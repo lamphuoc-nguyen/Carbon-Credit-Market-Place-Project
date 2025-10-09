@@ -6,8 +6,8 @@ const SocialLogin = () => {
                 Google
             </button>
             <button className="flex gap-3 w-full text-base font-medium cursor-pointer py-3 rounded-md items-center justify-center bg-violet-50 border border-violet-300 hover:border-violet-600 hover:bg-violet-100 transition-all duration-300">
-                <img src="apple.svg" alt="Apple" className="w-6" />
-                Apple
+                <img src="facebook.svg" alt="Facebook" className="w-6" />
+                Facebook
             </button>
         </div>
     )
