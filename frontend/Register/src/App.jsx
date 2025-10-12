@@ -1,22 +1,22 @@
 import React from 'react';
-import { useState } from 'react';
-import reactLogo from './assets/react.svg';
-import viteLogo from '/vite.svg';
-import Login from './Login';
-import { FaGoogle, FaFacebook } from 'react-icons/fa';
-
+import Register from './pages/RegisterForm';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 
 function App() {
-  const [open, setOpen] = useState(false)
-
   return (
-    <>
-      <div className='text-white h-[100vh] flex items-center justify-center bg-cover' style={{ backgroundImage: "url('../src/img/pexels-petra-reid-419907087-34154290.jpg')" }}>
-        <Login />
-      </div>
+    <Router>
+      <div className="App">
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/register" element={<Register />} />
 
-    </>
+          {/* Temporary redirect to register for testing */}
+          <Route path="/" element={<Navigate to="/register" replace />} />
+          <Route path="*" element={<Navigate to="/register" replace />} />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 
