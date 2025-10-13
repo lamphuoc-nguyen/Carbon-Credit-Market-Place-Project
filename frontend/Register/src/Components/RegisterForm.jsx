@@ -195,7 +195,7 @@ const RegisterForm = () => {
                     <div className="flex-1 flex items-center justify-end px-12 mb-30 ">
                         <div className="max-w-2xl pr-8">
                             {/* Logo */}
-                            <div className="absolute top-[-10px] ml-9 ">
+                            <div className="absolute top-[-10px] ml-9 h-60 pointer-events-none ">
                                 <img
                                     src={logoImage}
                                     alt="Carbon Credit Marketplace"
