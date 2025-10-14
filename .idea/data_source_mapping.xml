@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourcePerFileMappings">
-    <file url="file://$APPLICATION_CONFIG_DIR$/consoles/db/15cfb3d4-61a3-4f91-a78f-9cd8da4eafcb/console.sql" value="15cfb3d4-61a3-4f91-a78f-9cd8da4eafcb" />
     <file url="file://$PROJECT_DIR$/backend/src/main/resources/db/migration/V1__Create_Users_Roles_table.sql" value="15cfb3d4-61a3-4f91-a78f-9cd8da4eafcb" />
     <file url="file://$PROJECT_DIR$/backend/src/main/resources/db/migration/V2__Insert_roles.sql" value="15cfb3d4-61a3-4f91-a78f-9cd8da4eafcb" />
     <file url="file://$PROJECT_DIR$/backend/src/main/resources/db/migration/V3__Add_OAuth2_fields_to_users.sql" value="15cfb3d4-61a3-4f91-a78f-9cd8da4eafcb" />

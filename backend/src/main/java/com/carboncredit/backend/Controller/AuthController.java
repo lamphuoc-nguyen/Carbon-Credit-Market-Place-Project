@@ -81,4 +81,9 @@ public class AuthController {
         // Trả về JWT cho client
         return ResponseEntity.ok(new AuthResponseDto(token));
     }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logoutUser() {
+        return new ResponseEntity<>("User logged out successfully!", HttpStatus.OK);
+    }
 }
