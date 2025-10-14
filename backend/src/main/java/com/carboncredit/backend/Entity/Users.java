@@ -47,3 +47,4 @@ public class Users {
     @Column(name = "avatar_url", length = 255)
     private String avatarUrl;
 }
+

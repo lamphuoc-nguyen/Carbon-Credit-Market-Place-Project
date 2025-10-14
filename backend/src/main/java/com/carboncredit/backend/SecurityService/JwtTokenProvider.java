@@ -6,6 +6,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
@@ -31,10 +32,9 @@ public class JwtTokenProvider {
         this.key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
 
-    // Tạo Access Token
+    // Tạo Access Token - Fixed to handle both UserDetails and CustomOAuth2User
     public String createAccessToken(Authentication authentication) {
-        CustomOAuth2User customOAuth2User = (CustomOAuth2User) authentication.getPrincipal();
-        String email = customOAuth2User.getEmail();
+        String email = getEmailFromAuthentication(authentication);
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpirationInMs);
 
@@ -46,10 +46,9 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    // Tạo Refresh Token
+    // Tạo Refresh Token - Fixed to handle both UserDetails and CustomOAuth2User
     public String createRefreshToken(Authentication authentication) {
-        CustomOAuth2User customOAuth2User = (CustomOAuth2User) authentication.getPrincipal();
-        String email = customOAuth2User.getEmail();
+        String email = getEmailFromAuthentication(authentication);
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtRefreshExpirationInMs);
 
@@ -59,6 +58,21 @@ public class JwtTokenProvider {
                 .expiration(expiryDate)
                 .signWith(key)
                 .compact();
+    }
+
+    // Helper method to extract email from different authentication principal types
+    private String getEmailFromAuthentication(Authentication authentication) {
+        Object principal = authentication.getPrincipal();
+
+        if (principal instanceof CustomOAuth2User) {
+            // OAuth2 login
+            return ((CustomOAuth2User) principal).getEmail();
+        } else if (principal instanceof UserDetails) {
+            // Regular username/password login
+            return ((UserDetails) principal).getUsername(); // In your case, username is email
+        } else {
+            throw new IllegalArgumentException("Unsupported principal type: " + principal.getClass());
+        }
     }
 
     public String getEmailFromJWT(String token) {

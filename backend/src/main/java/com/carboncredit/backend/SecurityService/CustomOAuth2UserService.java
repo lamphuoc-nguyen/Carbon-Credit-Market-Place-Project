@@ -35,20 +35,26 @@
                 @Override
                 public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
                     OAuth2User oauth2User = delegate.loadUser(userRequest);
+
+                    System.out.println("--- GitHub User Attributes ---");
+                    System.out.println(oauth2User.getAttributes()); // In ra tất cả thông tin GitHub trả về
+                    System.out.println("-----------------------------");
+
+                    String email = oauth2User.getAttribute("email");
+                    System.out.println("Email from GitHub: " + email);
+
                     return processOAuth2User(userRequest, oauth2User);
                 }
 
                 private OAuth2User processOAuth2User(OAuth2UserRequest userRequest, OAuth2User oauth2User) {
                     String registrationId = userRequest.getClientRegistration().getRegistrationId();
-                    String email = oauth2User.getAttribute("email");
+                    String email = extractEmail(oauth2User, registrationId);
                     String name = oauth2User.getAttribute("name");
-                    String providerId = oauth2User.getAttribute("id") != null
-                            ? oauth2User.getAttribute("id").toString()
-                            : oauth2User.getAttribute("sub").toString();
+                    String providerId = extractProviderId(oauth2User, registrationId);
                     String avatarUrl = extractAvatarUrl(oauth2User, registrationId);
 
                     if (email == null) {
-                        throw new OAuth2AuthenticationException("Email not found from OAuth2 provider");
+                        throw new OAuth2AuthenticationException("Email not found from OAuth2 provider: " + registrationId);
                     }
 
                     Optional<Users> existingUser = usersRepository.findByProviderAndProviderId(
@@ -71,17 +77,44 @@
                     return new CustomOAuth2User(oauth2User, user);
                 }
 
+                private String extractEmail(OAuth2User oauth2User, String provider) {
+                    String email = oauth2User.getAttribute("email");
+
+                    // GitHub specific email handling
+                    if ("github".equalsIgnoreCase(provider) && email == null) {
+                        // For GitHub, if primary email is private, we might need to handle it differently
+                        // GitHub API might return null email if user has private email
+                        throw new OAuth2AuthenticationException("GitHub email is private or not accessible. Please make your email public in GitHub settings.");
+                    }
+
+                    return email;
+                }
+
+                private String extractProviderId(OAuth2User oauth2User, String provider) {
+                    if ("github".equalsIgnoreCase(provider)) {
+                        // GitHub: use "login" as the unique identifier (username)
+                        String login = oauth2User.getAttribute("login");
+                        if (login != null) {
+                            return login;
+                        }
+                        // Fallback to id if login is not available
+                        Object id = oauth2User.getAttribute("id");
+                        return id != null ? id.toString() : null;
+                    } else if ("google".equalsIgnoreCase(provider)) {
+                        // Google uses "sub" as the unique identifier
+                        return oauth2User.getAttribute("sub");
+                    } else {
+                        // Default fallback
+                        Object id = oauth2User.getAttribute("id");
+                        return id != null ? id.toString() : oauth2User.getAttribute("sub");
+                    }
+                }
+
                 private String extractAvatarUrl(OAuth2User oauth2User, String provider) {
                     if ("google".equalsIgnoreCase(provider)) {
                         return oauth2User.getAttribute("picture");
-                    } else if ("facebook".equalsIgnoreCase(provider)) {
-                        Map<String, Object> picture = oauth2User.getAttribute("picture");
-                        if (picture != null) {
-                            Map<String, Object> data = (Map<String, Object>) picture.get("data");
-                            if (data != null) {
-                                return (String) data.get("url");
-                            }
-                        }
+                    } else if ("github".equalsIgnoreCase(provider)) {
+                        return oauth2User.getAttribute("avatar_url");
                     }
                     return null;
                 }
