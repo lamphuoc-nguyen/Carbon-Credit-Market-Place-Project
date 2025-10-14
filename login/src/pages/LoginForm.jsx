@@ -1,12 +1,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FaGoogle, FaFacebook, FaCheck, FaTimes, FaBriefcase, FaUser, FaEnvelope, FaPhone, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
-import { useState, useEffect } from 'react';
+import { FaGoogle, FaFacebook, FaUser, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { useState } from 'react';
 import { CircleCheckBig } from 'lucide-react';
 import backgroundImage from '../image/background.png';
 import logoImage from '../image/logo1.png';
+import { authApi } from '../api';
+import { useNavigate } from 'react-router-dom';
 
 const LoginForm = () => {
+    const navigate = useNavigate();
     const [formData, setFormData] = useState({
         username: '',
         password: '',
@@ -15,6 +18,7 @@ const LoginForm = () => {
     const [errors, setErrors] = useState({});
     const [touched, setTouched] = useState({});
     const [showPassword, setShowPassword] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleGoogleLogin = () => {
         console.log('Google login clicked');
@@ -23,17 +27,6 @@ const LoginForm = () => {
     const handleFacebookLogin = () => {
         console.log('Facebook login clicked');
     };
-
-    useEffect(() => {
-        const savedUsername = localStorage.getItem('rememberedUsername');
-        if (savedUsername) {
-            setFormData(prev => ({
-                ...prev,
-                username: savedUsername,
-                rememberMe: true
-            }));
-        }
-    }, []);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -100,7 +93,6 @@ const LoginForm = () => {
         });
 
         setErrors(newErrors);
-
         setTouched({
             username: true,
             password: true
@@ -109,21 +101,55 @@ const LoginForm = () => {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (validateAllFields()) {
-            // Handle Remember Me
-            if (formData.rememberMe) {
-                localStorage.setItem('rememberedUsername', formData.username);
-            } else {
-                localStorage.removeItem('rememberedUsername');
-            }
+            setIsLoading(true);
+            setErrors({}); // Xóa lỗi cũ
 
-            console.log('Form submitted:', formData);
-            // Add your login logic here
-        } else {
-            console.log('Form has errors');
+            try {
+                // GỌI API
+                const response = await authApi.login({
+                    username: formData.username,
+                    password: formData.password
+                });
+
+                console.log('✅ Login success:', response);
+
+                // Lưu token
+                if (response.token) {
+                    sessionStorage.setItem('authToken', response.token);
+                }
+
+                // Chuyển trang
+                navigate('/dashboard');
+
+            } catch (error) {
+                console.error('❌ Login error:', error);
+
+                // Xử lý lỗi
+                if (error.response) {
+                    const status = error.response.status;
+                    const message = error.response.data?.message || error.response.data?.error;
+
+                    if (status === 401) {
+                        setErrors({ submit: 'Invalid username or password' });
+                    } else if (status === 400) {
+                        setErrors({ submit: message || 'Invalid request' });
+                    } else if (status === 500) {
+                        setErrors({ submit: 'Server error. Please try again later.' });
+                    } else {
+                        setErrors({ submit: message || 'Login failed' });
+                    }
+                } else if (error.request) {
+                    setErrors({ submit: 'Cannot connect to server. Check your connection.' });
+                } else {
+                    setErrors({ submit: 'An unexpected error occurred.' });
+                }
+            } finally {
+                setIsLoading(false);
+            }
         }
     };
 
@@ -206,8 +232,9 @@ const LoginForm = () => {
                                             value={formData.username}
                                             onChange={handleChange}
                                             onBlur={() => handleBlur('username')}
+                                            disabled={isLoading}
                                             className={`block w-full pl-10 pr-3 py-2.5 text-sm border ${touched.username && errors.username ? 'border-red-500' : 'border-gray-300'
-                                                } rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 bg-white text-gray-700`}
+                                                } rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 bg-white text-gray-700 disabled:bg-gray-100 disabled:cursor-not-allowed`}
                                             placeholder='Enter your username'
                                         />
                                     </div>
@@ -232,14 +259,16 @@ const LoginForm = () => {
                                             value={formData.password}
                                             onChange={handleChange}
                                             onBlur={() => handleBlur('password')}
+                                            disabled={isLoading}
                                             className={`block w-full pl-10 pr-10 py-2.5 text-sm border ${touched.password && errors.password ? 'border-red-500' : 'border-gray-300'
-                                                } rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 bg-white text-gray-700`}
+                                                } rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 bg-white text-gray-700 disabled:bg-gray-100 disabled:cursor-not-allowed`}
                                             placeholder='Enter your password'
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setShowPassword(!showPassword)}
-                                            className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
+                                            disabled={isLoading}
+                                            className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer disabled:cursor-not-allowed"
                                         >
                                             {showPassword ? (
                                                 <FaEyeSlash className="text-gray-400 text-sm hover:text-gray-600" />
@@ -253,6 +282,13 @@ const LoginForm = () => {
                                     )}
                                 </div>
 
+                                {/* ✅ THÊM PHẦN NÀY: Hiển thị lỗi từ server */}
+                                {errors.submit && (
+                                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                                        <p className="text-red-600 text-sm font-medium">{errors.submit}</p>
+                                    </div>
+                                )}
+
                                 {/* Remember Me and Forgot Password */}
                                 <div className="flex items-center justify-between mb-6">
                                     <div className="flex items-center">
@@ -262,7 +298,8 @@ const LoginForm = () => {
                                             name="rememberMe"
                                             checked={formData.rememberMe}
                                             onChange={handleChange}
-                                            className="w-4 h-4 text-green-500 bg-white border-gray-300 rounded focus:ring-green-500 focus:ring-2 cursor-pointer"
+                                            disabled={isLoading}
+                                            className="w-4 h-4 text-green-500 bg-white border-gray-300 rounded focus:ring-green-500 focus:ring-2 cursor-pointer disabled:cursor-not-allowed"
                                         />
                                         <label htmlFor="rememberMe" className="ml-2 text-sm text-gray-700 cursor-pointer select-none">
                                             Remember me
@@ -273,12 +310,23 @@ const LoginForm = () => {
                                     </Link>
                                 </div>
 
-                                {/* Submit Button */}
+                                {/* ✅ SỬA PHẦN NÀY: Submit Button với loading */}
                                 <button
                                     type="submit"
-                                    className="text-center w-full mb-4 text-[19px] rounded-lg bg-green-500 py-3 hover:bg-green-600 transition-colors duration-300 text-white font-medium"
+                                    disabled={isLoading}
+                                    className="text-center w-full mb-4 text-[19px] rounded-lg bg-green-500 py-3 hover:bg-green-600 transition-colors duration-300 text-white font-medium disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
                                 >
-                                    Log In
+                                    {isLoading ? (
+                                        <>
+                                            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            Logging in...
+                                        </>
+                                    ) : (
+                                        'Log In'
+                                    )}
                                 </button>
 
                                 {/* Divider */}
@@ -293,7 +341,8 @@ const LoginForm = () => {
                                     <button
                                         type="button"
                                         onClick={handleGoogleLogin}
-                                        className="flex-1 flex items-center justify-center gap-1.5 bg-slate-200 text-gray-800 py-2 rounded hover:bg-gray-100 transition-colors duration-300"
+                                        disabled={isLoading}
+                                        className="flex-1 flex items-center justify-center gap-1.5 bg-slate-200 text-gray-800 py-2 rounded hover:bg-gray-100 transition-colors duration-300 disabled:bg-gray-300 disabled:cursor-not-allowed"
                                     >
                                         <FaGoogle className="text-sm" />
                                         <span className="font-medium text-s">Google</span>
@@ -301,7 +350,8 @@ const LoginForm = () => {
                                     <button
                                         type="button"
                                         onClick={handleFacebookLogin}
-                                        className="flex-1 flex items-center justify-center gap-1.5 bg-[#1877F2] text-white py-2 rounded hover:bg-[#166FE5] transition-colors duration-300"
+                                        disabled={isLoading}
+                                        className="flex-1 flex items-center justify-center gap-1.5 bg-[#1877F2] text-white py-2 rounded hover:bg-[#166FE5] transition-colors duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
                                     >
                                         <FaFacebook className="text-sm" />
                                         <span className="font-medium text-s">Facebook</span>
