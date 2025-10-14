@@ -450,8 +450,8 @@ const RegisterForm = () => {
                                             }}
                                         >
                                             <option value="" disabled>Select Roles</option>
-                                            <option value="carbon-credit-producer">Carbon Credit Buyer</option>
-                                            <option value="project-developer">Carbon Credit Seller</option>
+                                            <option value="1">Carbon Credit Buyer</option>
+                                            <option value="2">Carbon Credit Seller</option>
                                         </select>
                                     </div>
                                     {touched.businessType && errors.businessType && (
