@@ -58,10 +58,10 @@ public class AuthController {
         user.setProvider("LOCAL"); // Đánh dấu đây là tài khoản thường
         user.setCreatedAt(LocalDateTime.now());
 
-        // Gán vai trò mặc định, ví dụ: "buyer"
-        Roles defaultRole = rolesRepository.findByRoleName("buyer")
-                .orElseThrow(() -> new RuntimeException("Error: Default role buyer not found."));
-        user.setRole(defaultRole);
+        // ✅ REMOVED: Auto buyer role assignment
+        // ✅ NEW: Set profile as incomplete (no role assigned yet)
+        user.setRole(null); // No role assigned initially
+        user.setProfileStatus(0); // Profile incomplete
 
         usersRepository.save(user);
 
