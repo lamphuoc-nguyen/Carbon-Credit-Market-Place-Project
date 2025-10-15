@@ -155,7 +155,7 @@ const ProjectsSection = () => {
 
                 {/* Explore More Button */}
                 <div className="text-center">
-                    <Link to='/Marketplace' className="bg-green-500 hover:bg-green-600 text-white font-bold py-6 px-12 rounded-full text-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
+                    <Link to='/Marketplace' className="bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-12 rounded-full text-lg transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
                         Explore More Projects
                     </Link>
                 </div>
