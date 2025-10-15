@@ -1,13 +1,16 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FaGoogle, FaFacebook, FaCheck, FaTimes, FaBriefcase, FaUser, FaEnvelope, FaPhone, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { useState } from 'react';
 import { CircleCheckBig } from 'lucide-react';
 import backgroundImage from '../image/background.png';
 import logoImage from '../image/logo1.png';
+import { authApi } from '../api';
 
 const RegisterForm = () => {
+    const navigate = useNavigate();
     const [formData, setFormData] = useState({
+        fullName: '',
         email: '',
         username: '',
         phone: '',
@@ -20,6 +23,7 @@ const RegisterForm = () => {
     const [touched, setTouched] = useState({});
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleGoogleLogin = () => {
         console.log('Google login clicked');
@@ -57,6 +61,16 @@ const RegisterForm = () => {
         let error = '';
 
         switch (field) {
+            case 'fullName':
+                if (!value) {
+                    error = 'Full name is required';
+                } else if (value.length < 2) {
+                    error = 'Full name must be at least 2 characters';
+                } else if (value.length > 50) {
+                    error = 'Full name must be less than 50 characters';
+                }
+                break;
+
             case 'email':
                 if (!value) {
                     error = 'Email is required';
@@ -139,6 +153,7 @@ const RegisterForm = () => {
 
         // Mark all fields as touched
         setTouched({
+            fullName: true,
             email: true,
             username: true,
             phone: true,
@@ -150,12 +165,63 @@ const RegisterForm = () => {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (validateAllFields()) {
-            console.log('Form submitted:', formData);
-            // Add your registration logic here
+            setIsLoading(true);
+            setErrors({});
+
+            try {
+                // ✅ Gọi API register với dữ liệu form
+                const response = await authApi.register({
+                    fullName: formData.fullName,
+                    username: formData.username,
+                    email: formData.email,
+                    password: formData.password,
+                    phone: formData.phone,
+                    businessType: parseInt(formData.businessType)
+                });
+
+                console.log('✅ Register success:', response);
+
+                // ✅ Hiển thị thông báo thành công và chuyển hướng
+                alert('Registration successful! Please login with your credentials.');
+                navigate('/login');
+
+            } catch (error) {
+                console.error('❌ Register error:', error);
+
+                // ✅ Xử lý lỗi chi tiết
+                if (error.response) {
+                    const status = error.response.status;
+                    const message = error.response.data?.message || error.response.data?.error;
+
+                    const errorMessages = {
+                        400: message || 'Invalid registration data',
+                        409: 'Username or email already exists',
+                        422: 'Validation failed. Please check your input.',
+                        500: 'Server error. Please try again later.',
+                        503: 'Service temporarily unavailable'
+                    };
+
+                    setErrors({
+                        submit: errorMessages[status] || message || 'Registration failed'
+                    });
+                } else if (error.request) {
+                    if (error.code === 'ECONNABORTED') {
+                        setErrors({ submit: 'Request timeout. Please try again.' });
+                    } else {
+                        setErrors({ submit: 'Cannot connect to server. Check your connection.' });
+                    }
+                } else {
+                    setErrors({
+                        submit: error.message || 'An unexpected error occurred.'
+                    });
+                }
+            } finally {
+                setIsLoading(false);
+            }
         } else {
             console.log('Form has errors');
         }
@@ -247,6 +313,32 @@ const RegisterForm = () => {
                             <p className='text-center text-gray-600 mb-3'>Join thousands of successful sellers</p>
                             <form onSubmit={handleSubmit} noValidate>
 
+                                {/* Full Name Field */}
+                                <div className='mb-4'>
+                                    <label htmlFor='fullName' className='block text-xs font-medium text-gray-700 mb-1'>
+                                        Full Name
+                                    </label>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <FaUser className="text-gray-400 text-sm" />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            id="fullName"
+                                            name="fullName"
+                                            value={formData.fullName}
+                                            onChange={handleChange}
+                                            onBlur={() => handleBlur('fullName')}
+                                            disabled={isLoading}
+                                            className={`block w-full pl-10 pr-3 py-2.5 text-sm border ${touched.fullName && errors.fullName ? 'border-red-500' : 'border-gray-300'
+                                                } rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 bg-white text-gray-700 disabled:bg-gray-100 disabled:cursor-not-allowed`}
+                                            placeholder='Enter your full name'
+                                        />
+                                    </div>
+                                    {touched.fullName && errors.fullName && (
+                                        <p className="text-red-500 text-[10px] mt-1">{errors.fullName}</p>
+                                    )}
+                                </div>
 
                                 {/* Username Field */}
                                 <div className='mb-4'>
@@ -264,8 +356,9 @@ const RegisterForm = () => {
                                             value={formData.username}
                                             onChange={handleChange}
                                             onBlur={() => handleBlur('username')}
+                                            disabled={isLoading}
                                             className={`block w-full pl-10 pr-3 py-2.5 text-sm border ${touched.username && errors.username ? 'border-red-500' : 'border-gray-300'
-                                                } rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 bg-white text-gray-700`}
+                                                } rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 bg-white text-gray-700 disabled:bg-gray-100 disabled:cursor-not-allowed`}
                                             placeholder='Enter username'
                                         />
                                     </div>
@@ -292,14 +385,16 @@ const RegisterForm = () => {
                                                 value={formData.password}
                                                 onChange={handleChange}
                                                 onBlur={() => handleBlur('password')}
+                                                disabled={isLoading}
                                                 className={`block w-full pl-10 pr-10 py-2.5 text-sm border ${touched.password && errors.password ? 'border-red-500' : 'border-gray-300'
-                                                    } rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 bg-white text-gray-700`}
+                                                    } rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 bg-white text-gray-700 disabled:bg-gray-100 disabled:cursor-not-allowed`}
                                                 placeholder='Create password'
                                             />
                                             <button
                                                 type="button"
                                                 onClick={() => setShowPassword(!showPassword)}
-                                                className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
+                                                disabled={isLoading}
+                                                className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer disabled:cursor-not-allowed"
                                             >
                                                 {showPassword ? (
                                                     <FaEyeSlash className="text-gray-400 text-sm hover:text-gray-600" />
@@ -329,14 +424,16 @@ const RegisterForm = () => {
                                                 value={formData.confirmPassword}
                                                 onChange={handleChange}
                                                 onBlur={() => handleBlur('confirmPassword')}
+                                                disabled={isLoading}
                                                 className={`block w-full pl-10 pr-10 py-2.5 text-sm border ${touched.confirmPassword && errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
-                                                    } rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 bg-white text-gray-700`}
+                                                    } rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 bg-white text-gray-700 disabled:bg-gray-100 disabled:cursor-not-allowed`}
                                                 placeholder='Confirm password'
                                             />
                                             <button
                                                 type="button"
                                                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                                className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
+                                                disabled={isLoading}
+                                                className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer disabled:cursor-not-allowed"
                                             >
                                                 {showConfirmPassword ? (
                                                     <FaEyeSlash className="text-gray-400 text-sm hover:text-gray-600" />
@@ -388,8 +485,9 @@ const RegisterForm = () => {
                                             value={formData.email}
                                             onChange={handleChange}
                                             onBlur={() => handleBlur('email')}
+                                            disabled={isLoading}
                                             className={`block w-full pl-10 pr-3 py-2.5 text-sm border ${touched.email && errors.email ? 'border-red-500' : 'border-gray-300'
-                                                } rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 bg-white text-gray-700`}
+                                                } rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 bg-white text-gray-700 disabled:bg-gray-100 disabled:cursor-not-allowed`}
                                             placeholder='Enter your email'
                                         />
                                     </div>
@@ -413,8 +511,9 @@ const RegisterForm = () => {
                                             value={formData.phone}
                                             onChange={handleChange}
                                             onBlur={() => handleBlur('phone')}
+                                            disabled={isLoading}
                                             className={`block w-full pl-10 pr-3 py-2.5 text-sm border ${touched.phone && errors.phone ? 'border-red-500' : 'border-gray-300'
-                                                } rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 bg-white text-gray-700`}
+                                                } rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 bg-white text-gray-700 disabled:bg-gray-100 disabled:cursor-not-allowed`}
                                             placeholder='Enter phone number'
                                         />
                                     </div>
@@ -440,8 +539,9 @@ const RegisterForm = () => {
                                             value={formData.businessType}
                                             onChange={handleChange}
                                             onBlur={() => handleBlur('businessType')}
+                                            disabled={isLoading}
                                             className={`block w-full pl-8 pr-3 py-2 text-xs border-2 ${touched.businessType && errors.businessType ? 'border-red-500' : 'border-gray-300'
-                                                } focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 rounded-lg bg-white text-gray-700 appearance-none cursor-pointer transition-colors duration-200`}
+                                                } focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 rounded-lg bg-white text-gray-700 appearance-none cursor-pointer transition-colors duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed`}
                                             style={{
                                                 backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
                                                 backgroundPosition: 'right 0.3rem center',
@@ -459,12 +559,30 @@ const RegisterForm = () => {
                                     )}
                                 </div>
 
+                                {/* ✅ Server Error Message */}
+                                {errors.submit && (
+                                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                                        <p className="text-red-600 text-sm font-medium">{errors.submit}</p>
+                                    </div>
+                                )}
+
                                 {/* Submit Button */}
                                 <button
                                     type="submit"
-                                    className="text-center w-full mb-3 text-[19px] mt-3 rounded-lg bg-green-500 py-3 hover:bg-green-600 transition-colors duration-300 text-white font-medium"
+                                    disabled={isLoading}
+                                    className="text-center w-full mb-3 text-[19px] mt-3 rounded-lg bg-green-500 py-3 hover:bg-green-600 transition-colors duration-300 text-white font-medium disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
                                 >
-                                    Sign Up
+                                    {isLoading ? (
+                                        <>
+                                            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            Creating Account...
+                                        </>
+                                    ) : (
+                                        'Sign Up'
+                                    )}
                                 </button>
 
                                 {/* Divider */}
@@ -479,7 +597,8 @@ const RegisterForm = () => {
                                     <button
                                         type="button"
                                         onClick={handleGoogleLogin}
-                                        className="flex-1 flex items-center justify-center gap-1.5 bg-slate-200 text-gray-800 py-2 rounded hover:bg-gray-100 transition-colors duration-300"
+                                        disabled={isLoading}
+                                        className="flex-1 flex items-center justify-center gap-1.5 bg-slate-200 text-gray-800 py-2 rounded hover:bg-gray-100 transition-colors duration-300 disabled:bg-gray-300 disabled:cursor-not-allowed"
                                     >
                                         <FaGoogle className="text-sm" />
                                         <span className="font-medium text-s">Google</span>
@@ -487,7 +606,8 @@ const RegisterForm = () => {
                                     <button
                                         type="button"
                                         onClick={handleFacebookLogin}
-                                        className="flex-1 flex items-center justify-center gap-1.5 bg-[#1877F2] text-white py-2 rounded hover:bg-[#166FE5] transition-colors duration-300"
+                                        disabled={isLoading}
+                                        className="flex-1 flex items-center justify-center gap-1.5 bg-[#1877F2] text-white py-2 rounded hover:bg-[#166FE5] transition-colors duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
                                     >
                                         <FaFacebook className="text-sm" />
                                         <span className="font-medium text-s">Facebook</span>

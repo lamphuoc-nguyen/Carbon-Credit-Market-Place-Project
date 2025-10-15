@@ -205,11 +205,11 @@ const LoginForm = () => {
                 style={{ backgroundImage: `url(${backgroundImage})`, backgroundSize: 'auto' }}>
 
                 {/* ✅ Logo - Fixed positioning */}
-                <div className="absolute top-4 left-8 h-40 pointer-events-none z-10">
+                <div className="absolute top-[-70px] -ml-150 h-60 pointer-events-none ">
                     <img
                         src={logoImage}
                         alt="Carbon Credit Marketplace"
-                        className="h-full w-auto object-contain"
+                        className="w-100 h-auto"
                     />
                 </div>
 
