@@ -45,8 +45,14 @@ public class AuthController {
             return new ResponseEntity<>("Email is already taken!", HttpStatus.BAD_REQUEST);
         }
 
+        // Kiểm tra username đã tồn tại chưa
+        if (usersRepository.existsByUsername(registerDto.getUsername())) {
+            return new ResponseEntity<>("Username is already taken!", HttpStatus.BAD_REQUEST);
+        }
+
         Users user = new Users();
         user.setName(registerDto.getUsername());
+        user.setUsername(registerDto.getUsername());
         user.setEmail(registerDto.getEmail());
         user.setPasswordHash(passwordEncoder.encode(registerDto.getPassword())); // Mã hóa password
         user.setProvider("LOCAL"); // Đánh dấu đây là tài khoản thường
@@ -67,7 +73,7 @@ public class AuthController {
         // Xác thực người dùng bằng Spring Security
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        loginDto.getEmail(),
+                        loginDto.getUsernameOrEmail(),
                         loginDto.getPassword()
                 )
         );

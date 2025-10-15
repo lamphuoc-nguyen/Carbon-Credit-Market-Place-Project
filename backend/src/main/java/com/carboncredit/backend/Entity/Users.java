@@ -26,6 +26,9 @@ public class Users {
     @Column(name = "email", length = 190, nullable = false, unique = true)
     private String email;
 
+    @Column(name = "username", length = 50, nullable = false, unique = true)
+    private String username;
+
     @Column(name = "passwordHash", length = 255, nullable = true)
     private String passwordHash;
 
@@ -47,4 +50,3 @@ public class Users {
     @Column(name = "avatar_url", length = 255)
     private String avatarUrl;
 }
-
