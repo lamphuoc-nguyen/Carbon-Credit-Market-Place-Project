@@ -42,6 +42,9 @@ public class Users {
     @Column(name = "profile_status", nullable = false)
     private Integer profileStatus = 0; // 0 = incomplete, 1 = complete
 
+    @Column(name = "status", length = 20, nullable = false)
+    private String status = "INCOMPLETE"; // INCOMPLETE, ACTIVE
+
     @Column(name = "provider", length = 50, nullable = false)
     private String provider = "LOCAL";
 

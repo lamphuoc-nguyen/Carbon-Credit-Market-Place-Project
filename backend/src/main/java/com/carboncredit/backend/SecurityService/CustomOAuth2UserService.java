@@ -148,10 +148,10 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         newUser.setAvatarUrl(avatarUrl);
         newUser.setCreatedAt(LocalDateTime.now());
 
-        // ✅ REMOVED: Auto buyer role assignment
-        // ✅ NEW: Set profile as incomplete (no role assigned yet)
+        // ✅ NEW: Set status as INCOMPLETE for new OAuth2 users
         newUser.setRole(null); // No role assigned initially
         newUser.setProfileStatus(0); // Profile incomplete
+        newUser.setStatus("INCOMPLETE"); // Status incomplete - needs role selection
 
         return usersRepository.save(newUser);
     }

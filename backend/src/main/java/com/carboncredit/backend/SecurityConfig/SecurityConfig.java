@@ -67,11 +67,33 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // adjust origins/methods/headers to your needs
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+
+        // ✅ Allow specific origins including port 5173
+        configuration.setAllowedOrigins(List.of(
+            "http://localhost:5173",
+            "http://localhost:3000",
+            "http://127.0.0.1:5173",
+            "http://127.0.0.1:3000"
+        ));
+
+        // ✅ Allow all common HTTP methods including OPTIONS for preflight
+        configuration.setAllowedMethods(List.of(
+            "GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"
+        ));
+
+        // ✅ Allow all headers including Authorization
         configuration.setAllowedHeaders(List.of("*"));
+
+        // ✅ Allow credentials (important for authentication)
         configuration.setAllowCredentials(true);
+
+        // ✅ Expose headers that the frontend might need
+        configuration.setExposedHeaders(List.of(
+            "Authorization", "Content-Type", "X-Requested-With"
+        ));
+
+        // ✅ Set preflight cache time
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
