@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import React from 'react';
+
 
 const ProjectsSection = () => {
     const [projects, setProjects] = useState([]);

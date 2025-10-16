@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import windmill1 from '../img/windmill1.png';
+import windmill1 from '../image/windmill1.png';
 import { Link } from 'react-router-dom';
-import bgAbout from '../img/bgabout.png';
+import bgAbout from '../image/bgabout.png';
+import React from 'react';
+
 
 const AboutSection = () => {
     const [isVisible, setIsVisible] = useState(false);

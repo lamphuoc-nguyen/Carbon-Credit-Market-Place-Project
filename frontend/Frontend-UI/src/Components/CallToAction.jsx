@@ -14,7 +14,7 @@ const CallToAction = () => {
                 <div className="flex flex-col md:flex-row gap-64 mt-10 ">
                     {/* Buy Carbon Credits Button */}
                     <Link
-                        to="/buy"
+                        to="/Register"
                         className="bg-white text-green-500 font-bold text-lg px-12 py-5 rounded-full hover:bg-gray-50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
                     >
                         I want to buy carbon credits
@@ -22,7 +22,7 @@ const CallToAction = () => {
 
                     {/* Sell Carbon Credits Button */}
                     <Link
-                        to="/sell"
+                        to="/Register"
                         className="bg-white text-green-500 font-bold text-lg px-12 py-5 rounded-full hover:bg-gray-50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
                     >
                         I want to sell carbon credits

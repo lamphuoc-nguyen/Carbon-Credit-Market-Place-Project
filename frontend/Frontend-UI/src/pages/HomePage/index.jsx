@@ -1,17 +1,15 @@
-import AboutSection from "../Components/AboutSection";
-import CallToAction from "../Components/CallToAction";
-import Footer from "../Components/Footer";
-import MainContent from "../Components/MainContent";
-import Navbar from "../Components/Navbar";
-import ProjectsSection from "../Components/ProjectsSection";
-import SubContent from "../Components/SubContent";
+import React from 'react';
+import CallToAction from "../../Components/CallToAction";
+import Footer from "../../Components/Footer";
+import MainContent from "../../Components/MainContent";
+import Navbar from "../../Components/Navbar";
+import ProjectsSection from "../../Components/ProjectsSection";
+import AboutSection from "../../Components/AboutSection";
+import SubContent from "../../Components/SubContent";
 
-const Homepage = () => {
+const HomePage = () => {
     return (
         <>
-            <div>
-                <Navbar />
-            </div>
             <div>
                 <MainContent />
             </div>
@@ -32,12 +30,9 @@ const Homepage = () => {
             <div>
                 <CallToAction />
             </div>
-            <div>
-                <Footer />
-            </div>
         </>
     )
 
 };
 
-export default Homepage;
+export default HomePage;
