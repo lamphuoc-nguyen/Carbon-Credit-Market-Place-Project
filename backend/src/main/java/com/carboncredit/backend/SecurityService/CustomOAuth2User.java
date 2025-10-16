@@ -26,6 +26,12 @@ public class CustomOAuth2User implements OAuth2User {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
+        // ✅ FIX: Handle null role for incomplete profiles
+        if (user.getRole() == null) {
+            // Return empty list for users with incomplete profiles
+            return Collections.emptyList();
+        }
+
         return Collections.singletonList(
             new SimpleGrantedAuthority("ROLE_" + user.getRole().getRoleName().toUpperCase())
         );
@@ -49,6 +55,7 @@ public class CustomOAuth2User implements OAuth2User {
     }
 
     public String getRole() {
-        return user.getRole().getRoleName();
+        // ✅ FIX: Handle null role safely
+        return user.getRole() != null ? user.getRole().getRoleName() : null;
     }
 }

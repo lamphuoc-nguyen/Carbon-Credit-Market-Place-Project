@@ -15,7 +15,7 @@ public class OAuth2AuthenticationFailureHandler extends SimpleUrlAuthenticationF
 
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
-        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:3000/register")
+        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/register")
                 .queryParam("error", "Authentication failed. Please try again.")
                 .build().toUriString();
 
