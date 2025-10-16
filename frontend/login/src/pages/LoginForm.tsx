@@ -37,13 +37,15 @@ const LoginForm = () => {
     const [isLoading, setIsLoading] = useState(false);
 
     const handleGoogleLogin = () => {
-        console.log('Google login clicked');
-        // TODO: Implement OAuth
+        console.log('Google OAuth2 login clicked');
+        // Redirect to backend OAuth2 endpoint for Google
+        window.location.href = 'http://localhost:8080/oauth2/authorization/google';
     };
 
     const handleFacebookLogin = () => {
-        console.log('Facebook login clicked');
-        // TODO: Implement OAuth
+        console.log('GitHub OAuth2 login clicked');
+        // Redirect to backend OAuth2 endpoint for GitHub (using GitHub instead of Facebook)
+        window.location.href = 'http://localhost:8080/oauth2/authorization/github';
     };
 
     const handleChange = (e) => {
@@ -154,12 +156,23 @@ const LoginForm = () => {
                 const storage = formData.rememberMe ? localStorage : sessionStorage;
                 storage.setItem('authToken', response.accessToken);
 
-                // Note: Backend doesn't return user info, so we don't store it
-                // If you need user info, you'll need to make a separate API call
+                // ✅ Check profile status after successful login
+                try {
+                    const profileResponse = await authApi.getProfileStatus();
+                    console.log('Profile status:', profileResponse);
 
-                // ✅ CHỈ navigate khi thực sự thành công
-                navigate('/dashboard');
-
+                    if (profileResponse.profileStatus === 0 || !profileResponse.hasRole) {
+                        // Profile incomplete - redirect to role selection
+                        navigate('/select-role');
+                    } else {
+                        // Profile complete - redirect to dashboard
+                        navigate('/dashboard');
+                    }
+                } catch (profileError) {
+                    console.warn('Could not check profile status, redirecting to role selection:', profileError);
+                    // If profile check fails, assume incomplete and go to role selection
+                    navigate('/select-role');
+                }
             } catch (error) {
                 console.error('❌ Login error:', error);
 

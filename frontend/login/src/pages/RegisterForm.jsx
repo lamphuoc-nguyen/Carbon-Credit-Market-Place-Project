@@ -26,11 +26,15 @@ const RegisterForm = () => {
     const [isLoading, setIsLoading] = useState(false);
 
     const handleGoogleLogin = () => {
-        console.log('Google login clicked');
+        console.log('Google OAuth2 login clicked');
+        // Redirect to backend OAuth2 endpoint for Google
+        window.location.href = 'http://localhost:8080/oauth2/authorization/google';
     };
 
     const handleFacebookLogin = () => {
-        console.log('Facebook login clicked');
+        console.log('Facebook OAuth2 login clicked');
+        // Redirect to backend OAuth2 endpoint for GitHub (using GitHub instead of Facebook)
+        window.location.href = 'http://localhost:8080/oauth2/authorization/github';
     };
 
     const handleChange = (e) => {
@@ -185,9 +189,9 @@ const RegisterForm = () => {
 
                 console.log('✅ Register success:', response);
 
-                // ✅ Hiển thị thông báo thành công và chuyển hướng
-                alert('Registration successful! Please login with your credentials.');
-                navigate('/login');
+                // ✅ Registration successful - redirect to role selection
+                alert('Registration successful! Please select your role to complete your profile.');
+                navigate('/select-role');
 
             } catch (error) {
                 console.error('❌ Register error:', error);
@@ -628,3 +632,4 @@ const RegisterForm = () => {
 }
 
 export default RegisterForm;
+

@@ -16,7 +16,8 @@ const axiosInstance: AxiosInstance = axios.create({
 // ✅ REQUEST INTERCEPTOR - Tự động thêm token và logging
 axiosInstance.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
-        const token = sessionStorage.getItem('authToken');
+        // Check both localStorage and sessionStorage for token
+        const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
         if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -24,6 +25,11 @@ axiosInstance.interceptors.request.use(
         // ✅ Log request (dev only)
         if (import.meta.env.DEV) {
             console.log(`📤 ${config.method?.toUpperCase()} ${config.url}`, config.data);
+            if (token) {
+                console.log(`🔐 Token found and added to request`);
+            } else {
+                console.warn(`⚠️ No authentication token found`);
+            }
         }
 
         return config;
@@ -52,7 +58,10 @@ axiosInstance.interceptors.response.use(
             // ✅ 401 - Unauthorized: Đăng xuất tự động
             if (status === 401) {
                 console.warn('🔐 Unauthorized - Redirecting to login');
+                // Clear token from both storage locations
+                localStorage.removeItem('authToken');
                 sessionStorage.removeItem('authToken');
+                localStorage.removeItem('user');
                 sessionStorage.removeItem('user');
 
                 // Chỉ redirect nếu không phải đang ở trang login

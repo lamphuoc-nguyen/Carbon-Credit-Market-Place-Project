@@ -23,7 +23,13 @@ public class CustomUserDetailsService implements UserDetailsService {
         Users user = usersRepository.findByUsernameOrEmail(usernameOrEmail)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with username or email: " + usernameOrEmail));
 
-        return new User(user.getEmail(), user.getPasswordHash(),
-                Collections.singleton(new SimpleGrantedAuthority(user.getRole().getRoleName())));
+        // Handle users without roles (incomplete profiles)
+        String roleName = user.getRole() != null ? user.getRole().getRoleName() : "INCOMPLETE_PROFILE";
+
+        // Use a default password for OAuth users (they don't use password-based auth)
+        String password = user.getPasswordHash() != null ? user.getPasswordHash() : "OAUTH_USER";
+
+        return new User(user.getEmail(), password,
+                Collections.singleton(new SimpleGrantedAuthority("ROLE_" + roleName)));
     }
 }

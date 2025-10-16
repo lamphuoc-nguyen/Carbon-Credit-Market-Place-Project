@@ -124,5 +124,23 @@ export const authApi = {
     ping: async (): Promise<any> => {
         const response = await axiosInstance.get('/api/health');
         return response.data;
+    },
+
+    // ✅ GET PROFILE STATUS - Check if user profile is complete
+    getProfileStatus: async (): Promise<any> => {
+        const response = await axiosInstance.get('/api/profile/status');
+        return response.data;
+    },
+
+    // ✅ GET AVAILABLE ROLES - Get list of all roles
+    getRoles: async (): Promise<any> => {
+        const response = await axiosInstance.get('/api/profile/roles');
+        return response.data;
+    },
+
+    // ✅ SET USER ROLE - Assign role to user and complete profile
+    setRole: async (roleId: number): Promise<any> => {
+        const response = await axiosInstance.post('/api/profile/set-role', { roleId });
+        return response.data;
     }
 };

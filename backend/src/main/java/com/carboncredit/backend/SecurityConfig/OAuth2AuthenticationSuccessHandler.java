@@ -1,5 +1,7 @@
 package com.carboncredit.backend.SecurityConfig;
 
+import com.carboncredit.backend.Entity.Users;
+import com.carboncredit.backend.SecurityService.CustomOAuth2User;
 import com.carboncredit.backend.SecurityService.JwtTokenProvider;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -37,11 +39,29 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         refreshTokenCookie.setMaxAge(7 * 24 * 60 * 60); // Ví dụ: 7 ngày
         response.addCookie(refreshTokenCookie);
 
-        // 3. Xây dựng URL để redirect về frontend
-        // Cách tiếp cận tốt là redirect về một trang callback và truyền Access Token qua query param
-        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:3000/auth/callback") // URL của frontend
-                .queryParam("token", accessToken)
-                .build().toUriString();
+        // 3. ✅ NEW: Check user status to determine redirect URL
+        String targetUrl;
+        if (authentication.getPrincipal() instanceof CustomOAuth2User) {
+            CustomOAuth2User customUser = (CustomOAuth2User) authentication.getPrincipal();
+            Users user = customUser.getUser();
+
+            if ("INCOMPLETE".equals(user.getStatus())) {
+                // Redirect to complete registration page for incomplete profiles
+                targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/complete-registration")
+                        .queryParam("token", accessToken)
+                        .build().toUriString();
+            } else {
+                // Redirect to dashboard for complete profiles
+                targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/auth/callback")
+                        .queryParam("token", accessToken)
+                        .build().toUriString();
+            }
+        } else {
+            // Fallback for non-OAuth2 users
+            targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/auth/callback")
+                    .queryParam("token", accessToken)
+                    .build().toUriString();
+        }
 
         // Xóa các thuộc tính xác thực tạm thời
         clearAuthenticationAttributes(request);
