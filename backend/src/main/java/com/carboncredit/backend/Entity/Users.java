@@ -20,7 +20,7 @@ public class Users {
     @Column(name = "userID")
     private Integer userID;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "roleID", nullable = true) // Allow null for incomplete profiles
     private Roles role;
 
