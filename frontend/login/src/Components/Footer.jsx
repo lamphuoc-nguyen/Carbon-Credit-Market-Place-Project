@@ -13,7 +13,7 @@ const Footer = () => {
                     <Link to="/terms-of-service" className='hover:text-green-500 '>
                         <p>Terms of Service</p>
                     </Link>
-                    <Link to="/contact-us" className='hover:text-green-500 '>
+                    <Link to="/contact" className='hover:text-green-500 '>
                         <p>Contact Us</p>
                     </Link>
                 </ul>

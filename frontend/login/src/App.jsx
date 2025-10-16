@@ -9,6 +9,8 @@ import OAuth2CallbackPage from './pages/OAuth2CallbackPage';
 import CompleteRegistrationPage from './pages/CompleteRegistrationPage';
 import Footer from './Components/Footer';
 import HomePage from './pages/HomePage';
+import AboutPage from './pages/AboutPage';
+import ContactPage from './pages/ContactPage';
 
 function App() {
 
@@ -26,6 +28,8 @@ function App() {
         <Route path="/complete-registration" element={<CompleteRegistrationPage />} />
         <Route path="/home" element={<HomePage />} />
         <Route path="/dashboard" element={<HomePage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/contact" element={<ContactPage />} />
       </Routes>
 
       <Footer />
