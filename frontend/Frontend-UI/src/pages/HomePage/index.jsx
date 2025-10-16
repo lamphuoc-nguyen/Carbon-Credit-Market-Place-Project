@@ -30,9 +30,6 @@ const HomePage = () => {
             <div>
                 <CallToAction />
             </div>
-            <div>
-                <Footer />
-            </div>
         </>
     )
 
