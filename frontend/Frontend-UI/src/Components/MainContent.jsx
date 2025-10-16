@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import backgroundImage from '../img/bghome.png';
-import logoImage from '../img/logo.png';
+import backgroundImage from '../image/bghome.png';
+import logoImage from '../image/logo.png';
 
 const MainContent = () => {
     return (
