@@ -20,7 +20,7 @@ const Navbar = () => {
                         {/*Menu*/}
                         <div className=''>
                             <ul className='flex items-center gap-6 py-5 px-3 '>
-                                <li className='inline-block py-1 px-5 text-[16px] hover:text-green-500 text-gray-500 font-semibold'>
+                                <li className='inline-block py-1 px-5 text-[16px] hover:text-green-500 font-semibold rounded-lg transition -all duration-300 hover:bg-gray-200'>
                                     <NavLink
                                         to="/Home"
                                         className={({ isActive }) =>
@@ -30,7 +30,7 @@ const Navbar = () => {
                                         Home
                                     </NavLink>
                                 </li>
-                                <li className='inline-block py-1 px-5 text-[16px] hover:text-green-500 text-gray-500 font-semibold'>
+                                <li className='inline-block py-1 px-5 text-[16px] hover:text-green-500 font-semibold rounded-lg transition -all duration-300 hover:bg-gray-200'>
                                     <NavLink
                                         to="/About"
                                         className={({ isActive }) =>
@@ -40,7 +40,7 @@ const Navbar = () => {
                                         About
                                     </NavLink>
                                 </li>
-                                <li className='inline-block py-1 px-5 text-[16px] hover:text-green-500 text-gray-500 font-semibold'>
+                                <li className='inline-block py-1 px-5 text-[16px] hover:text-green-500 font-semibold rounded-lg transition -all duration-300 hover:bg-gray-200'>
                                     <NavLink
                                         to="/Contact"
                                         className={({ isActive }) =>
