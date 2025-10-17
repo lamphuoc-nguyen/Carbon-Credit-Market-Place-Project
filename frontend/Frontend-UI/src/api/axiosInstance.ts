@@ -25,16 +25,13 @@ axiosInstance.interceptors.request.use(
             method: config.method,
             hasToken: !!token,
             tokenPreview: token ? token.substring(0, 20) + '...' : 'NONE',
-            headers: config.headers
         });
 
         if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
-            console.log('✅ Authorization header set:', `Bearer ${token.substring(0, 20)}...`);
+            console.log('✅ Authorization header set');
         } else {
-            console.warn('⚠️ No token available for request!');
-            console.log('⚠️ localStorage authToken:', localStorage.getItem('authToken') ? 'EXISTS' : 'NULL');
-            console.log('⚠️ sessionStorage authToken:', sessionStorage.getItem('authToken') ? 'EXISTS' : 'NULL');
+            console.warn('⚠️ No token available for request to:', config.url);
         }
 
         return config;
