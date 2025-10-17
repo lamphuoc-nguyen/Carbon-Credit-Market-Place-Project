@@ -8,12 +8,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.security.Key;
 import java.util.Date;
 
 @Component
 public class JwtTokenProvider {
+
+    private static final Logger logger = LoggerFactory.getLogger(JwtTokenProvider.class);
 
     @Value("${jwt.secret}")
     private String jwtSecret;
@@ -86,14 +90,21 @@ public class JwtTokenProvider {
 
     public boolean validateToken(String authToken) {
         try {
+            logger.debug("🔍 Validating JWT token: {}...", authToken != null ? authToken.substring(0, Math.min(20, authToken.length())) : "NULL");
+
             Jwts.parser()
                 .verifyWith((javax.crypto.SecretKey) key)
                 .build()
                 .parseSignedClaims(authToken);
+
+            logger.debug("✅ JWT token is valid");
             return true;
         } catch (JwtException | IllegalArgumentException ex) {
-            // Log lỗi ở đây nếu cần
-            // Ví dụ: logger.error("Invalid JWT token: {}", ex.getMessage());
+            // ✅ Add proper logging for token validation failures
+            logger.warn("❌ JWT token validation failed: {} - Token: {}...",
+                ex.getMessage(),
+                authToken != null ? authToken.substring(0, Math.min(20, authToken.length())) : "NULL");
+            logger.debug("Full validation error:", ex);
         }
         return false;
     }
