@@ -15,25 +15,20 @@ const SelectRolePage = () => {
     // Role icons mapping
     const roleIcons = {
         'evowner': FaLeaf,
-        'buyer': FaBriefcase,
-        'verifier': FaShieldAlt,
-        'admin': FaCog
+        'buyer': FaBriefcase
     };
 
     // Role descriptions
     const roleDescriptions = {
         'evowner': 'Generate and sell carbon credits from your environmental projects',
         'buyer': 'Purchase carbon credits to offset your carbon footprint',
-        'verifier': 'Verify and validate carbon credit projects for authenticity',
-        'admin': 'Manage the platform and oversee all activities'
+
     };
 
     // Fallback roles data when backend is not available
     const fallbackRoles = [
         { roleID: 1, roleName: 'evowner' },
         { roleID: 2, roleName: 'buyer' },
-        { roleID: 3, roleName: 'verifier' },
-        { roleID: 4, roleName: 'admin' }
     ];
 
     useEffect(() => {
@@ -72,7 +67,11 @@ const SelectRolePage = () => {
             }
 
             if (rolesData && rolesData.length > 0) {
-                setRoles(rolesData);
+                // Filter to show only evowner (roleID 1) and buyer (roleID 2)
+                const filteredRoles = rolesData.filter(role =>
+                    role.roleName === 'evowner' || role.roleName === 'buyer'
+                );
+                setRoles(filteredRoles.length > 0 ? filteredRoles : fallbackRoles);
             } else {
                 // Use fallback roles if no data received
                 console.warn('No roles data received, using fallback roles');
@@ -114,27 +113,37 @@ const SelectRolePage = () => {
             return;
         }
 
+        console.log('🔵 Starting role submission...');
+        console.log('🔵 Selected roleId:', selectedRoleId);
+        console.log('🔵 Token in localStorage:', localStorage.getItem('authToken') ? 'EXISTS' : 'MISSING');
+
         setIsLoading(true);
         setError('');
 
         try {
+            console.log('🔵 Sending POST request to /api/profile/set-role');
             const response = await axiosInstance.post('/api/profile/set-role', {
                 roleId: parseInt(selectedRoleId)
             });
 
-            console.log('Role assigned successfully:', response.data);
+            console.log('✅ Response received:', response.data);
 
             // Check if response indicates success
             if (response.data?.success !== false) {
+                console.log('✅ Role assignment successful! Redirecting to dashboard...');
                 // Redirect to dashboard after successful role assignment
                 navigate('/dashboard');
             } else {
+                console.error('❌ Unexpected response format:', response.data);
                 setError(response.data?.message || 'Unexpected response format. Please try again.');
             }
         } catch (error) {
-            console.error('Error setting role:', error);
+            console.error('❌ Error setting role:', error);
 
             if (error.response) {
+                console.error('❌ Error response status:', error.response.status);
+                console.error('❌ Error response data:', error.response.data);
+
                 // Handle different response structures
                 const errorData = error.response.data;
                 let message = 'Failed to assign role';
@@ -149,8 +158,10 @@ const SelectRolePage = () => {
 
                 setError(message);
             } else if (error.request) {
+                console.error('❌ No response received:', error.request);
                 setError('Network error. Backend server may not be running. Please try again later.');
             } else {
+                console.error('❌ Error details:', error.message);
                 setError('An unexpected error occurred. Please try again.');
             }
         } finally {
