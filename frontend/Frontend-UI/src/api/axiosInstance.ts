@@ -18,18 +18,23 @@ axiosInstance.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
         // Check both localStorage and sessionStorage for token
         const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+
+        // 🔵 Enhanced debugging
+        console.log('🔵 Axios Interceptor - Request Config:', {
+            url: config.url,
+            method: config.method,
+            hasToken: !!token,
+            tokenPreview: token ? token.substring(0, 20) + '...' : 'NONE',
+            headers: config.headers
+        });
+
         if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
-        }
-
-        // ✅ Log request (dev only)
-        if (import.meta.env.DEV) {
-            console.log(`📤 ${config.method?.toUpperCase()} ${config.url}`, config.data);
-            if (token) {
-                console.log(`🔐 Token found and added to request`);
-            } else {
-                console.warn(`⚠️ No authentication token found`);
-            }
+            console.log('✅ Authorization header set:', `Bearer ${token.substring(0, 20)}...`);
+        } else {
+            console.warn('⚠️ No token available for request!');
+            console.log('⚠️ localStorage authToken:', localStorage.getItem('authToken') ? 'EXISTS' : 'NULL');
+            console.log('⚠️ sessionStorage authToken:', sessionStorage.getItem('authToken') ? 'EXISTS' : 'NULL');
         }
 
         return config;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaGoogle, FaFacebook, FaCheck, FaTimes, FaBriefcase, FaUser, FaEnvelope, FaPhone, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaGoogle, FaFacebook, FaUser, FaEnvelope, FaPhone, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { useState } from 'react';
 import { CircleCheckBig } from 'lucide-react';
 import backgroundImage from '../image/background.png';
@@ -15,8 +15,7 @@ const RegisterForm = () => {
         username: '',
         phone: '',
         password: '',
-        confirmPassword: '',
-        businessType: ''
+        confirmPassword: ''
     });
 
     const [errors, setErrors] = useState({});
@@ -125,12 +124,6 @@ const RegisterForm = () => {
                 }
                 break;
 
-            case 'businessType':
-                if (!value) {
-                    error = 'Please select a business type';
-                }
-                break;
-
             default:
                 break;
         }
@@ -162,8 +155,7 @@ const RegisterForm = () => {
             username: true,
             phone: true,
             password: true,
-            confirmPassword: true,
-            businessType: true
+            confirmPassword: true
         });
 
         return Object.keys(newErrors).length === 0;
@@ -183,16 +175,37 @@ const RegisterForm = () => {
                     username: formData.username,
                     email: formData.email,
                     password: formData.password,
-                    phone: formData.phone,
-                    businessType: parseInt(formData.businessType)
+                    phone: formData.phone
                 });
 
-                console.log('✅ Register success:', response);
+                console.log('✅ Register success - Full response:', response);
+                console.log('✅ Response data:', response.data);
+                console.log('✅ Token in response.data.token:', response.data?.token);
+                console.log('✅ Token in response.token:', response.token);
 
-                // ✅ Registration successful - redirect to role selection
-                alert('Registration successful! Please select your role to complete your profile.');
-                navigate('/select-role');
+                // ✅ Try to get token from multiple possible locations
+                const token = response.data?.token || response.token || response.data?.accessToken;
 
+                if (token) {
+                    console.log('🔵 Storing token:', token.substring(0, 20) + '...');
+                    localStorage.setItem('authToken', token);
+
+                    // ✅ Wait a bit to ensure token is saved
+                    await new Promise(resolve => setTimeout(resolve, 100));
+
+                    console.log('✅ Token stored in localStorage');
+                    console.log('✅ Verification - Token exists:', localStorage.getItem('authToken') ? 'YES' : 'NO');
+
+                    // ✅ Registration successful - redirect to role selection page
+                    alert('Registration successful! Please select your role to complete your profile.');
+                    navigate('/select-role');
+                } else {
+                    console.error('❌ No token found in response!');
+                    console.error('❌ Response structure:', JSON.stringify(response, null, 2));
+                    setErrors({ submit: 'Registration succeeded but no authentication token received. Please login manually.' });
+                    // Redirect to login after 2 seconds
+                    setTimeout(() => navigate('/login'), 2000);
+                }
             } catch (error) {
                 console.error('❌ Register error:', error);
 
@@ -527,42 +540,6 @@ const RegisterForm = () => {
                                 </div>
 
 
-
-                                {/* Business Type Dropdown */}
-                                <div className="mb-4">
-                                    <label htmlFor="businessType" className="block text-xs font-medium text-gray-700 mb-1">
-                                        Roles
-                                    </label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
-                                            <FaBriefcase className="text-gray-400 text-xs" />
-                                        </div>
-                                        <select
-                                            id="businessType"
-                                            name="businessType"
-                                            value={formData.businessType}
-                                            onChange={handleChange}
-                                            onBlur={() => handleBlur('businessType')}
-                                            disabled={isLoading}
-                                            className={`block w-full pl-8 pr-3 py-2 text-xs border-2 ${touched.businessType && errors.businessType ? 'border-red-500' : 'border-gray-300'
-                                                } focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 rounded-lg bg-white text-gray-700 appearance-none cursor-pointer transition-colors duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed`}
-                                            style={{
-                                                backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
-                                                backgroundPosition: 'right 0.3rem center',
-                                                backgroundRepeat: 'no-repeat',
-                                                backgroundSize: '1.2em 1.2em',
-                                            }}
-                                        >
-                                            <option value="" disabled>Select Roles</option>
-                                            <option value="1">Carbon Credit Buyer</option>
-                                            <option value="2">Carbon Credit Seller</option>
-                                        </select>
-                                    </div>
-                                    {touched.businessType && errors.businessType && (
-                                        <p className="text-red-500 text-[10px] mt-0.5">{errors.businessType}</p>
-                                    )}
-                                </div>
-
                                 {/* ✅ Server Error Message */}
                                 {errors.submit && (
                                     <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
@@ -632,4 +609,3 @@ const RegisterForm = () => {
 }
 
 export default RegisterForm;
-
