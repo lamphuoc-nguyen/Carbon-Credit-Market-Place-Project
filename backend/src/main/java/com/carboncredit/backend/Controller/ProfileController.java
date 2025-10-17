@@ -62,15 +62,21 @@ public class ProfileController {
     @GetMapping("/roles")
     public ResponseEntity<?> getAvailableRoles() {
         try {
-            List<Roles> roles = rolesRepository.findAll();
+            // ✅ FIX: Only return evowner and buyer roles for user selection
+            List<Roles> allRoles = rolesRepository.findAll();
+
+            // Filter to only show evowner and buyer roles
+            List<Roles> availableRoles = allRoles.stream()
+                    .filter(role -> "evowner".equals(role.getRoleName()) || "buyer".equals(role.getRoleName()))
+                    .toList();
 
             // If no roles found in database, create default roles
-            if (roles.isEmpty()) {
-                roles = createDefaultRoles();
+            if (availableRoles.isEmpty()) {
+                availableRoles = createUserSelectableRoles();
             }
 
             // Validate that we have proper role data
-            if (roles == null || roles.isEmpty()) {
+            if (availableRoles == null || availableRoles.isEmpty()) {
                 Map<String, Object> errorResponse = new HashMap<>();
                 errorResponse.put("success", false);
                 errorResponse.put("message", "No roles available in the system");
@@ -79,11 +85,7 @@ public class ProfileController {
             }
 
             // Return successful response with roles data
-            Map<String, Object> response = new HashMap<>();
-            response.put("success", true);
-            response.put("message", "Roles loaded successfully");
-            response.put("data", roles);
-            return ResponseEntity.ok(roles); // Return roles directly for frontend compatibility
+            return ResponseEntity.ok(availableRoles); // Return only evowner and buyer roles
 
         } catch (Exception e) {
             System.err.println("Error fetching roles: " + e.getMessage());
@@ -120,6 +122,33 @@ public class ProfileController {
             return defaultRoles;
         } catch (Exception e) {
             System.err.println("Error creating default roles: " + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    // ✅ NEW: Helper method to create only user-selectable roles (evowner and buyer)
+    private List<Roles> createUserSelectableRoles() {
+        try {
+            List<Roles> userRoles = new ArrayList<>();
+
+            // Only create evowner and buyer roles for user selection
+            String[] userRoleNames = {"evowner", "buyer"};
+
+            for (String roleName : userRoleNames) {
+                Optional<Roles> existingRole = rolesRepository.findByRoleName(roleName);
+                if (existingRole.isPresent()) {
+                    userRoles.add(existingRole.get());
+                } else {
+                    // Create the role if it doesn't exist
+                    Roles role = new Roles();
+                    role.setRoleName(roleName);
+                    userRoles.add(rolesRepository.save(role));
+                }
+            }
+
+            return userRoles;
+        } catch (Exception e) {
+            System.err.println("Error creating user-selectable roles: " + e.getMessage());
             return new ArrayList<>();
         }
     }

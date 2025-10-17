@@ -156,6 +156,15 @@ const LoginForm = () => {
                 const storage = formData.rememberMe ? localStorage : sessionStorage;
                 storage.setItem('authToken', response.accessToken);
 
+                // ✅ CRITICAL FIX: Set token in axios defaults immediately for subsequent requests
+                const axios = (await import('../api/axiosInstance')).default;
+                axios.defaults.headers.common['Authorization'] = `Bearer ${response.accessToken}`;
+
+                console.log('✅ Token saved and set in axios headers');
+
+                // ✅ Small delay to ensure token is fully saved and available
+                await new Promise(resolve => setTimeout(resolve, 100));
+
                 // ✅ Check profile status after successful login
                 try {
                     const profileResponse = await authApi.getProfileStatus();

@@ -35,6 +35,15 @@ const OAuth2CallbackPage = () => {
             // Store the token
             localStorage.setItem('authToken', token);
 
+            // ✅ CRITICAL FIX: Set token in axios defaults immediately for subsequent requests
+            const axios = (await import('../api/axiosInstance')).default;
+            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+            console.log('✅ OAuth2 token saved and set in axios headers');
+
+            // ✅ Small delay to ensure token is fully saved and available
+            await new Promise(resolve => setTimeout(resolve, 100));
+
             // Check user's profile status to determine next step
             try {
                 const profileResponse = await authApi.getProfileStatus();

@@ -19,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -51,21 +52,42 @@ public class AuthController {
         }
 
         Users user = new Users();
-        user.setName(registerDto.getUsername());
+        // ✅ FIX: Use fullName from registerDto instead of username
+        user.setName(registerDto.getFullName()); // Correct: use fullName
         user.setUsername(registerDto.getUsername());
         user.setEmail(registerDto.getEmail());
+        // ✅ FIX: Set phone number from registerDto
+        user.setPhone(registerDto.getPhone());
         user.setPasswordHash(passwordEncoder.encode(registerDto.getPassword())); // Mã hóa password
         user.setProvider("LOCAL"); // Đánh dấu đây là tài khoản thường
         user.setCreatedAt(LocalDateTime.now());
 
-        // ✅ REMOVED: Auto buyer role assignment
-        // ✅ NEW: Set profile as incomplete (no role assigned yet)
+        // ✅ Set profile as incomplete (no role assigned yet)
         user.setRole(null); // No role assigned initially
         user.setProfileStatus(0); // Profile incomplete
 
         usersRepository.save(user);
 
-        return new ResponseEntity<>("User registered successfully!", HttpStatus.OK);
+        // ✅ FIX: Create JWT token for automatic login after registration
+        try {
+            // Create authentication object for the new user
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            registerDto.getEmail(), // Use email for authentication
+                            registerDto.getPassword()
+                    )
+            );
+
+            // Generate JWT token
+            String token = jwtTokenProvider.createAccessToken(authentication);
+
+            // Return success response with token
+            return ResponseEntity.ok(new AuthResponseDto(token));
+
+        } catch (Exception e) {
+            // If token generation fails, still return success but without token
+            return new ResponseEntity<>("User registered successfully!", HttpStatus.OK);
+        }
     }
 
     @PostMapping("/login")
@@ -90,6 +112,38 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<?> logoutUser() {
-        return new ResponseEntity<>("User logged out successfully!", HttpStatus.OK);
+        try {
+            // Get current authentication
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+            if (authentication != null && authentication.isAuthenticated()) {
+                String username = authentication.getName();
+                System.out.println("User " + username + " is logging out");
+
+                // Clear the security context
+                SecurityContextHolder.clearContext();
+
+                // In a production system, you might want to:
+                // 1. Add the token to a blacklist
+                // 2. Store logout timestamp in database
+                // 3. Send logout notification
+
+                return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "User logged out successfully!"
+                ));
+            } else {
+                return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "User was not authenticated"
+                ));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(
+                        "success", false,
+                        "message", "Logout failed: " + e.getMessage()
+                    ));
+        }
     }
 }

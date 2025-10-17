@@ -39,17 +39,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         try {
+            // ✅ Add detailed logging for debugging
+            logger.debug("🔍 JWT Filter - Processing request: {} {}", request.getMethod(), request.getRequestURI());
+
             // Checklist: Logic Flow - Extract JWT
             String jwt = getJwtFromRequest(request);
 
+            // ✅ Log token extraction result
+            if (StringUtils.hasText(jwt)) {
+                logger.debug("✅ JWT Token extracted: {}...", jwt.substring(0, Math.min(20, jwt.length())));
+            } else {
+                logger.debug("❌ No JWT token found in Authorization header");
+                String authHeader = request.getHeader("Authorization");
+                logger.debug("📋 Authorization header: {}", authHeader != null ? authHeader : "NULL");
+            }
+
             // Checklist: Logic Flow - Validate the token
             if (StringUtils.hasText(jwt) && jwtTokenProvider.validateToken(jwt)) {
+                logger.debug("✅ JWT Token is valid");
 
                 // Lấy email từ chuỗi jwt
                 String email = jwtTokenProvider.getEmailFromJWT(jwt);
+                logger.debug("👤 Extracted email from JWT: {}", email);
 
                 // Checklist: Logic Flow - Load user details
                 UserDetails userDetails = customUserDetailsService.loadUserByUsername(email);
+                logger.debug("👤 Loaded user details for: {}", userDetails.getUsername());
 
                 // Checklist: Logic Flow - Create authentication object
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
@@ -59,10 +74,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 // Checklist: Logic Flow - Set authentication in SecurityContext
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                logger.debug("🔐 Authentication set in SecurityContext for user: {}", email);
+            } else if (StringUtils.hasText(jwt)) {
+                logger.warn("❌ JWT Token validation failed");
             }
         } catch (Exception ex) {
             // Checklist: Key Missing Functionality - Error handling
-            logger.error("Could not set user authentication in security context", ex);
+            logger.error("❌ Could not set user authentication in security context", ex);
         }
 
         // Checklist: Logic Flow - Continue filter chain
