@@ -44,7 +44,7 @@ const MainContent = () => {
 
                 {/* CTA Button */}
                 <Link
-                    to="/marketplace"
+                    to="/login"
                     className="px-12 py-4 bg-green-500 text-white text-lg font-semibold rounded-full hover:bg-green-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
                 >
                     Go to Marketplace

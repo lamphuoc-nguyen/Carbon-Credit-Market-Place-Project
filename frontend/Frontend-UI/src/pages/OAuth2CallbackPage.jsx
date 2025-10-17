@@ -7,7 +7,7 @@ import logoImage from '../image/logo1.png';
 const OAuth2CallbackPage = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const [isLoading, setIsLoading] = useState(true);
+    const [IsLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
 
     useEffect(() => {
