@@ -179,32 +179,33 @@ const RegisterForm = () => {
                 });
 
                 console.log('✅ Register success - Full response:', response);
-                console.log('✅ Response data:', response.data);
-                console.log('✅ Token in response.data.token:', response.data?.token);
-                console.log('✅ Token in response.token:', response.token);
 
-                // ✅ Try to get token from multiple possible locations
-                const token = response.data?.token || response.token || response.data?.accessToken;
+                // ✅ FIX: Extract accessToken from AuthResponseDto structure
+                const token = response.accessToken || response.data?.accessToken;
 
                 if (token) {
-                    console.log('🔵 Storing token:', token.substring(0, 20) + '...');
+                    console.log('🔵 Storing token from registration:', token.substring(0, 20) + '...');
                     localStorage.setItem('authToken', token);
+
+                    // ✅ CRITICAL FIX: Set token in axios defaults immediately for subsequent requests
+                    const axios = (await import('../api/axiosInstance')).default;
+                    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+                    console.log('✅ Token stored and set in axios headers after registration');
 
                     // ✅ Wait a bit to ensure token is saved
                     await new Promise(resolve => setTimeout(resolve, 100));
 
-                    console.log('✅ Token stored in localStorage');
-                    console.log('✅ Verification - Token exists:', localStorage.getItem('authToken') ? 'YES' : 'NO');
-
                     // ✅ Registration successful - redirect to role selection page
-                    alert('Registration successful! Please select your role to complete your profile.');
+                    console.log('✅ Registration successful, redirecting to role selection');
                     navigate('/select-role');
                 } else {
-                    console.error('❌ No token found in response!');
+                    console.error('❌ No token found in registration response!');
                     console.error('❌ Response structure:', JSON.stringify(response, null, 2));
-                    setErrors({ submit: 'Registration succeeded but no authentication token received. Please login manually.' });
-                    // Redirect to login after 2 seconds
-                    setTimeout(() => navigate('/login'), 2000);
+
+                    // Registration succeeded but no token - still redirect to role selection
+                    alert('Registration successful! Please login to complete your profile.');
+                    navigate('/login');
                 }
             } catch (error) {
                 console.error('❌ Register error:', error);
