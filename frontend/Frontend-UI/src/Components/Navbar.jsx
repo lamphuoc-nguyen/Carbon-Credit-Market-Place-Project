@@ -75,7 +75,7 @@ const Navbar = () => {
 
                                 {/* Authentication-aware menu items */}
                                 {isAuthenticated ? (
-                                    // Authenticated user menu
+                                    // Authenticated user menu - Show logout button
                                     <>
                                         <li className="relative">
                                             <button
@@ -115,7 +115,7 @@ const Navbar = () => {
                                                 </div>
                                             )}
                                         </li>
-                                        {/* ✅ ADD: Standalone Logout Button for better visibility */}
+                                        {/* ✅ FIXED: Only show logout button when authenticated */}
                                         <li className='inline-block'>
                                             <LogoutButton
                                                 variant="button"
@@ -125,7 +125,7 @@ const Navbar = () => {
                                         </li>
                                     </>
                                 ) : (
-                                    // Unauthenticated user menu
+                                    // ✅ FIXED: Show Sign In / Sign Up when NOT authenticated
                                     <>
                                         <li className='inline-block py-1 px-5 text-[16px] hover:text-green-500 font-semibold rounded-lg transition -all duration-300 hover:bg-gray-200'>
                                             <NavLink
@@ -134,7 +134,7 @@ const Navbar = () => {
                                                     isActive ? 'text-green-500' : 'text-gray-500'
                                                 }
                                             >
-                                                Login
+                                                Sign In
                                             </NavLink>
                                         </li>
                                         <li className='inline-block py-2.5 px-5 text-[16px] text-white bg-green-500 rounded-lg font-semibold transition hover:bg-green-600 shadow-sm border-green-700'>
