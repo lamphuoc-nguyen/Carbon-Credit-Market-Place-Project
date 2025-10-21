@@ -12,6 +12,7 @@ import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
 import ErrorPage from './pages/ErrorPage';
+import CvaPage from './pages/CvaPage';
 
 function App() {
 
@@ -32,6 +33,7 @@ function App() {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="*" element={<ErrorPage />} />
+        <Route path="/cva" element={<CvaPage />} />
       </Routes>
 
       <Footer />
