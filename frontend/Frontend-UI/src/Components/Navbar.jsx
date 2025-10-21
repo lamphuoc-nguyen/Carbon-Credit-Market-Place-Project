@@ -31,7 +31,7 @@ const Navbar = () => {
                 <div className="container flex justify-between ">
 
                     {/*Logo*/}
-                    <Link to="/Home" className="flex text-2xl items-center gap-2 py-4 px-23 cursor-pointer">
+                    <Link to="/home" className="flex text-2xl items-center gap-2 py-4 px-23 cursor-pointer">
                         <Leaf size={32} color="#2bff00" />
                         <p className='font-bold text-green-500 '>Carbon Credit</p>
                         <p className='text-gray-500 font-sans'>MarketPlace</p>
@@ -42,7 +42,7 @@ const Navbar = () => {
                         <ul className='flex items-center gap-6 py-5 px-3 '>
                             <li className='inline-block py-1 px-5 text-[16px] hover:text-green-500 font-semibold rounded-lg transition -all duration-300 hover:bg-gray-200'>
                                 <NavLink
-                                    to="/Home"
+                                    to="/home"
                                     className={({ isActive }) =>
                                         isActive ? 'text-green-500' : 'text-gray-500'
                                     }
@@ -52,7 +52,7 @@ const Navbar = () => {
                             </li>
                             <li className='inline-block py-1 px-5 text-[16px] hover:text-green-500 font-semibold rounded-lg transition -all duration-300 hover:bg-gray-200'>
                                 <NavLink
-                                    to="/About"
+                                    to="/about"
                                     className={({ isActive }) =>
                                         isActive ? 'text-green-500' : 'text-gray-500'
                                     }
@@ -62,7 +62,7 @@ const Navbar = () => {
                             </li>
                             <li className='inline-block py-1 px-5 text-[16px] hover:text-green-500 font-semibold rounded-lg transition -all duration-300 hover:bg-gray-200'>
                                 <NavLink
-                                    to="/Contact"
+                                    to="/contact"
                                     className={({ isActive }) =>
                                         isActive ? 'text-green-500' : 'text-gray-500'
                                     }

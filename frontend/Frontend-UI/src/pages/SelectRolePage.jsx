@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaBriefcase, FaLeaf, FaShieldAlt, FaCog } from 'react-icons/fa';
+import { FaBriefcase, FaLeaf } from 'react-icons/fa';
 import backgroundImage from '../image/background.png';
 import logoImage from '../image/logo1.png';
 import axiosInstance from '../api/axiosInstance';
@@ -62,14 +62,15 @@ const SelectRolePage = () => {
                     rolesData = response.data.data;
                 } else if (response.data.success === false) {
                     // Error response from backend
-                    throw new Error(response.data.message || 'Failed to load roles');
+                    setError(response.data.message || 'Failed to load roles');
+                    return;
                 }
             }
 
             if (rolesData && rolesData.length > 0) {
-                // Filter to show only evowner (roleID 1) and buyer (roleID 2)
+                // Filter to show only EV_OWNER (roleID 1) and BUYER (roleID 2)
                 const filteredRoles = rolesData.filter(role =>
-                    role.roleName === 'evowner' || role.roleName === 'buyer'
+                    role.roleName === 'EV_OWNER' || role.roleName === 'BUYER'
                 );
                 setRoles(filteredRoles.length > 0 ? filteredRoles : fallbackRoles);
             } else {
@@ -232,7 +233,7 @@ const SelectRolePage = () => {
                                 <tbody className="bg-white divide-y divide-gray-200">
                                     {roles.map((role) => {
                                         const IconComponent = roleIcons[role.roleName] || FaBriefcase;
-                                        const isSelected = selectedRoleId == role.roleID;
+                                        const isSelected = selectedRoleId === role.roleID.toString();
 
                                         return (
                                             <tr
@@ -306,7 +307,7 @@ const SelectRolePage = () => {
                     {selectedRoleId && (
                         <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md">
                             <p className="text-sm text-green-700">
-                                <span className="font-medium">Selected Role:</span> {roles.find(role => role.roleID == selectedRoleId)?.roleName}
+                                <span className="font-medium">Selected Role:</span> {roles.find(role => role.roleID.toString() === selectedRoleId)?.roleName}
                                 <span className="text-green-600"> (ID: {selectedRoleId})</span>
                             </p>
                         </div>
