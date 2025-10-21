@@ -29,24 +29,23 @@ public class CustomUserDetailsService implements UserDetailsService {
     }
 
     @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // TODO Auto-generated method stub
-        log.debug("Loading user details for username: {}", username);
+    public UserDetails loadUserByUsername(String usernameOrEmail) throws UsernameNotFoundException {
+        log.debug("Loading user details for: {}", usernameOrEmail);
 
-        // step 1: Find user in database
-        User user = userService.findByUsername(username).orElseThrow(() -> {
-            log.error("User not found: {}", username);
-            return new UsernameNotFoundException("User not found: " + username);
+        // step 1: Find user in database by username OR email
+        User user = userService.findByUsernameOrEmail(usernameOrEmail).orElseThrow(() -> {
+            log.error("User not found: {}", usernameOrEmail);
+            return new UsernameNotFoundException("User not found: " + usernameOrEmail);
         });
 
-        log.info("✅ [AUTH] User found: {}", user.getUsername());
+        log.info("✅ [AUTH] User found: {} (searched with: {})", user.getUsername(), usernameOrEmail);
         log.info("🔑 [AUTH] Password hash exists: {}", user.getPasswordHash() != null);
         log.info("🔑 [AUTH] Password hash length: {}",
                 user.getPasswordHash() != null ? user.getPasswordHash().length() : 0);
-        log.info("🔑 [AUTH] Password hash preview: {}",
-                user.getPasswordHash() != null ? user.getPasswordHash().substring(0, 20) : "null");
+
         String passwordHash = user.getPasswordHash();
-        log.info("🔧 [AUTH] About to create UserDetails with password: '{}'", passwordHash != null ? passwordHash.substring(0, 20) + "..." : "NULL");
+        log.info("🔧 [AUTH] About to create UserDetails with password: '{}'",
+                passwordHash != null ? passwordHash.substring(0, 20) + "..." : "NULL");
 
         // Step 2: Convert YOUR User entity to Spring Security UserDetails
         UserDetails userDetails = new org.springframework.security.core.userdetails.User(
@@ -55,8 +54,6 @@ public class CustomUserDetailsService implements UserDetailsService {
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())));
 
         log.info("✅ [AUTH] UserDetails created, authorities: {}", userDetails.getAuthorities());
-        log.info("🔧 [AUTH] UserDetails password from object: '{}'",
-                userDetails.getPassword() != null ? userDetails.getPassword().substring(0, 20) + "..." : "NULL");
 
         return userDetails;
     }

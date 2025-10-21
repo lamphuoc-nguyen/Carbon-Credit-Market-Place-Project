@@ -102,6 +102,11 @@ public class UserService {
         return userRepository.findByEmailOrPhone(input);
     }
 
+    @Transactional(readOnly = true)
+    public Optional<User> findByUsernameOrEmail(String usernameOrEmail) {
+        return userRepository.findByUsernameOrEmail(usernameOrEmail);
+    }
+
     // Simple login method using plain text password
     public boolean authenticateUser(String username, String password) {
         Optional<User> user = findByUsername(username);
