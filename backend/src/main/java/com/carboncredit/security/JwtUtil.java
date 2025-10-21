@@ -25,18 +25,22 @@ public class JwtUtil {
     @Value("${jwt.expiration-ms:3600000}")
     private long expirationMs;
 
-    public String generateToken(String username) {
+    public String generateToken(String usernameOrEmail) {
         Date now = new Date();
         Date exp = new Date(now.getTime() + expirationMs);
-        Optional<User> userOpt = userRepository.findByUsername(username);
+
+        // Find user by username or email
+        Optional<User> userOpt = userRepository.findByUsernameOrEmail(usernameOrEmail);
         if (userOpt.isEmpty()) {
-            throw new RuntimeException("User not found");
+            log.error("❌ User not found for: {}", usernameOrEmail);
+            throw new RuntimeException("User not found: " + usernameOrEmail);
         }
 
         User user = userOpt.get();
         String roleString = user.getRole().name(); // Convert enum to String
 
-        log.info("🎫 Generating token for user: {} with role: {}", username, roleString);
+        log.info("🎫 Generating token for user: {} (searched with: {}) with role: {}",
+                user.getUsername(), usernameOrEmail, roleString);
 
         return Jwts.builder()
                 .setSubject(user.getUsername())
