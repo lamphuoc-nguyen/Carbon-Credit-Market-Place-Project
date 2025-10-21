@@ -1,10 +1,10 @@
-import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from "axios";
-import { getValidToken, clearAuthData } from "../utils/tokenUtils";
+import axios from "axios";
+import { getValidToken } from "../utils/tokenUtils";
 
-const _env: any = import.meta as any;
-const BASE_URL: string = _env.env?.VITE_API_URL || 'http://localhost:8080';
+const _env = import.meta;
+const BASE_URL = _env.env?.VITE_API_URL || 'http://localhost:8080';
 
-const axiosInstance: AxiosInstance = axios.create({
+const axiosInstance = axios.create({
     baseURL: BASE_URL,
     withCredentials: true, // ✅ Bật để gửi cookies
     headers: {
@@ -16,7 +16,7 @@ const axiosInstance: AxiosInstance = axios.create({
 
 // ✅ REQUEST INTERCEPTOR - Automatically check token validity and add headers
 axiosInstance.interceptors.request.use(
-    (config: InternalAxiosRequestConfig) => {
+    (config) => {
         // Use utility function to get valid token (auto-clears expired ones)
         const token = getValidToken();
 
@@ -54,7 +54,7 @@ axiosInstance.interceptors.response.use(
 
         return response;
     },
-    (error: AxiosError) => {
+    (error) => {
         // ✅ Xử lý các loại lỗi
         if (error.response) {
             const status = error.response.status;

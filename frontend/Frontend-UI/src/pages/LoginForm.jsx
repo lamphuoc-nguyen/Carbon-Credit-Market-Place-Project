@@ -5,34 +5,17 @@ import { useState } from 'react';
 import { CircleCheckBig } from 'lucide-react';
 import backgroundImage from '../image/background.png';
 import logoImage from '../image/logo1.png';
-import { authApi, type LoginPayload } from '../api';
-
-interface FormData {
-    usernameOrEmail: string;
-    password: string;
-    rememberMe: boolean;
-}
-
-interface FormErrors {
-    usernameOrEmail?: string;
-    password?: string;
-    submit?: string;
-}
-
-interface TouchedFields {
-    usernameOrEmail?: boolean;
-    password?: boolean;
-}
+import { authApi } from '../api';
 
 const LoginForm = () => {
     const navigate = useNavigate();
-    const [formData, setFormData] = useState<FormData>({
+    const [formData, setFormData] = useState({
         usernameOrEmail: '',
         password: '',
         rememberMe: false
     });
-    const [errors, setErrors] = useState<FormErrors>({});
-    const [touched, setTouched] = useState<TouchedFields>({});
+    const [errors, setErrors] = useState({});
+    const [touched, setTouched] = useState({});
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -48,14 +31,14 @@ const LoginForm = () => {
         window.location.href = 'http://localhost:8080/oauth2/authorization/github';
     };
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         setFormData(prev => ({
             ...prev,
             [name]: type === 'checkbox' ? checked : value
         }));
 
-        if (errors[name as keyof FormErrors] && touched[name as keyof TouchedFields]) {
+        if (errors[name] && touched[name]) {
             setErrors(prev => ({
                 ...prev,
                 [name]: ''
@@ -67,7 +50,7 @@ const LoginForm = () => {
         }
     };
 
-    const handleBlur = (field: keyof FormData) => {
+    const handleBlur = (field) => {
         setTouched(prev => ({
             ...prev,
             [field]: true
@@ -75,7 +58,7 @@ const LoginForm = () => {
         validateField(field, formData[field]);
     };
 
-    const validateField = (field: keyof FormData, value: string | boolean) => {
+    const validateField = (field, value) => {
         let error = '';
 
         switch (field) {
@@ -108,8 +91,8 @@ const LoginForm = () => {
     };
 
     const validateAllFields = () => {
-        const newErrors: FormErrors = {};
-        const fieldsToValidate: (keyof FormData)[] = ['usernameOrEmail', 'password'];
+        const newErrors = {};
+        const fieldsToValidate = ['usernameOrEmail', 'password'];
 
         fieldsToValidate.forEach(field => {
             const error = validateField(field, formData[field]);
@@ -127,7 +110,7 @@ const LoginForm = () => {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (validateAllFields()) {
@@ -135,7 +118,7 @@ const LoginForm = () => {
             setErrors({});
 
             try {
-                const loginPayload: LoginPayload = {
+                const loginPayload = {
                     usernameOrEmail: formData.usernameOrEmail,
                     password: formData.password
                 };
@@ -159,14 +142,14 @@ const LoginForm = () => {
                 // Redirect to home page after successful login
                 navigate('/home');
 
-            } catch (error: any) {
+            } catch (error) {
                 console.error('❌ Login error:', error);
 
                 if (error.response) {
                     const status = error.response.status;
                     const message = error.response.data?.message || error.response.data?.error;
 
-                    const errorMessages: { [key: number]: string } = {
+                    const errorMessages = {
                         400: message || 'Invalid request',
                         401: 'Invalid username or password',
                         403: 'Account is locked or suspended',
@@ -196,7 +179,7 @@ const LoginForm = () => {
 
     return (
         <div className="min-h-screen bg-cover bg-center flex items-center justify-center"
-             style={{ backgroundImage: `url(${backgroundImage})` }}>
+            style={{ backgroundImage: `url(${backgroundImage})` }}>
             <div className="bg-white bg-opacity-95 backdrop-blur-sm p-8 rounded-2xl shadow-2xl w-full max-w-md">
 
                 {/* Logo */}
@@ -257,11 +240,10 @@ const LoginForm = () => {
                                 value={formData.usernameOrEmail}
                                 onChange={handleChange}
                                 onBlur={() => handleBlur('usernameOrEmail')}
-                                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${
-                                    errors.usernameOrEmail && touched.usernameOrEmail
+                                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${errors.usernameOrEmail && touched.usernameOrEmail
                                         ? 'border-red-500 bg-red-50'
                                         : 'border-gray-300'
-                                }`}
+                                    }`}
                                 placeholder="Enter your username or email"
                             />
                         </div>
@@ -283,11 +265,10 @@ const LoginForm = () => {
                                 value={formData.password}
                                 onChange={handleChange}
                                 onBlur={() => handleBlur('password')}
-                                className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${
-                                    errors.password && touched.password
+                                className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${errors.password && touched.password
                                         ? 'border-red-500 bg-red-50'
                                         : 'border-gray-300'
-                                }`}
+                                    }`}
                                 placeholder="Enter your password"
                             />
                             <button

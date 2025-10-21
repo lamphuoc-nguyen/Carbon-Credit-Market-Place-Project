@@ -1,34 +1,8 @@
 import axiosInstance from "./axiosInstance";
 
-// ✅ Define types
-export interface LoginPayload {
-    usernameOrEmail: string;
-    password: string;
-}
-
-export interface LoginResponse {
-    accessToken: string;
-    tokenType: string;
-}
-
-export interface RegisterPayload {
-    username: string;
-    email: string;
-    password: string;
-    fullName?: string;
-    businessType?: number;
-    [key: string]: any;
-}
-
-export interface ApiResponse {
-    success?: boolean;
-    message?: string;
-    [key: string]: any;
-}
-
 // ✅ Helper function to create validation errors
-const createValidationError = (message: string, status: number, data: any, config: any) => {
-    const error: any = new Error(message);
+const createValidationError = (message, status, data, config) => {
+    const error = new Error(message);
     error.response = {
         status,
         statusText: status === 401 ? 'Unauthorized' : 'Bad Request',
@@ -41,8 +15,8 @@ const createValidationError = (message: string, status: number, data: any, confi
 
 export const authApi = {
     // ✅ LOGIN - Updated to match backend AuthResponseDto structure
-    login: async (payload: LoginPayload): Promise<LoginResponse> => {
-        const response = await axiosInstance.post<LoginResponse>('/api/auth/login', payload);
+    login: async (payload) => {
+        const response = await axiosInstance.post('/api/auth/login', payload);
 
         // ✅ VALIDATE: Check if we have accessToken (backend returns this field)
         if (!response.data.accessToken) {
@@ -58,8 +32,8 @@ export const authApi = {
     },
 
     // ✅ REGISTER - Kiểm tra response
-    register: async (payload: RegisterPayload): Promise<ApiResponse> => {
-        const response = await axiosInstance.post<ApiResponse>('/api/auth/register', payload);
+    register: async (payload) => {
+        const response = await axiosInstance.post('/api/auth/register', payload);
 
         if (response.data.success === false) {
             throw createValidationError(
@@ -74,7 +48,7 @@ export const authApi = {
     },
 
     // ✅ LOGOUT - Clear all storage
-    logout: async (): Promise<void> => {
+    logout: async () => {
         try {
             await axiosInstance.post('/api/auth/logout');
         } finally {
@@ -86,8 +60,8 @@ export const authApi = {
     },
 
     // ✅ FORGOT PASSWORD - Kiểm tra response
-    forgotPassword: async (email: string): Promise<ApiResponse> => {
-        const response = await axiosInstance.post<ApiResponse>('/api/auth/forgot-password', { email });
+    forgotPassword: async (email) => {
+        const response = await axiosInstance.post('/api/auth/forgot-password', { email });
 
         if (response.data.success === false) {
             throw createValidationError(
@@ -102,8 +76,8 @@ export const authApi = {
     },
 
     // ✅ RESET PASSWORD - Kiểm tra response
-    resetPassword: async (token: string, newPassword: string): Promise<ApiResponse> => {
-        const response = await axiosInstance.post<ApiResponse>('/api/auth/reset-password', {
+    resetPassword: async (token, newPassword) => {
+        const response = await axiosInstance.post('/api/auth/reset-password', {
             token,
             newPassword
         });
@@ -121,25 +95,25 @@ export const authApi = {
     },
 
     // ✅ PING - Health check
-    ping: async (): Promise<any> => {
+    ping: async () => {
         const response = await axiosInstance.get('/api/health');
         return response.data;
     },
 
     // ✅ GET PROFILE STATUS - Check if user profile is complete
-    getProfileStatus: async (): Promise<any> => {
+    getProfileStatus: async () => {
         const response = await axiosInstance.get('/api/profile/status');
         return response.data;
     },
 
     // ✅ GET AVAILABLE ROLES - Get list of all roles
-    getRoles: async (): Promise<any> => {
+    getRoles: async () => {
         const response = await axiosInstance.get('/api/profile/roles');
         return response.data;
     },
 
     // ✅ SET USER ROLE - Assign role to user and complete profile
-    setRole: async (roleId: number): Promise<any> => {
+    setRole: async (roleId) => {
         const response = await axiosInstance.post('/api/profile/set-role', { roleId });
         return response.data;
     }

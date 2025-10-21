@@ -4,13 +4,7 @@ import { FaSignOutAlt } from 'react-icons/fa';
 import { authApi } from '../api';
 import { clearAuthData } from '../utils/tokenUtils';
 
-interface LogoutButtonProps {
-    className?: string;
-    variant?: 'button' | 'dropdown' | 'icon';
-    showText?: boolean;
-}
-
-const LogoutButton: React.FC<LogoutButtonProps> = ({
+const LogoutButton = ({
     className = '',
     variant = 'button',
     showText = true

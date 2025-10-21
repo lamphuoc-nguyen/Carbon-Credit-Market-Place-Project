@@ -4,11 +4,11 @@
 /**
  * Decode JWT token payload without verification
  */
-export const decodeJWTPayload = (token: string) => {
+export const decodeJWTPayload = (token) => {
     try {
         const base64Url = token.split('.')[1];
         const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
             return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
         }).join(''));
         return JSON.parse(jsonPayload);
@@ -21,7 +21,7 @@ export const decodeJWTPayload = (token: string) => {
 /**
  * Check if JWT token is expired
  */
-export const isTokenExpired = (token: string): boolean => {
+export const isTokenExpired = (token) => {
     try {
         const payload = decodeJWTPayload(token);
         if (!payload || !payload.exp) {
@@ -49,7 +49,7 @@ export const isTokenExpired = (token: string): boolean => {
 /**
  * Get a valid token or null if expired
  */
-export const getValidToken = (): string | null => {
+export const getValidToken = () => {
     const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
 
     if (!token) {
@@ -71,14 +71,14 @@ export const getValidToken = (): string | null => {
 /**
  * Clear all authentication data
  */
-export const clearAuthData = (): void => {
+export const clearAuthData = () => {
     localStorage.removeItem('authToken');
     sessionStorage.removeItem('authToken');
     localStorage.removeItem('user');
     sessionStorage.removeItem('user');
 
     // Also clear axios headers if available
-    const axios = (window as any).axiosInstance;
+    const axios = window.axiosInstance;
     if (axios?.defaults?.headers?.common) {
         delete axios.defaults.headers.common['Authorization'];
     }
