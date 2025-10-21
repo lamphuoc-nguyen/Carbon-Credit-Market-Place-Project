@@ -1,14 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourcePerFileMappings">
-    <file url="file://$APPLICATION_CONFIG_DIR$/consoles/db/15cfb3d4-61a3-4f91-a78f-9cd8da4eafcb/console_11.sql" value="15cfb3d4-61a3-4f91-a78f-9cd8da4eafcb" />
-    <file url="file://$APPLICATION_CONFIG_DIR$/consoles/db/15cfb3d4-61a3-4f91-a78f-9cd8da4eafcb/console_12.sql" value="15cfb3d4-61a3-4f91-a78f-9cd8da4eafcb" />
     <file url="file://$APPLICATION_CONFIG_DIR$/consoles/db/b952493b-8f28-4e2e-affa-62dcdfae5c77/console_1.sql" value="b952493b-8f28-4e2e-affa-62dcdfae5c77" />
     <file url="file://$APPLICATION_CONFIG_DIR$/consoles/db/b952493b-8f28-4e2e-affa-62dcdfae5c77/console_2.sql" value="b952493b-8f28-4e2e-affa-62dcdfae5c77" />
     <file url="file://$APPLICATION_CONFIG_DIR$/consoles/db/b952493b-8f28-4e2e-affa-62dcdfae5c77/console_3.sql" value="b952493b-8f28-4e2e-affa-62dcdfae5c77" />
     <file url="file://$APPLICATION_CONFIG_DIR$/consoles/db/b952493b-8f28-4e2e-affa-62dcdfae5c77/console_4.sql" value="b952493b-8f28-4e2e-affa-62dcdfae5c77" />
-    <file url="file://$PROJECT_DIR$/backend/src/main/resources/db/migration/V1__Initial_Schema.sql" value="15cfb3d4-61a3-4f91-a78f-9cd8da4eafcb" />
-    <file url="file://$PROJECT_DIR$/backend/src/main/resources/db/migration/V6__Add_username_and_profile_status.sql" value="b952493b-8f28-4e2e-affa-62dcdfae5c77" />
-    <file url="file://$PROJECT_DIR$/backend/src/main/resources/db/migration/V7__Add_status_field.sql" value="b952493b-8f28-4e2e-affa-62dcdfae5c77" />
+    <file url="file://$APPLICATION_CONFIG_DIR$/consoles/db/debbb6c0-efb5-4a74-ba06-68d0c50d3485/console.sql" value="debbb6c0-efb5-4a74-ba06-68d0c50d3485" />
+    <file url="file://$APPLICATION_CONFIG_DIR$/consoles/db/debbb6c0-efb5-4a74-ba06-68d0c50d3485/console_1.sql" value="debbb6c0-efb5-4a74-ba06-68d0c50d3485" />
   </component>
 </project>

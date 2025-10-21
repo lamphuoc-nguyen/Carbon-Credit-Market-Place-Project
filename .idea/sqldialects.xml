@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project version="4">
-  <component name="SqlDialectMappings">
-    <file url="file://$PROJECT_DIR$/backend/src/main/resources/db/migration/V1__Initial_Schema.sql" dialect="TSQL" />
-    <file url="file://$PROJECT_DIR$/backend/src/main/resources/db/migration/V6__Add_username_and_profile_status.sql" dialect="TSQL" />
-    <file url="file://$PROJECT_DIR$/backend/src/main/resources/db/migration/V7__Add_status_field.sql" dialect="TSQL" />
-  </component>
-</project>
