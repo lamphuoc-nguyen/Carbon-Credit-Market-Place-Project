@@ -206,7 +206,7 @@ const LoginForm = () => {
 
                     case 'BUYER':
                         console.log('Redirecting Buyer to /marketplace');
-                        navigate('/marketplace');
+                        navigate('/buyer');
                         break;
 
                     default:

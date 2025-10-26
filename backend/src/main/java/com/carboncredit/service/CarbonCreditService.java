@@ -80,6 +80,19 @@ public class CarbonCreditService {
         // Recalculate credit amount with VERIFIED status for better rate
         credit.setCreditAmount(calculateCreditAmount(credit.getCo2ReducedKg(), CreditStatus.VERIFIED));
 
+        JourneyData journey = credit.getJourney();
+        if (journey != null) {
+            journey.setVerificationStatus(JourneyData.VerificationStatus.VERIFIED); // Đặt trạng thái Journey
+            journey.setVerifiedBy(verifier); // Lưu người duyệt
+            journey.setVerificationDate(LocalDateTime.now()); // Lưu thời gian duyệt
+            journey.setVerificationNotes(comments); // Lưu ghi chú duyệt
+            journey.setRejectionReason(null); // Xóa lý do từ chối cũ (nếu có)
+            journeyDataRepository.save(journey); // <-- Quan trọng: Lưu lại JourneyData
+            log.info("Updated associated JourneyData {} status to VERIFIED", journey.getId());
+        } else {
+            log.warn("CarbonCredit {} has no associated JourneyData to update status.", creditId);
+        }
+
         CarbonCredit saved = carbonCreditRepository.save(credit);
 
         // persisit audit recored (before/after amounts)
@@ -105,6 +118,19 @@ public class CarbonCreditService {
 
         credit.setStatus(CreditStatus.REJECTED);
         CarbonCredit saved = carbonCreditRepository.save(credit);
+
+        JourneyData journey = credit.getJourney();
+        if (journey != null) {
+            journey.setVerificationStatus(JourneyData.VerificationStatus.REJECTED); // Đặt trạng thái Journey
+            journey.setVerifiedBy(verifier); // Lưu người từ chối
+            journey.setVerificationDate(LocalDateTime.now()); // Lưu thời gian từ chối
+            journey.setRejectionReason(comments); // Lưu lý do từ chối
+            journey.setVerificationNotes(null); // Xóa ghi chú duyệt cũ (nếu có)
+            journeyDataRepository.save(journey); // <-- Quan trọng: Lưu lại JourneyData
+            log.info("Updated associated JourneyData {} status to REJECTED", journey.getId());
+        } else {
+            log.warn("CarbonCredit {} has no associated JourneyData to update status.", creditId);
+        }
 
         try {
             auditService.logRejection(saved, verifier, comments);

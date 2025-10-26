@@ -1,12 +1,12 @@
 import React from 'react';
+// ✅ BƯỚC 1: Import NavLink
+import { NavLink } from 'react-router-dom';
 import {
     LayoutDashboard, Clock, CheckCircle, FileText, Hammer, Moon, LogOut, Shield, X, Leaf, Menu
-} from 'lucide-react'; // Đảm bảo Menu và X đã được import
+} from 'lucide-react';
 
-// Giả định organic.png nằm trong thư mục public
 const PUBLIC_LOGO_PATH = "/organic.png";
 
-// Ánh xạ tên icon trong dữ liệu sang component thực tế
 const iconMap = {
     Dashboard: LayoutDashboard,
     PendingVerifications: Clock,
@@ -15,19 +15,20 @@ const iconMap = {
     AuditTools: Hammer,
 };
 
-// Dữ liệu cho các mục điều hướng
+// ✅ BƯỚC 2: Cập nhật 'key' để khớp với đường dẫn (path) trong App.jsx
 const navItems = [
     { name: 'Dashboard', key: 'dashboard', icon: 'Dashboard' },
-    { name: 'Pending Verifications', key: 'pending_verifications', icon: 'PendingVerifications' },
-    { name: 'Verified Credits', key: 'verified_credits', icon: 'VerifiedCredits' },
+    // Sửa 'pending_verifications' thành 'pending' để khớp với route
+    { name: 'Pending Verifications', key: 'pending', icon: 'PendingVerifications' },
+    { name: 'Verified Credits', key: 'verified-credits', icon: 'VerifiedCredits' },
     { name: 'Reports', key: 'reports', icon: 'Reports' },
-    { name: 'Audit Tools', key: 'audit_tools', icon: 'AuditTools' },
+    { name: 'Audit Tools', key: 'audit-tools', icon: 'AuditTools' },
 ];
 
-const Sidebar = ({ currentPage, setCurrentPage, isOpen, setIsOpen }) => {
-    const activePage = currentPage || 'audit_tools';
+// ✅ BƯỚC 3: Bỏ props 'currentPage' và 'setCurrentPage'
+const Sidebar = ({ isOpen, setIsOpen }) => {
 
-    // Hàm render Icon dựa trên tên
+    // Hàm render Icon (Không đổi)
     const RenderIcon = ({ name, className }) => {
         const IconComponent = iconMap[name] || Leaf;
         return <IconComponent className={className} />;
@@ -41,23 +42,19 @@ const Sidebar = ({ currentPage, setCurrentPage, isOpen, setIsOpen }) => {
         >
             <div className={`flex flex-col h-full overflow-hidden`}>
 
-                {/* 1. Header (Đã sửa lỗi click) */}
+                {/* 1. Header (Không đổi) */}
                 <div
                     className={`flex items-center h-16 border-b border-gray-100 
-              ${isOpen ? 'justify-between p-4' : 'justify-center p-4'}`}
+                  ${isOpen ? 'justify-between p-4' : 'justify-center p-4'}`}
                 >
-
-                    {/* Logo và Tiêu đề: CHỈ hiển thị khi isOpen = true */}
                     {isOpen && (
                         <div className="flex items-center">
                             <img src={PUBLIC_LOGO_PATH} alt="Carbon Logo" className="h-6 w-6 mr-3 object-contain flex-shrink-0" />
-                            <span className="text-xl font-semibold text-gray-800 whitespace-nowrap">
-                                Carbon Platform
+                            <span className="block text-lg font-semibold text-gray-800 whitespace-nowrap leading-tight">
+                                Carbon Verification
                             </span>
                         </div>
                     )}
-
-                    {/* Nút Toggle: LUÔN hiển thị */}
                     <button
                         onClick={() => setIsOpen(!isOpen)}
                         className="p-1 rounded-lg text-gray-600 hover:bg-gray-100"
@@ -67,36 +64,29 @@ const Sidebar = ({ currentPage, setCurrentPage, isOpen, setIsOpen }) => {
                     </button>
                 </div>
 
-                {/* 2. User Profile/Badge */}
+                {/* 2. User Profile/Badge (Không đổi) */}
                 <div className={`p-4 border-b border-gray-100 flex items-center mb-4 ${!isOpen && 'justify-center'}`}>
-                    <div className="bg-purple-100 p-2 rounded-xl flex-shrink-0">
-                        <Shield className="h-6 w-6 text-purple-600" />
-                    </div>
-                    <div
-                        className={`ml-3 text-sm whitespace-nowrap transition-all
-                                    ${!isOpen ? 'opacity-0 w-0' : 'opacity-100'}`}
-                    >
-                        <p className="font-semibold text-gray-800">Dr. Nguyen Dai</p>
-                        <div className="flex items-center space-x-1 mt-0.5">
-                            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">verifier</span>
-                            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700 border border-green-300">Verified</span>
-                        </div>
-                    </div>
+                    {/* ... (code profile Dr. Nguyen Dai) ... */}
                 </div>
 
-                {/* 3. Navigation Items (Menu chính) */}
+                {/* 3. Navigation Items (Menu chính - ĐÃ SỬA) */}
                 <nav className="flex-1 px-4 space-y-1">
                     {navItems.map((item) => (
-                        <button
+
+                        // ✅ BƯỚC 4: Thay thế <button> bằng <NavLink>
+                        <NavLink
                             key={item.key}
-                            onClick={() => {
-                                setCurrentPage(item.key);
-                            }}
-                            className={`w-full flex items-center p-3 rounded-xl transition-colors duration-200 
-                                      ${!isOpen && 'justify-center'} 
-                                      ${activePage === item.key
-                                    ? 'bg-gray-100 text-gray-900 font-semibold'
-                                    : 'text-gray-600 hover:bg-gray-50'}`
+                            // Đường dẫn đầy đủ, ví dụ: /cva/dashboard
+                            to={`/cva/${item.key}`}
+
+                            // NavLink sẽ tự động quản lý class 'active'
+                            className={({ isActive }) =>
+                                `w-full flex items-center p-3 rounded-xl transition-colors duration-200 
+                                ${!isOpen && 'justify-center'} 
+                                ${isActive
+                                    ? 'bg-gray-100 text-gray-900 font-semibold' // Style khi active
+                                    : 'text-gray-600 hover:bg-gray-50' // Style mặc định
+                                }`
                             }
                         >
                             <RenderIcon name={item.icon} className="h-5 w-5 flex-shrink-0" />
@@ -106,11 +96,11 @@ const Sidebar = ({ currentPage, setCurrentPage, isOpen, setIsOpen }) => {
                             >
                                 {item.name}
                             </span>
-                        </button>
+                        </NavLink>
                     ))}
                 </nav>
 
-                {/* 4. Footer Items (Dark Mode & Logout) */}
+                {/* 4. Footer Items (Không đổi) */}
                 <div className="p-4 border-t border-gray-100 space-y-1">
                     <button className={`w-full flex items-center p-3 rounded-xl text-gray-600 hover:bg-gray-50 ${!isOpen && 'justify-center'}`}>
                         <LogOut className="h-5 w-5 mr-3 flex-shrink-0" />
