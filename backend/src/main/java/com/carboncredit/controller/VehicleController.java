@@ -89,6 +89,7 @@ public class VehicleController {
             vehicle.setUser(vehicleOwner);
             vehicle.setVin(vehicleDTO.getVin());
             vehicle.setModel(vehicleDTO.getModel());
+            vehicle.setCreatedAt(vehicleDTO.getCreatedAt());
             vehicle.setRegistrationDate(vehicleDTO.getRegistrationDate());
 
             Vehicle createdVehicle = vehicleService.createVehicle(vehicle);
