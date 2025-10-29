@@ -3,6 +3,7 @@ import { Leaf } from 'lucide-react';
 import { Link, NavLink } from 'react-router-dom';
 import LogoutButton from './LogoutButton';
 import { getValidToken } from '../utils/tokenUtils';
+    
 
 const Navbar = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);

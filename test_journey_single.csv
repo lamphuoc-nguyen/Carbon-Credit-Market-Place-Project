@@ -1,0 +1,2 @@
+journeyId,distanceKm,startTime,endTime,vehicleId,co2ReducedKg,energyConsumedKwh,verificationStatus,verificationNotes,rejectionReason,userId,verifiedById,createdAt,verificationDate
+2252d902-8a64-4874-baed-9b8c4f63ecbc,150.5,2025-10-16T08:00:00,2025-10-16T10:30:00,8434e7ab-d074-4f11-9a16-f4badca1811d,17.46,28.3,PENDING_VERIFICATION,,,89017430-26e5-4c6f-a61f-9c0dd26f4147,,2025-10-26T23:47:46.3858107,

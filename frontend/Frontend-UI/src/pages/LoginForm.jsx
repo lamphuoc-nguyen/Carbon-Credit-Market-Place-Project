@@ -241,7 +241,7 @@ const LoginForm = () => {
                         submit: 'Unable to connect to server. Please check your connection.'
 
                     });
-                    _
+                    
                 } else {
                     setErrors({
                         submit: error.message || 'An unexpected error occurred'
