@@ -53,6 +53,7 @@ public class CarbonCreditService {
     public CarbonCredit createCarbonCredit(JourneyData journey) {
         CarbonCredit credit = new CarbonCredit();
         credit.setUser(journey.getUser());
+        credit.setCreatedAt(LocalDateTime.now());
         credit.setJourney(journey);
         credit.setCo2ReducedKg(journey.getCo2ReducedKg());
         credit.setStatus(CreditStatus.PENDING);
