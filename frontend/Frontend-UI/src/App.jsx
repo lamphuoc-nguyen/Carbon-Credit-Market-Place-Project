@@ -12,12 +12,15 @@ import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
 import CvaPage from './pages/CvaPage';
-import BuyerPage from './pages/BuyerPage';
 import ReviewJourneyDetail from './Components/CvaComponents/ReviewJourneyDetail';
 import PendingVerifications from './Components/CvaComponents/PendingVerifications';
 import Dashboard from './Components/CvaComponents/Dashboard';
 import VerifiedCredits from './Components/CvaComponents/VerifiedCredits';
 import Report from './Components/CvaComponents/Report';
+import DetailPage from './Components/CvaComponents/DetailPage';
+
+import AdminPage from './pages/AdminPage';
+import AdminDashboard from './Components/AdminComponents/AdminDashboard';
 
 
 function App() {
@@ -26,7 +29,7 @@ function App() {
   // ✅ 3. Use startsWith() to check the path
   // This will hide the layout for /cva, /cva/dashboard, /cva/pending, etc.
   // Also added check for /buyer assuming similar logic applies
-  const hideLayout = location.pathname.startsWith('/cva') || location.pathname.startsWith('/buyer');
+  const hideLayout = location.pathname.startsWith('/cva') || location.pathname.startsWith('/admin');
 
   return (
     <>
@@ -62,6 +65,18 @@ function App() {
           {/* Add other child routes like verified-credits, reports here */}
           <Route path="verified-credits" element={<VerifiedCredits />} />
           <Route path="reports" element={<Report />} />
+          <Route path="detail/:journeyId" element={<DetailPage />} />
+
+        </Route> {/* End of PARENT Route */}
+
+
+
+        {/* --- Admin Routes --- */}
+        <Route path="/admin" element={<AdminPage />}> {/* PARENT Route */}
+
+          {/* CHILD Routes */}
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
 
         </Route> {/* End of PARENT Route */}
 

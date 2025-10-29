@@ -1,31 +1,33 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-    LayoutDashboard, Clock, CheckCircle, FileText, Hammer, X, Leaf, Menu,
-    Shield // ✅ 1. IMPORT SHIELD INSTEAD OF SETTINGS
+    Home, Users, TrendingUp, FileText, Wallet, BarChart,
+    Leaf, X, Menu, Settings, CheckCircle // Keep CheckCircle if used elsewhere
 } from 'lucide-react';
 import LogoutButton from '../LogoutButton'; // Adjust path if needed
 
-const PUBLIC_LOGO_PATH = "/organic.png"; // Make sure path is correct
+const PUBLIC_LOGO_PATH = "/organic.png"; // Make sure this path is correct relative to public folder
 
 const iconMap = {
-    Dashboard: LayoutDashboard,
-    PendingVerifications: Clock,
-    VerifiedCredits: CheckCircle,
-    Reports: FileText,
-    AuditTools: Hammer,
-    // Settings removed as it's not used by navItems anymore
+    Dashboard: Home,
+    UserManagement: Users,
+    CreditListings: TrendingUp,
+    Transactions: FileText,
+    WalletAndCashFlow: Wallet,
+    PlatformReports: BarChart,
+    Settings: Settings, // Keep if used for user badge
 };
 
 const navItems = [
-    { name: 'Dashboard', key: 'dashboard', icon: 'Dashboard' },
-    { name: 'Pending Verifications', key: 'pending', icon: 'PendingVerifications' },
-    { name: 'Verified Credits', key: 'verified-credits', icon: 'VerifiedCredits' },
-    { name: 'Reports', key: 'reports', icon: 'Reports' },
-    { name: 'Audit Tools', key: 'audit-tools', icon: 'AuditTools' },
+    { name: 'Dashboard', key: 'dashboard', icon: 'Dashboard' }, // key matches the route path
+    { name: 'User Management', key: 'user-management', icon: 'UserManagement' },
+    { name: 'Credit Listings', key: 'credit-listings', icon: 'CreditListings' },
+    { name: 'Transactions', key: 'transactions', icon: 'Transactions' },
+    { name: 'Wallets & Cash Flow', key: 'wallets-cash-flow', icon: 'WalletAndCashFlow' },
+    { name: 'Platform Reports', key: 'platform-reports', icon: 'PlatformReports' },
 ];
 
-const Sidebar = ({ isOpen, setIsOpen }) => {
+const AdminSidebar = ({ isOpen, setIsOpen }) => {
 
     const RenderIcon = ({ name, className }) => {
         const IconComponent = iconMap[name] || Leaf;
@@ -40,7 +42,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         >
             <div className={`flex flex-col h-full overflow-hidden`}>
 
-                {/* 1. Header (Unchanged) */}
+                {/* 1. Header */}
                 <div
                     className={`flex items-center h-16 border-b border-gray-100
                               ${isOpen ? 'justify-between p-4' : 'justify-center p-4'}`}
@@ -49,7 +51,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                         <div className="flex items-center">
                             <img src={PUBLIC_LOGO_PATH} alt="Carbon Logo" className="h-6 w-6 mr-3 object-contain flex-shrink-0" />
                             <span className="block text-lg font-semibold text-gray-800 whitespace-nowrap leading-tight">
-                                Carbon Verification
+                                Admin Management
                             </span>
                         </div>
                     )}
@@ -62,29 +64,30 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                     </button>
                 </div>
 
-                {/* 2. User Profile/Badge - UPDATED ICON */}
+                {/* 2. User Profile/Badge (Placeholder - Add your actual user info display here) */}
                 <div className={`p-4 border-b border-gray-100 flex items-center mb-4 ${!isOpen && 'justify-center'}`}>
-                    <div className={`p-2 rounded-full ${isOpen ? 'bg-blue-100' : 'bg-blue-100'}`}> {/* Changed color to blue */}
-                        {/* ✅ 2. USE SHIELD ICON HERE */}
-                        <Shield className={`h-6 w-6 ${isOpen ? 'text-blue-600' : 'text-blue-600'}`} />
+                    <div className={`p-2 rounded-full ${isOpen ? 'bg-orange-100' : 'bg-orange-100'}`}>
+                        <Settings className={`h-6 w-6 ${isOpen ? 'text-orange-600' : 'text-orange-600'}`} />
                     </div>
                     {isOpen && (
                         <div className="ml-3">
-                            <p className="font-semibold text-sm text-gray-800">CVA User</p>
+                            <p className="font-semibold text-sm text-gray-800">Admin User</p>
                             <div className="flex items-center mt-1 space-x-1">
-                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">cva</span>
+                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">admin</span>
                                 <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">Verified</span>
                             </div>
                         </div>
                     )}
                 </div>
 
-                {/* 3. Navigation Items (Unchanged) */}
+
+                {/* 3. Navigation Items */}
                 <nav className="flex-1 px-4 space-y-1">
                     {navItems.map((item) => (
                         <NavLink
                             key={item.key}
-                            to={`/cva/${item.key}`}
+                            // ✅ SỬA PREFIX THÀNH '/admin/'
+                            to={`/admin/${item.key}`}
                             className={({ isActive }) =>
                                 `w-full flex items-center p-3 rounded-xl transition-colors duration-200
                                  ${!isOpen && 'justify-center'}
@@ -96,7 +99,8 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                         >
                             <RenderIcon name={item.icon} className="h-5 w-5 flex-shrink-0" />
                             <span
-                                className={`text-sm ml-3 whitespace-nowrap transition-opacity duration-200 ${!isOpen ? 'opacity-0 w-0 pointer-events-none' : 'opacity-100'
+                                className={`text-sm ml-3 whitespace-nowrap transition-opacity duration-200 ${ /* Adjusted text size */
+                                    !isOpen ? 'opacity-0 w-0 pointer-events-none' : 'opacity-100' /* Hide completely when closed */
                                     }`}
                             >
                                 {item.name}
@@ -105,11 +109,11 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                     ))}
                 </nav>
 
-                {/* 4. Footer Items (Unchanged) */}
-                <div className="p-4 border-t border-gray-100 mt-auto">
+                {/* 4. Footer Items */}
+                <div className="p-4 border-t border-gray-100 mt-auto"> {/* Added mt-auto */}
                     <LogoutButton
                         className={`w-full flex items-center p-3 rounded-xl text-gray-600 hover:bg-red-50 hover:text-red-700 transition-colors duration-200 ${!isOpen && 'justify-center'}`}
-                        variant="sidebar"
+                        variant="sidebar" // Assuming LogoutButton handles variants
                         showText={isOpen}
                     />
                 </div>
@@ -118,4 +122,4 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     );
 };
 
-export default Sidebar;
+export default AdminSidebar;

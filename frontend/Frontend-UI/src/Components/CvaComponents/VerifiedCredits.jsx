@@ -102,7 +102,8 @@ const VerifiedCredits = () => {
     }, [searchTerm, statusFilter, journeys]);
 
     const handleViewDetails = (journeyId) => {
-        navigate(`/cva/review/${journeyId}`);
+        // Điều hướng đến route chi tiết MỚI (không phải /cva/review)
+        navigate(`/cva/detail/${journeyId}`);
     };
 
     // Calculate stats
