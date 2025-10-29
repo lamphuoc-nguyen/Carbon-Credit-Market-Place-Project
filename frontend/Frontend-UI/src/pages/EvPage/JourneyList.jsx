@@ -140,93 +140,73 @@ useEffect(() => {
   }
 
   const uploadCSV = async () => {
+    if (!selectedVehicleId) {
+        setUploadStatus('error');
+        setUploadMessage('You must select a vehicle before uploading.');
+        return;
+    }
   if (!csvFile) {
     setUploadStatus('error')
     setUploadMessage('Please select a CSV file')
     return
   }
-  
-  if (!selectedVehicleId) {
-    setUploadStatus('error')
-    setUploadMessage('Please select a vehicle first')
-    return
-  }
-  
+
   try {
     setUploadStatus('uploading')
     setUploadProgress(0)
     setUploadMessage('Reading CSV file...')
-    
+
     const reader = new FileReader()
     reader.onload = async (e) => {
       try {
         const csvText = e.target.result
         setUploadProgress(25)
         setUploadMessage('Processing CSV data...')
-        
+
         const rows = parseCSV(csvText)
         console.log('📊 Parsed CSV rows:', rows)
         setUploadProgress(50)
         setUploadMessage(`Uploading ${rows.length} journey records...`)
-        
-        // Upload journeys one by one
+
         let successCount = 0
         let errorCount = 0
         const errors = []
-        
+
         for (let i = 0; i < rows.length; i++) {
           try {
-            console.log(`🚀 Processing journey ${i + 1}:`, rows[i])
-            
-            // ✅ CORRECTED: Use selected vehicle ID automatically
+            // ✅ Fetch current vehicle ID fresh for each row
+            const vehicleId = selectedVehicleId || (await EvOwnerAPI.vehicles.getCurrentVehicleId())
+
             const journeyData = {
-              vehicleId: selectedVehicleId, // ✅ Auto-filled from dropdown
-              distanceKm: parseFloat(rows[i].distanceKm || rows[i].distance_km),
-              energyConsumedKwh: parseFloat(rows[i].energyConsumedKwh || rows[i].energy_consumed_kwh),
-              startTime: rows[i].startTime || rows[i].start_time,
-              endTime: rows[i].endTime || rows[i].end_time
-            }
-            
+    vehicle: { id: vehicleId }, // Change this line
+    distanceKm: parseFloat(rows[i].distanceKm || rows[i].distance_km),
+    energyConsumedKwh: parseFloat(rows[i].energyConsumedKwh || rows[i].energy_consumed_kwh),
+    startTime: rows[i].startTime || rows[i].start_time,
+    endTime: rows[i].endTime || rows[i].end_time
+};
+
             // Validate required fields
-            if (!journeyData.distanceKm || journeyData.distanceKm <= 0) {
-              throw new Error('distanceKm must be a positive number')
-            }
-            if (!journeyData.energyConsumedKwh || journeyData.energyConsumedKwh <= 0) {
-              throw new Error('energyConsumedKwh must be a positive number')
-            }
-            if (!journeyData.startTime) {
-              throw new Error('startTime is required')
-            }
-            if (!journeyData.endTime) {
-              throw new Error('endTime is required')
-            }
-            
-            console.log(`📤 Sending journey data:`, journeyData)
-            
-            // Send to API
-            const response = await EvOwnerAPI.journeys.createJourney(journeyData)
-            console.log(`✅ Journey ${i + 1} created successfully:`, response.data)
-            
+            if (!journeyData.distanceKm || journeyData.distanceKm <= 0) throw new Error('distanceKm must be positive')
+            if (!journeyData.energyConsumedKwh || journeyData.energyConsumedKwh <= 0) throw new Error('energyConsumedKwh must be positive')
+            if (!journeyData.startTime) throw new Error('startTime is required')
+            if (!journeyData.endTime) throw new Error('endTime is required')
+
+            console.log(`📤 Uploading journey ${i + 1}:`, journeyData)
+            await EvOwnerAPI.journeys.createJourney(journeyData)
             successCount++
-            
+
             setUploadProgress(50 + ((i + 1) / rows.length) * 40)
             setUploadMessage(`Processed ${i + 1}/${rows.length} journeys...`)
-            
+
           } catch (error) {
-            console.error(`❌ Failed to create journey ${i + 1}:`, error)
-            console.error('Error details:', {
-              message: error.message,
-              response: error.response?.data,
-              status: error.response?.status
-            })
-            
+            console.error(`❌ Journey ${i + 1} failed:`, error)
             errorCount++
             errors.push(`Row ${i + 2}: ${error.response?.data?.message || error.message}`)
           }
         }
-        
+
         setUploadProgress(100)
-        
+
         if (errorCount === 0) {
           setUploadStatus('success')
           setUploadMessage(`✅ Successfully uploaded ${successCount} journeys!`)
@@ -236,30 +216,31 @@ useEffect(() => {
           }, 2000)
         } else if (successCount > 0) {
           setUploadStatus('error')
-          setUploadMessage(`⚠️ Uploaded ${successCount} journeys, ${errorCount} failed. First errors: ${errors.slice(0, 2).join(' | ')}`)
+          setUploadMessage(`⚠️ Uploaded ${successCount} journeys, ${errorCount} failed. First errors: ${errors.slice(0, 5).join(' | ')}`)
         } else {
           setUploadStatus('error')
-          setUploadMessage(`❌ All uploads failed. Errors: ${errors.slice(0, 3).join(' | ')}`)
+          setUploadMessage(`❌ All uploads failed. Errors: ${errors.slice(0, 5).join(' | ')}`)
         }
-        
+
       } catch (error) {
         setUploadStatus('error')
         setUploadMessage(`Parse error: ${error.message}`)
       }
     }
-    
+
     reader.onerror = () => {
       setUploadStatus('error')
       setUploadMessage('Failed to read file')
     }
-    
+
     reader.readAsText(csvFile)
-    
+
   } catch (error) {
     setUploadStatus('error')
     setUploadMessage(error.message)
   }
 }
+
 
   const closeUploadModal = () => {
     setShowUploadModal(false)
