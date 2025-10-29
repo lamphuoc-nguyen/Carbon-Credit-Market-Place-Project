@@ -3,21 +3,24 @@ package com.carboncredit.controller;
 // Add these imports to TransactionController.java
 import com.carboncredit.dto.PurchaseRequest;
 
+import com.carboncredit.service.VNPayService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.springframework.security.core.Authentication;
 import com.carboncredit.entity.Dispute;
 import com.carboncredit.entity.Transaction;
 import com.carboncredit.entity.User;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import com.carboncredit.dto.DisputeDTO;
 import com.carboncredit.dto.DisputeRequest;
 import com.carboncredit.dto.TransactionDTO;
@@ -41,27 +44,45 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class TransactionController {
     private final TransactionService transactionService;
     private final UserService userService;
+    private final VNPayService vnPayService;
 
-    // initiate a purchase of carbon credits from listing
     @PostMapping("/purchase")
-    public ResponseEntity<TransactionDTO> initiateTransaction(@RequestBody PurchaseRequest request,
-                                                              Authentication authentication) {
+    public ResponseEntity<Map<String, Object>> initiateTransaction(@RequestBody PurchaseRequest request,
+                                                                   Authentication authentication,
+                                                                   HttpServletRequest httpRequest) {
         try {
             User buyer = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            log.info("User {} initiating purchase of listing {}", buyer.getUsername(), request.getListingId());
+            Transaction transaction = transactionService.initiatePurchase(
+                    request.getListingId(),
+                    buyer,
+                    "VNPAY_PENDING"
+            );
 
-            Transaction transaction = transactionService.initiatePurchase(request.getListingId(), buyer);
-            TransactionDTO transactionDTO = DTOMapper.toTransactionDTO(transaction);
+            String ipAddress = getIpAddress(httpRequest);
+            String paymentUrl = vnPayService.createPaymentUrl(transaction, ipAddress);
 
-            return ResponseEntity.status(HttpStatus.CREATED).body(transactionDTO);
+            Map<String, Object> response = new HashMap<>();
+            response.put("transactionId", transaction.getId());
+            response.put("paymentUrl", paymentUrl);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (Exception e) {
             log.error("Error initiating purchase: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
         }
-
     }
+
+    private String getIpAddress(HttpServletRequest request) {
+        String ipAddress = request.getHeader("X-FORWARDED-FOR");
+        if (ipAddress == null) {
+            ipAddress = request.getRemoteAddr();
+        }
+        return ipAddress;
+    }
+
+
 
     // Complete a transaction (process payment and finalize
     @PostMapping("/{transactionId}/complete")
@@ -266,6 +287,42 @@ public class TransactionController {
             return ResponseEntity.badRequest().build();
         }
     }
+    @GetMapping("/{transactionId}/status")
+    public ResponseEntity<Map<String, Object>> getTransactionStatus(@PathVariable UUID transactionId,
+                                                                    Authentication authentication) {
+        try {
+            User user = userService.findByUsername(authentication.getName())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            Transaction transaction = transactionService.findTransactionById(transactionId);
+            if (transaction == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Check authorization
+            boolean isAuthorized = transaction.getBuyer().getId().equals(user.getId())
+                    || transaction.getListing().getCredit().getUser().getId().equals(user.getId());
+
+            if (!isAuthorized) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("transactionId", transaction.getId());
+            response.put("status", transaction.getStatus());
+            response.put("amount", transaction.getAmount());
+            response.put("paymentMethodId", transaction.getPaymentMethodId());
+            response.put("createdAt", transaction.getCreatedAt());
+            response.put("completedAt", transaction.getCompletedAt());
+            response.put("isPurchaseSuccessful", transaction.getStatus() == Transaction.TransactionStatus.COMPLETED);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error fetching transaction status: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
 }
 
 
