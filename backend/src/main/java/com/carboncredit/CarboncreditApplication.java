@@ -5,7 +5,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.scheduling.annotation.EnableAsync;
 
-@SpringBootApplication
+@SpringBootApplication(exclude = {
+        com.google.cloud.spring.autoconfigure.core.GcpContextAutoConfiguration.class,
+        com.google.cloud.spring.autoconfigure.storage.GcpStorageAutoConfiguration.class
+})
 @EnableJpaAuditing
 @EnableAsync
 public class CarboncreditApplication {

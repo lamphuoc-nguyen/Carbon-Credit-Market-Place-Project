@@ -102,6 +102,15 @@
 | GET | `/api/wallets/admin/user/{userId}` | Get user wallet | Yes | Admin/CVA |
 | PUT | `/api/wallets/admin/user/{userId}/balance` | Update user balance | Yes | Admin |
 
+### 📄 Certificate & Retirement APIs
+| Method | Endpoint | Description | Auth Required | Role Required |
+|--------|----------|-------------|---------------|---------------|
+| POST | `/api/retirement/initiate` | Initiate carbon credit retirement | Yes | BUYER |
+| GET | `/api/retirement/{id}` | Get retirement transaction by ID | Yes | BUYER/CVA/ADMIN |
+| GET | `/api/retirement/user/{userId}` | Get user's retirement history | Yes | BUYER/CVA/ADMIN |
+| GET | `/api/retirement/{retirementId}/certificate` | Get certificate by retirement ID | Yes | BUYER/CVA/ADMIN |
+| GET | `/api/retirement/certificates/user/{userId}` | Get all certificates for a user | Yes | BUYER/CVA/ADMIN |
+
 ## Legend
 - 🔐 **No Auth**: Public endpoints
 - 👤 **Any**: Any authenticated user
@@ -707,23 +716,299 @@ Create these environment variables in Postman:
 
 ---
 
-## Testing Workflow Recommendations
+## 10. CERTIFICATE & RETIREMENT CONTROLLER (`/api/retirement`) 🏆
 
-### 1. Basic Flow (EV Owner):
+### 10.1 Initiate Carbon Credit Retirement (BUYER Only)
+**POST** `{{BASE_URL}}/api/retirement/initiate`
+
+**Headers:**
+- `Authorization`: `Bearer {{JWT_TOKEN}}` (BUYER role required)
+
+**Body (JSON):**
+```json
+{
+  "userId": "{{USER_ID}}",
+  "amountToRetireKg": 25.50,
+  "projectInfo": "Solar Panel Installation Project - Q4 2025",
+  "retirementPurpose": "Corporate Carbon Neutrality Initiative"
+}
+```
+
+**Expected Response:**
+```json
+{
+  "retirementId": "123e4567-e89b-12d3-a456-426614174001",
+  "userId": "{{USER_ID}}",
+  "userUsername": "buyer1",
+  "amountRetiredKg": 25.50,
+  "retirementDate": "2025-10-29",
+  "status": "PENDING",
+  "retiredCarbonCreditIds": [
+    "credit-uuid-1",
+    "credit-uuid-2"
+  ],
+  "createdAt": "2025-10-29T10:30:00Z",
+  "certificate": null,
+  "message": "Retirement initiated successfully. Certificate generation in progress."
+}
+```
+
+**Test Scripts (Postman):**
+```javascript
+// Save retirement ID for subsequent tests
+if (pm.response.code === 200) {
+    const response = pm.response.json();
+    pm.environment.set("RETIREMENT_ID", response.retirementId);
+    console.log("Retirement ID saved:", response.retirementId);
+}
+```
+
+### 10.2 Get Retirement Transaction by ID
+**GET** `{{BASE_URL}}/api/retirement/{{RETIREMENT_ID}}`
+
+**Headers:**
+- `Authorization`: `Bearer {{JWT_TOKEN}}`
+
+**Expected Response:**
+```json
+{
+  "retirementId": "{{RETIREMENT_ID}}",
+  "userId": "{{USER_ID}}",
+  "userUsername": "buyer1",
+  "amountRetiredKg": 25.50,
+  "retirementDate": "2025-10-29",
+  "status": "COMPLETED",
+  "retiredCarbonCreditIds": [
+    "credit-uuid-1",
+    "credit-uuid-2"
+  ],
+  "createdAt": "2025-10-29T10:30:00Z",
+  "certificate": {
+    "id": "cert-uuid-123",
+    "certificateCode": "CERT-1730203800000-ABC12",
+    "buyerId": "{{USER_ID}}",
+    "buyerUsername": "John Doe",
+    "buyerEmail": "buyer1@example.com",
+    "retirementTransactionId": "{{RETIREMENT_ID}}",
+    "amountRetiredKg": 25.50,
+    "projectSourceInfo": "Tesla Model 3 (VIN123), Solar Installation Project",
+    "retirementDate": "2025-10-29",
+    "status": "COMPLETED",
+    "pdfUrl": "https://storage.googleapis.com/carbon-credit-marketplace-certs-2025/certificates/CERT-1730203800000-ABC12.pdf",
+    "createdAt": "2025-10-29T10:30:15Z"
+  }
+}
+```
+
+### 10.3 Get User's Retirement History (Paginated)
+**GET** `{{BASE_URL}}/api/retirement/user/{{USER_ID}}`
+
+**Headers:**
+- `Authorization`: `Bearer {{JWT_TOKEN}}`
+
+**Query Parameters:**
+- `page` (optional): 0
+- `size` (optional): 10
+
+**Expected Response:**
+```json
+{
+  "content": [
+    {
+      "retirementId": "{{RETIREMENT_ID}}",
+      "userId": "{{USER_ID}}",
+      "userUsername": "buyer1",
+      "amountRetiredKg": 25.50,
+      "retirementDate": "2025-10-29",
+      "status": "COMPLETED",
+      "retiredCarbonCreditIds": ["credit-uuid-1", "credit-uuid-2"],
+      "createdAt": "2025-10-29T10:30:00Z",
+      "certificate": { /* Certificate details */ }
+    }
+  ],
+  "page": 0,
+  "size": 10,
+  "totalElements": 1,
+  "totalPages": 1,
+  "last": true
+}
+```
+
+### 10.4 Get Certificate by Retirement ID
+**GET** `{{BASE_URL}}/api/retirement/{{RETIREMENT_ID}}/certificate`
+
+**Headers:**
+- `Authorization`: `Bearer {{JWT_TOKEN}}`
+
+**Expected Response:**
+```json
+{
+  "id": "cert-uuid-123",
+  "certificateCode": "CERT-1730203800000-ABC12",
+  "buyerId": "{{USER_ID}}",
+  "buyerUsername": "John Doe",
+  "buyerEmail": "buyer1@example.com",
+  "retirementTransactionId": "{{RETIREMENT_ID}}",
+  "amountRetiredKg": 25.50,
+  "projectSourceInfo": "Tesla Model 3 (VIN123), Solar Installation Project",
+  "retirementDate": "2025-10-29",
+  "status": "COMPLETED",
+  "pdfUrl": "https://storage.googleapis.com/carbon-credit-marketplace-certs-2025/certificates/CERT-1730203800000-ABC12.pdf",
+  "createdAt": "2025-10-29T10:30:15Z"
+}
+```
+
+**Test Scripts (Postman):**
+```javascript
+// Save certificate ID and PDF URL for verification
+if (pm.response.code === 200) {
+    const response = pm.response.json();
+    pm.environment.set("CERTIFICATE_ID", response.id);
+    pm.environment.set("PDF_URL", response.pdfUrl);
+    console.log("Certificate Code:", response.certificateCode);
+    console.log("PDF URL:", response.pdfUrl);
+}
+```
+
+### 10.5 Get All Certificates for a User (Paginated)
+**GET** `{{BASE_URL}}/api/retirement/certificates/user/{{USER_ID}}?page=0&size=10`
+
+**Headers:**
+- `Authorization`: `Bearer {{JWT_TOKEN}}`
+
+**Query Parameters:**
+- `page` (optional): 0
+- `size` (optional): 10
+
+**Expected Response:**
+```json
+{
+  "content": [
+    {
+      "id": "cert-uuid-123",
+      "certificateCode": "CERT-1730203800000-ABC12",
+      "buyerId": "{{USER_ID}}",
+      "buyerUsername": "John Doe",
+      "buyerEmail": "buyer1@example.com",
+      "retirementTransactionId": "{{RETIREMENT_ID}}",
+      "amountRetiredKg": 25.50,
+      "projectSourceInfo": "Tesla Model 3 (VIN123), Solar Installation Project",
+      "retirementDate": "2025-10-29",
+      "status": "COMPLETED",
+      "pdfUrl": "https://storage.googleapis.com/...",
+      "createdAt": "2025-10-29T10:30:15Z"
+    }
+  ],
+  "page": 0,
+  "size": 10,
+  "totalElements": 1,
+  "totalPages": 1,
+  "last": true
+}
+```
+
+---
+
+## 🔧 Common Troubleshooting Issues
+
+### **Issue 1: SQL Server UUID Data Type Error**
+```
+Error: Cannot find data type UUID
+```
+**Solution:** SQL Server uses `UNIQUEIDENTIFIER` instead of `UUID`. This has been fixed in the RetirementTransaction entity.
+
+### **Issue 2: Google Cloud Storage Credentials Error**
+```
+Error: C:UsersacerDocumentsSWP302... (The system cannot find the file specified)
+```
+**Solution:** 
+1. Use forward slashes in file paths: `C:/Users/acer/Documents/...`
+2. Set `GCP_STORAGE_ENABLED=false` for local development
+3. Ensure credentials file exists at the specified path
+
+### **Issue 3: Certificate Generation Fails**
+```
+Error: StorageService dependency injection fails
+```
+**Solution:** The application now supports mock storage for development:
+- Set `spring.cloud.gcp.storage.enabled=false` in application.properties
+- Set `app.certificate.use-cloud-storage=false` for development mode
+
+### **Issue 4: Database Table Creation Issues**
+```
+Error: Cannot find table 'retired_credit_details'
+```
+**Solution:** This happens when Hibernate tries to create foreign keys before tables. 
+- Ensure `spring.jpa.hibernate.ddl-auto=update` is set
+- Run the application multiple times if needed for table creation order
+
+### **Issue 5: Wallet Balance Not Updated After Purchase**
+```
+Error: Cash balance unchanged, credit balance not increased after purchase
+```
+**Solution:** The CreditListingController now uses TransactionService instead of directly calling creditListingService:
+- Purchase endpoint: `POST /credit-listings/{listingId}/purchase` 
+- Now returns Transaction details instead of Listing details
+- Properly handles wallet operations (cash/credit balance updates)
+- Transfers credit ownership to buyer
+
+### **Issue 6: Purchase Bypasses Transaction System**
+```
+Error: Credits purchased but no transaction record, no wallet updates
+```
+**Solution:** 
+- Use the updated purchase endpoint that creates proper Transaction records
+- Verify response contains `transactionId` field
+- Check that wallet balances are updated immediately after purchase
+
+---
+
+## 🚀 Quick Start for Testing
+
+### **Development Mode Setup:**
+1. Set these environment variables:
+   ```
+   GCP_STORAGE_ENABLED=false
+   USE_CLOUD_STORAGE=false
+   ```
+
+2. Start the application - it will use mock storage
+
+3. Test certificate generation:
+   ```bash
+   POST /api/retirement/initiate
+   # Certificate will be generated with mock PDF URL
+   ```
+
+### **Production Mode Setup:**
+1. Ensure GCP credentials file exists
+2. Set these environment variables:
+   ```
+   GCP_STORAGE_ENABLED=true
+   USE_CLOUD_STORAGE=true
+   ```
+
+3. Test with actual cloud storage
+
+---
+
+## 📋 Enhanced Testing Workflow Recommendations
+
+### 1. 🚗 **EV Owner Basic Flow:**
 1. Register as EV_OWNER
 2. Login and get JWT token
 3. Create vehicle
 4. Create journey
 5. Check journey status
 
-### 2. CVA Flow:
+### 2. ✅ **CVA Verification Flow:**
 1. Register as CVA
 2. Login and get JWT token
 3. Get pending journeys
 4. Approve/reject journeys
 5. Check verification statistics
 
-### 3. Marketplace Flow:
+### 3. 🏪 **Marketplace Trading Flow:**
 1. Register as BUYER
 2. Login and get JWT token
 3. Deposit funds to wallet
@@ -731,24 +1016,661 @@ Create these environment variables in Postman:
 5. Purchase carbon credits
 6. Check transaction history
 
-### 4. Admin Flow:
+### 4. 💼 **Admin Management Flow:**
 1. Register as ADMIN
 2. Login and get JWT token
 3. View all users, journeys, transactions
 4. Manage user wallets
 5. View system statistics
 
-## Common Response Codes
-- `200`: Success
-- `201`: Created
-- `400`: Bad Request
-- `401`: Unauthorized
-- `403`: Forbidden
-- `404`: Not Found
-- `500`: Internal Server Error
+### 5. 🏆 **Certificate & Retirement Flow (NEW):**
+1. Register as BUYER
+2. Login and get JWT token
+3. Ensure you have purchased carbon credits (or use test credits)
+4. Initiate retirement with `POST /api/retirement/initiate`
+5. Monitor retirement status with `GET /api/retirement/{id}`
+6. Verify certificate generation with `GET /api/retirement/{id}/certificate`
+7. Check PDF generation (if cloud storage enabled)
+8. View retirement history with `GET /api/retirement/user/{userId}`
+9. Test error scenarios (insufficient credits, wrong role, etc.)
 
-## Notes
-- Replace `{id}`, `{userId}`, etc. with actual UUIDs
-- Set JWT token as environment variable after login
-- Some endpoints require specific user roles
-- Pagination parameters are optional for most list endpoints
+### 6. 🔄 **Complete End-to-End Integration Flow:
+```
+Step 1: EV_OWNER Journey Creation
+├── Register EV_OWNER account
+├── Create vehicle registration
+├── Log EV journeys with CO2 savings
+└── Submit for CVA verification
+
+Step 2: CVA Verification Process  
+├── Register CVA account
+├── Review pending journeys
+├── Approve valid journeys
+└── Generate carbon credits
+
+Step 3: Marketplace Trading
+├── Register BUYER account
+├── Deposit funds to wallet
+├── Browse available credits
+├── Purchase carbon credits
+└── Complete transactions
+
+Step 4: Credit Retirement & Certification
+├── Initiate credit retirement
+├── Generate retirement certificate
+├── Create PDF documentation
+├── Store in cloud storage
+└── Provide certificate access
+
+Step 5: System Administration
+├── Monitor all transactions
+├── Manage user accounts
+├── Oversee system statistics
+└── Handle disputes/issues
+```
+
+### 7. 🧪 **Comprehensive Testing Scenarios:**
+
+#### **A. Happy Path Testing:**
+1. Complete user registration for all roles
+2. Full journey lifecycle (creation → verification → credit generation)
+3. Successful marketplace transactions
+4. End-to-end retirement and certification process
+
+#### **B. Error Handling Testing:**
+1. Authentication failures (invalid tokens, expired sessions)
+2. Authorization failures (wrong roles, insufficient permissions)
+3. Business logic violations (insufficient credits, invalid data)
+4. System errors (service unavailable, timeout scenarios)
+
+#### **C. Edge Case Testing:**
+1. Large data volumes (pagination testing)
+2. Concurrent operations (multiple users, simultaneous requests)
+3. Data integrity (transaction rollbacks, consistency checks)
+4. Performance boundaries (maximum file sizes, request limits)
+
+### 8. 📊 **Testing Best Practices:**
+
+#### **Environment Setup:**
+- Use separate Postman environments for dev/staging/prod
+- Maintain consistent test data across environments
+- Use environment variables for dynamic data (IDs, tokens)
+
+#### **Test Organization:**
+- Group related tests in Postman collections
+- Use meaningful test names and descriptions
+- Implement proper test sequences and dependencies
+
+#### **Data Management:**
+- Clean up test data after test runs
+- Use unique identifiers to avoid conflicts
+- Maintain test data isolation between test runs
+
+#### **Monitoring & Validation:**
+- Verify response status codes and structures
+- Validate business logic in response data
+- Check for proper error messages and codes
+- Monitor performance metrics during testing
+
+---
+
+## 🛒 **BUYER WORKFLOW: Complete Testing Guide**
+
+### **Overview: Complete Buyer Journey**
+This section provides step-by-step instructions for testing the complete buyer workflow:
+1. **Setup Buyer Account** → 2. **Fund Wallet** → 3. **Purchase Credits** → 4. **Check Wallet** → 5. **Retire Credits** → 6. **Get Certificate**
+
+---
+
+### **STEP 1: Setup BUYER Account** 🔐
+
+#### **1.1 Register as BUYER**
+**POST** `{{BASE_URL}}/api/auth/register`
+
+**Body (JSON):**
+```json
+{
+  "username": "buyer_test_user",
+  "email": "buyer.test@example.com",
+  "password": "password123",
+  "fullName": "John Buyer",
+  "phone": "0987654321",
+  "role": "BUYER"
+}
+```
+
+**Expected Response:** `201 Created`
+```json
+{
+  "message": "User registered successfully",
+  "userId": "buyer-uuid-123"
+}
+```
+
+#### **1.2 Login as BUYER**
+**POST** `{{BASE_URL}}/api/auth/login`
+
+**Body (JSON):**
+```json
+{
+  "usernameOrEmail": "buyer_test_user",
+  "password": "password123"
+}
+```
+
+**Test Scripts (Postman):**
+```javascript
+// Save buyer credentials for workflow
+if (pm.response.code === 200) {
+    const response = pm.response.json();
+    pm.environment.set("BUYER_JWT_TOKEN", response.accessToken);
+    pm.environment.set("BUYER_USER_ID", response.userId);
+    pm.environment.set("BUYER_USERNAME", response.username);
+    console.log("Buyer logged in:", response.username);
+}
+```
+
+---
+
+### **STEP 2: Fund Wallet** 💰
+
+#### **2.1 Check Initial Wallet Balance**
+**GET** `{{BASE_URL}}/api/wallets/my-wallet`
+
+**Headers:**
+- `Authorization`: `Bearer {{BUYER_JWT_TOKEN}}`
+
+**Expected Response:**
+```json
+{
+  "userId": "{{BUYER_USER_ID}}",
+  "cashBalance": 0.00,
+  "creditBalance": 0.00,
+  "lastUpdated": "2025-10-29T16:30:00Z"
+}
+```
+
+#### **2.2 Deposit Funds to Wallet**
+**POST** `{{BASE_URL}}/api/wallets/deposit`
+
+**Headers:**
+- `Authorization`: `Bearer {{BUYER_JWT_TOKEN}}`
+
+**Body (JSON):**
+```json
+{
+  "amount": 1000.00,
+  "paymentMethodId": "payment-method-visa-1234"
+}
+```
+
+**Expected Response:**
+```json
+{
+  "transactionId": "deposit-txn-123",
+  "amount": 1000.00,
+  "newBalance": 1000.00,
+  "message": "Deposit completed successfully"
+}
+```
+
+#### **2.3 Verify Wallet Balance After Deposit**
+**GET** `{{BASE_URL}}/api/wallets/my-wallet`
+
+**Headers:**
+- `Authorization`: `Bearer {{BUYER_JWT_TOKEN}}`
+
+**Expected Response:**
+```json
+{
+  "userId": "{{BUYER_USER_ID}}",
+  "cashBalance": 1000.00,
+  "creditBalance": 0.00,
+  "lastUpdated": "2025-10-29T16:35:00Z"
+}
+```
+
+---
+
+### **STEP 3: Purchase Carbon Credits** 🌱
+
+#### **3.1 Browse Available Credits**
+**GET** `{{BASE_URL}}/credit-listings?page=0&size=10&sortBy=newest`
+
+**Expected Response:**
+```json
+{
+  "content": [
+    {
+      "listingId": "listing-uuid-456",
+      "creditId": "credit-uuid-789",
+      "sellerId": "evowner-uuid-001",
+      "price": 25.50,
+      "co2ReducedKg": 50.0,
+      "projectInfo": "Tesla Model 3 EV Journey",
+      "status": "ACTIVE",
+      "listedAt": "2025-10-29T10:00:00Z"
+    }
+  ],
+  "totalElements": 5,
+  "totalPages": 1
+}
+```
+
+**Test Scripts (Postman):**
+```javascript
+// Save first available listing for purchase
+if (pm.response.code === 200) {
+    const response = pm.response.json();
+    if (response.content && response.content.length > 0) {
+        pm.environment.set("TARGET_LISTING_ID", response.content[0].listingId);
+        pm.environment.set("TARGET_CREDIT_ID", response.content[0].creditId);
+        pm.environment.set("LISTING_PRICE", response.content[0].price);
+        console.log("Target listing selected:", response.content[0].listingId);
+    }
+}
+```
+
+#### **3.2 Check Balance Sufficiency**
+**GET** `{{BASE_URL}}/api/wallets/balance-check?amount={{LISTING_PRICE}}&balanceType=CASH`
+
+**Headers:**
+- `Authorization`: `Bearer {{BUYER_JWT_TOKEN}}`
+
+**Expected Response:**
+```json
+{
+  "sufficient": true,
+  "requestedAmount": 25.50,
+  "availableBalance": 1000.00,
+  "balanceType": "CASH"
+}
+```
+
+#### **3.3 Purchase Carbon Credit Listing**
+**POST** `{{BASE_URL}}/credit-listings/{{TARGET_LISTING_ID}}/purchase`
+
+**Headers:**
+- `Authorization`: `Bearer {{BUYER_JWT_TOKEN}}`
+
+**Expected Response:**
+```json
+{
+  "transactionId": "purchase-txn-789",
+  "creditId": "{{TARGET_CREDIT_ID}}",
+  "buyerId": "{{BUYER_USER_ID}}",
+  "sellerId": "evowner-uuid-001",
+  "amount": 25.50,
+  "status": "COMPLETED",
+  "createdAt": "2025-10-29T16:40:00Z",
+  "completedAt": "2025-10-29T16:40:05Z"
+}
+```
+
+**Test Scripts (Postman):**
+```javascript
+// Save transaction details for verification
+if (pm.response.code === 200) {
+    const response = pm.response.json();
+    pm.environment.set("PURCHASE_TRANSACTION_ID", response.transactionId);
+    pm.environment.set("PURCHASED_CREDIT_ID", response.creditId);
+    console.log("Transaction completed:", response.transactionId);
+    console.log("Credit purchased:", response.creditId);
+    console.log("Amount paid:", response.amount);
+}
+```
+
+---
+
+### **STEP 4: Verify Purchase & Check Wallet** ✅
+
+#### **4.1 Check Updated Wallet Balance**
+**GET** `{{BASE_URL}}/api/wallets/my-wallet`
+
+**Headers:**
+- `Authorization`: `Bearer {{BUYER_JWT_TOKEN}}`
+
+**Expected Response:**
+```json
+{
+  "userId": "{{BUYER_USER_ID}}",
+  "cashBalance": 974.50,
+  "creditBalance": 50.0,
+  "lastUpdated": "2025-10-29T16:45:00Z"
+}
+```
+
+**Verification Points:**
+- ✅ Cash balance decreased by purchase amount
+- ✅ Credit balance increased by CO2 amount purchased
+
+#### **4.2 View Purchase Transaction Details**
+**GET** `{{BASE_URL}}/transactions/{{PURCHASE_TRANSACTION_ID}}`
+
+**Headers:**
+- `Authorization`: `Bearer {{BUYER_JWT_TOKEN}}`
+
+**Expected Response:**
+```json
+{
+  "transactionId": "{{PURCHASE_TRANSACTION_ID}}",
+  "type": "PURCHASE",
+  "buyerId": "{{BUYER_USER_ID}}",
+  "sellerId": "evowner-uuid-001",
+  "listingId": "{{TARGET_LISTING_ID}}",
+  "amount": 25.50,
+  "status": "COMPLETED",
+  "completedAt": "2025-10-29T16:40:00Z"
+}
+```
+
+#### **4.3 Check My Purchased Credits**
+**GET** `{{BASE_URL}}/carbon-credits/user/{{BUYER_USER_ID}}`
+
+**Headers:**
+- `Authorization`: `Bearer {{BUYER_JWT_TOKEN}}`
+
+**Expected Response:**
+```json
+[
+  {
+    "creditId": "{{PURCHASED_CREDIT_ID}}",
+    "ownerId": "{{BUYER_USER_ID}}",
+    "co2ReducedKg": 50.0,
+    "status": "VERIFIED",
+    "projectInfo": "Tesla Model 3 EV Journey",
+    "retiredAt": "2025-10-29T16:50:00Z",
+    "retirementTransactionId": "{{RETIREMENT_ID}}"
+  }
+]
+```
+
+---
+
+### **STEP 5: Initiate Credit Retirement** 🏆
+
+#### **5.1 Prepare Retirement Request**
+**POST** `{{BASE_URL}}/api/retirement/initiate`
+
+**Headers:**
+- `Authorization`: `Bearer {{BUYER_JWT_TOKEN}}`
+
+**Body (JSON):**
+```json
+{
+  "userId": "{{BUYER_USER_ID}}",
+  "amountToRetireKg": 25.0,
+  "projectInfo": "Corporate Carbon Neutrality Project - Q4 2025",
+  "retirementPurpose": "Offsetting business operations for sustainability goals"
+}
+```
+
+**Expected Response:**
+```json
+{
+  "retirementId": "retirement-uuid-456",
+  "userId": "{{BUYER_USER_ID}}",
+  "userUsername": "buyer_test_user",
+  "amountRetiredKg": 25.0,
+  "retirementDate": "2025-10-29",
+  "status": "PENDING",
+  "retiredCarbonCreditIds": [
+    "{{PURCHASED_CREDIT_ID}}"
+  ],
+  "createdAt": "2025-10-29T16:50:00Z",
+  "certificate": null,
+  "message": "Retirement initiated successfully. Certificate generation in progress."
+}
+```
+
+**Test Scripts (Postman):**
+```javascript
+// Save retirement details for certificate tracking
+if (pm.response.code === 200) {
+    const response = pm.response.json();
+    pm.environment.set("RETIREMENT_ID", response.retirementId);
+    pm.environment.set("RETIREMENT_DATE", response.retirementDate);
+    console.log("Retirement initiated:", response.retirementId);
+}
+```
+
+#### **5.2 Monitor Retirement Status**
+**GET** `{{BASE_URL}}/api/retirement/{{RETIREMENT_ID}}`
+
+**Headers:**
+- `Authorization`: `Bearer {{BUYER_JWT_TOKEN}}`
+
+**Expected Response (Initially):**
+```json
+{
+  "retirementId": "{{RETIREMENT_ID}}",
+  "userId": "{{BUYER_USER_ID}}",
+  "userUsername": "buyer_test_user",
+  "amountRetiredKg": 25.0,
+  "retirementDate": "2025-10-29",
+  "status": "PENDING",
+  "retiredCarbonCreditIds": ["{{PURCHASED_CREDIT_ID}}"],
+  "createdAt": "2025-10-29T16:50:00Z",
+  "certificate": {
+    "id": "cert-uuid-789",
+    "status": "PENDING_GENERATION",
+    "certificateCode": "CERT-1730203800000-ABC12"
+  }
+}
+```
+
+**Wait 30-60 seconds, then check again for COMPLETED status**
+
+---
+
+### **STEP 6: Retrieve & Verify Certificate** 📄
+
+#### **6.1 Check Completed Retirement**
+**GET** `{{BASE_URL}}/api/retirement/{{RETIREMENT_ID}}`
+
+**Headers:**
+- `Authorization`: `Bearer {{BUYER_JWT_TOKEN}}`
+
+**Expected Response (After Processing):**
+```json
+{
+  "retirementId": "{{RETIREMENT_ID}}",
+  "userId": "{{BUYER_USER_ID}}",
+  "userUsername": "buyer_test_user",
+  "amountRetiredKg": 25.0,
+  "retirementDate": "2025-10-29",
+  "status": "COMPLETED",
+  "retiredCarbonCreditIds": ["{{PURCHASED_CREDIT_ID}}"],
+  "createdAt": "2025-10-29T16:50:00Z",
+  "certificate": {
+    "id": "cert-uuid-789",
+    "certificateCode": "CERT-1730203800000-ABC12",
+    "buyerId": "{{USER_ID}}",
+    "buyerUsername": "John Doe",
+    "buyerEmail": "buyer1@example.com",
+    "retirementTransactionId": "{{RETIREMENT_ID}}",
+    "amountRetiredKg": 25.0,
+    "projectSourceInfo": "Tesla Model 3 (VIN123), Corporate Neutrality Project",
+    "retirementDate": "2025-10-29",
+    "status": "COMPLETED",
+    "pdfUrl": "https://storage.googleapis.com/carbon-credit-marketplace-certs-2025/certificates/CERT-1730203800000-ABC12.pdf",
+    "createdAt": "2025-10-29T16:50:15Z"
+  }
+}
+```
+
+**Test Scripts (Postman):**
+```javascript
+// Save certificate details for final verification
+if (pm.response.code === 200) {
+    const response = pm.response.json();
+    if (response.certificate) {
+        pm.environment.set("CERTIFICATE_ID", response.certificate.id);
+        pm.environment.set("CERTIFICATE_CODE", response.certificate.certificateCode);
+        pm.environment.set("PDF_URL", response.certificate.pdfUrl);
+        console.log("Certificate generated:", response.certificate.certificateCode);
+        console.log("PDF URL:", response.certificate.pdfUrl);
+    }
+}
+```
+
+#### **6.2 Get Certificate Directly**
+**GET** `{{BASE_URL}}/api/retirement/{{RETIREMENT_ID}}/certificate`
+
+**Headers:**
+- `Authorization`: `Bearer {{BUYER_JWT_TOKEN}}`
+
+**Expected Response:**
+```json
+{
+  "id": "{{CERTIFICATE_ID}}",
+  "certificateCode": "{{CERTIFICATE_CODE}}",
+  "buyerId": "{{BUYER_USER_ID}}",
+  "buyerUsername": "John Doe",
+  "buyerEmail": "buyer1@example.com",
+  "retirementTransactionId": "{{RETIREMENT_ID}}",
+  "amountRetiredKg": 25.0,
+  "projectSourceInfo": "Tesla Model 3 (VIN123), Corporate Neutrality Project",
+  "retirementDate": "2025-10-29",
+  "status": "COMPLETED",
+  "pdfUrl": "{{PDF_URL}}",
+  "createdAt": "2025-10-29T16:50:15Z"
+}
+```
+
+#### **6.3 View All My Certificates**
+**GET** `{{BASE_URL}}/api/retirement/certificates/user/{{BUYER_USER_ID}}?page=0&size=10`
+
+**Headers:**
+- `Authorization`: `Bearer {{BUYER_JWT_TOKEN}}`
+
+**Query Parameters:**
+- `page` (optional): 0
+- `size` (optional): 10
+
+**Expected Response:**
+```json
+{
+  "content": [
+    {
+      "id": "{{CERTIFICATE_ID}}",
+      "certificateCode": "{{CERTIFICATE_CODE}}",
+      "buyerId": "{{BUYER_USER_ID}}",
+      "buyerUsername": "John Doe",
+      "buyerEmail": "buyer1@example.com",
+      "retirementTransactionId": "{{RETIREMENT_ID}}",
+      "amountRetiredKg": 25.50,
+      "projectSourceInfo": "Tesla Model 3 (VIN123), Solar Installation Project",
+      "retirementDate": "2025-10-29",
+      "status": "COMPLETED",
+      "pdfUrl": "{{PDF_URL}}",
+      "createdAt": "2025-10-29T10:30:15Z"
+    }
+  ],
+  "page": 0,
+  "size": 10,
+  "totalElements": 1,
+  "totalPages": 1,
+  "last": true
+}
+```
+
+---
+
+### **STEP 7: Final Verification** ✅
+
+#### **7.1 Check Final Wallet State**
+**GET** `{{BASE_URL}}/api/wallets/my-wallet`
+
+**Headers:**
+- `Authorization`: `Bearer {{BUYER_JWT_TOKEN}}`
+
+**Expected Response:**
+```json
+{
+  "userId": "{{BUYER_USER_ID}}",
+  "cashBalance": 974.50,
+  "creditBalance": 25.0,
+  "lastUpdated": "2025-10-29T16:50:00Z"
+}
+```
+
+**Verification Points:**
+- ✅ Credit balance reduced by retirement amount (50.0 → 25.0)
+- ✅ Cash balance unchanged from purchase
+- ✅ Retirement amount matches certificate amount
+
+#### **7.2 Check Credit Status After Retirement**
+**GET** `{{BASE_URL}}/carbon-credits/{{PURCHASED_CREDIT_ID}}`
+
+**Expected Response:**
+```json
+{
+  "creditId": "{{PURCHASED_CREDIT_ID}}",
+  "ownerId": "{{BUYER_USER_ID}}",
+  "co2ReducedKg": 50.0,
+  "status": "RETIRED",
+  "projectInfo": "Tesla Model 3 EV Journey",
+  "retiredAt": "2025-10-29T16:50:00Z",
+  "retirementTransactionId": "{{RETIREMENT_ID}}"
+}
+```
+
+---
+
+## 🎯 **BUYER WORKFLOW CHECKLIST**
+
+### **✅ Complete Success Criteria:**
+
+#### **Account & Wallet:**
+- [ ] BUYER account created and logged in
+- [ ] Wallet funded with sufficient balance
+- [ ] Balance verification working
+
+#### **Credit Purchase:**
+- [ ] Available credits browsed successfully
+- [ ] Credit purchased and transaction completed
+- [ ] Wallet balance updated correctly (cash decreased, credits increased)
+- [ ] Credit ownership transferred to buyer
+
+#### **Credit Retirement:**
+- [ ] Retirement initiated successfully
+- [ ] Retirement status progresses from PENDING → COMPLETED
+- [ ] Credit status changes from VERIFIED → RETIRED
+- [ ] Credit balance reduced by retirement amount
+
+#### **Certificate Generation:**
+- [ ] Certificate created with PENDING_GENERATION status
+- [ ] Certificate status progresses to COMPLETED
+- [ ] Certificate contains correct buyer information
+- [ ] Certificate includes proper project information
+- [ ] PDF URL generated (mock or real)
+- [ ] Certificate retrievable via retirement ID
+- [ ] Certificate appears in user's certificate list
+
+### **📊 Expected Balance Changes:**
+```
+Initial State:
+- Cash Balance: $0.00
+- Credit Balance: 0.0 kg CO2
+
+After Deposit ($1000):
+- Cash Balance: $1000.00
+- Credit Balance: 0.0 kg CO2
+
+After Purchase (50kg @ $25.50):
+- Cash Balance: $974.50
+- Credit Balance: 50.0 kg CO2
+
+After Retirement (25kg):
+- Cash Balance: $974.50
+- Credit Balance: 25.0 kg CO2
+```
+
+### **🕐 Timeline Expectations:**
+- **Registration & Login:** Immediate
+- **Wallet Deposit:** Immediate
+- **Credit Purchase:** Immediate
+- **Retirement Initiation:** Immediate
+- **Certificate Generation:** 30-60 seconds (async)
+- **PDF Generation:** 30-60 seconds (async)

@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
@@ -40,42 +41,28 @@ public class CertificateGenerationService {
      * @param certificateId The ID of the certificate to generate PDF for
      */
     @Async
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void generateAndStoreCertificate(UUID certificateId) {
         log.info("Starting async certificate generation for certificate ID: {}", certificateId);
 
+        Certificate certificate = certificateRepository.findById(certificateId)
+                .orElseThrow(() -> new IllegalStateException("Certificate not found: " + certificateId));
+
         try {
-            Optional<Certificate> certificateOpt = certificateRepository.findById(certificateId);
-
-            if (certificateOpt.isEmpty()) {
-                log.error("Certificate not found with ID: {}", certificateId);
-                return;
-            }
-
-            Certificate certificate = certificateOpt.get();
-
-            // Update status to indicate generation is in progress
-            certificate.setStatus(Certificate.CertificateStatus.PENDING_GENERATION);
-            certificateRepository.save(certificate);
-
-            // Generate PDF using PdfService and upload to cloud storage
+            // Generate PDF + upload
             String pdfUrl = generateAndUploadPdfDocument(certificate);
 
-            // Update certificate with PDF URL and mark as completed
+            // Save URL + status
             certificate.setPdfUrl(pdfUrl);
             certificate.setStatus(Certificate.CertificateStatus.COMPLETED);
             certificateRepository.save(certificate);
 
-            log.info("Successfully generated and stored certificate PDF for certificate ID: {}", certificateId);
+            log.info("Certificate PDF generated: {}", pdfUrl);
 
         } catch (Exception e) {
-            log.error("Failed to generate certificate for ID: {}", certificateId, e);
-
-            // Update status to failed if certificate still exists
-            certificateRepository.findById(certificateId).ifPresent(cert -> {
-                cert.setStatus(Certificate.CertificateStatus.FAILED_GENERATION);
-                certificateRepository.save(cert);
-            });
+            log.error("Failed to generate certificate: {}", certificateId, e);
+            certificate.setStatus(Certificate.CertificateStatus.FAILED_GENERATION);
+            certificateRepository.save(certificate);
         }
     }
 

@@ -24,7 +24,7 @@ public class CertificateDTO {
     private BigDecimal amountRetiredKg;
     private String projectSourceInfo;
     private LocalDate retirementDate;
-    private Certificate.CertificateStatus status;
+    private String status;
     private String pdfUrl;
     private Instant createdAt;
 
@@ -40,7 +40,7 @@ public class CertificateDTO {
         this.amountRetiredKg = certificate.getAmountRetiredKg();
         this.projectSourceInfo = certificate.getProjectSourceInfo();
         this.retirementDate = certificate.getRetirementDate();
-        this.status = certificate.getStatus();
+        this.status = certificate.getStatus().name();
         this.pdfUrl = certificate.getPdfUrl();
         this.createdAt = certificate.getCreatedAt();
     }

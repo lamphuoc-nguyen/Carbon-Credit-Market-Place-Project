@@ -129,7 +129,14 @@ public class CreditListingController {
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
             // Use TransactionService to handle wallet operations properly
-            Transaction transaction = transactionService.initiatePurchase(listingId, buyer);
+            Transaction transaction = transactionService.initiatePurchase(listingId, buyer, "WALLET");
+
+            // For WALLET payments, automatically process the payment to complete the transaction
+            if (transaction.getPaymentMethod() == Transaction.PaymentMethod.WALLET) {
+                transactionService.processPayment(transaction);
+                // Reload transaction to get updated status
+                transaction = transactionService.findTransactionById(transaction.getId());
+            }
 
             log.info("Transaction {} initiated for listing {} by user: {}",
                     transaction.getId(), listingId, buyer.getUsername());

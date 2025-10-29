@@ -46,22 +46,24 @@ public class RetirementController {
     /**
      * Initiate carbon credit retirement
      * POST /api/retirement/initiate
+     *
+     * FIX: Pass the complete request object to service
      */
     @PostMapping("/initiate")
     @PreAuthorize("hasRole('BUYER')")
     public ResponseEntity<?> initiateRetirement(@Valid @RequestBody RetirementRequestDTO request) {
         log.info("Initiating retirement for user: {} with amount: {} kg",
                 request.getUserId(), request.getAmountToRetireKg());
+        log.info("Project info: {}, Purpose: {}",
+                request.getProjectInfo(), request.getRetirementPurpose());
 
         try {
-            RetirementTransaction retirement = retirementService.initiateRetirement(
-                request.getUserId(),
-                request.getAmountToRetireKg()
-            );
+            // FIX: Pass the complete request object instead of individual fields
+            RetirementTransaction retirement = retirementService.initiateRetirement(request);
 
             RetirementResponseDTO response = new RetirementResponseDTO(
-                retirement,
-                "Retirement initiated successfully. Certificate generation in progress."
+                    retirement,
+                    "Retirement initiated successfully. Certificate generation in progress."
             );
 
             log.info("Retirement initiated successfully with ID: {}", retirement.getId());
@@ -70,17 +72,17 @@ public class RetirementController {
         } catch (UserNotFoundException e) {
             log.error("User not found: {}", request.getUserId(), e);
             return ResponseEntity.badRequest()
-                .body(new ErrorResponse("User not found: " + e.getMessage()));
+                    .body(new ErrorResponse("User not found: " + e.getMessage()));
 
         } catch (InsufficientCreditsException e) {
             log.error("Insufficient credits for retirement: {}", e.getMessage());
             return ResponseEntity.badRequest()
-                .body(new ErrorResponse("Insufficient credits: " + e.getMessage()));
+                    .body(new ErrorResponse("Insufficient credits: " + e.getMessage()));
 
         } catch (Exception e) {
             log.error("Error initiating retirement", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponse("Internal server error: " + e.getMessage()));
+                    .body(new ErrorResponse("Internal server error: " + e.getMessage()));
         }
     }
 
@@ -94,7 +96,6 @@ public class RetirementController {
         log.info("Fetching retirement transaction: {}", id);
 
         try {
-            // Note: You'll need to add this method to RetirementService
             Optional<RetirementTransaction> retirement = retirementService.findById(id);
 
             if (retirement.isEmpty()) {
@@ -107,7 +108,7 @@ public class RetirementController {
         } catch (Exception e) {
             log.error("Error fetching retirement: {}", id, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponse("Error fetching retirement: " + e.getMessage()));
+                    .body(new ErrorResponse("Error fetching retirement: " + e.getMessage()));
         }
     }
 
@@ -126,26 +127,25 @@ public class RetirementController {
 
         try {
             Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-            // Note: You'll need to add this method to RetirementService
             Page<RetirementTransaction> retirements = retirementService.findByUserId(userId, pageable);
 
             List<RetirementResponseDTO> responseList = retirements.getContent().stream()
-                .map(RetirementResponseDTO::new)
-                .collect(Collectors.toList());
+                    .map(RetirementResponseDTO::new)
+                    .collect(Collectors.toList());
 
             return ResponseEntity.ok(new PagedResponse<>(
-                responseList,
-                retirements.getNumber(),
-                retirements.getSize(),
-                retirements.getTotalElements(),
-                retirements.getTotalPages(),
-                retirements.isLast()
+                    responseList,
+                    retirements.getNumber(),
+                    retirements.getSize(),
+                    retirements.getTotalElements(),
+                    retirements.getTotalPages(),
+                    retirements.isLast()
             ));
 
         } catch (Exception e) {
             log.error("Error fetching user retirements: {}", userId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponse("Error fetching retirement history: " + e.getMessage()));
+                    .body(new ErrorResponse("Error fetching retirement history: " + e.getMessage()));
         }
     }
 
@@ -159,20 +159,23 @@ public class RetirementController {
         log.info("Fetching certificate for retirement: {}", retirementId);
 
         try {
-            Optional<Certificate> certificate = certificateRepository
-                .findByRetirementTransactionId(retirementId);
+            Optional<Certificate> optCert = certificateRepository.findByRetirementTransactionId(retirementId);
 
-            if (certificate.isEmpty()) {
+            if (optCert.isEmpty()) {
                 return ResponseEntity.notFound().build();
             }
 
-            CertificateDTO response = new CertificateDTO(certificate.get());
-            return ResponseEntity.ok(response);
+            Certificate cert = optCert.get();
+
+            // Build DTO with pdfUrl
+            CertificateDTO dto = new CertificateDTO(cert);
+
+            return ResponseEntity.ok(dto);
 
         } catch (Exception e) {
-            log.error("Error fetching certificate for retirement: {}", retirementId, e);
+            log.error("Error fetching certificate: {}", retirementId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponse("Error fetching certificate: " + e.getMessage()));
+                    .body(new ErrorResponse("Failed to retrieve certificate: " + e.getMessage()));
         }
     }
 
@@ -191,26 +194,25 @@ public class RetirementController {
 
         try {
             Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-            // Note: You'll need to add this method to CertificateRepository
             Page<Certificate> certificates = certificateRepository.findByBuyerId(userId, pageable);
 
             List<CertificateDTO> responseList = certificates.getContent().stream()
-                .map(CertificateDTO::new)
-                .collect(Collectors.toList());
+                    .map(CertificateDTO::new)
+                    .collect(Collectors.toList());
 
             return ResponseEntity.ok(new PagedResponse<>(
-                responseList,
-                certificates.getNumber(),
-                certificates.getSize(),
-                certificates.getTotalElements(),
-                certificates.getTotalPages(),
-                certificates.isLast()
+                    responseList,
+                    certificates.getNumber(),
+                    certificates.getSize(),
+                    certificates.getTotalElements(),
+                    certificates.getTotalPages(),
+                    certificates.isLast()
             ));
 
         } catch (Exception e) {
             log.error("Error fetching user certificates: {}", userId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponse("Error fetching certificates: " + e.getMessage()));
+                    .body(new ErrorResponse("Error fetching certificates: " + e.getMessage()));
         }
     }
 

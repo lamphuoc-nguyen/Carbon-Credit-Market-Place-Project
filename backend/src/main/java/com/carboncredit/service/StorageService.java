@@ -26,7 +26,7 @@ public class StorageService {
      */
     @Autowired
     public StorageService(@Autowired(required = false) Storage storage,
-                         @Value("${gcp.storage.bucket-name}") String bucketName,
+                         @Value("${gcp.storage.bucket-name:mock-bucket}") String bucketName,
                          @Value("${spring.cloud.gcp.storage.enabled:false}") boolean storageEnabled) {
         this.storage = storage;
         this.bucketName = bucketName;

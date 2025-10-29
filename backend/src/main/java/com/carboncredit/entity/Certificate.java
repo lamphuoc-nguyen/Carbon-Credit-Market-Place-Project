@@ -48,6 +48,9 @@ public class Certificate {
     @Column(name = "amount_retired_kg", nullable = false, precision = 10, scale = 2)
     private BigDecimal amountRetiredKg;
 
+    @Column(name = "co2_reduced_kg", nullable = false, precision = 10, scale = 2)
+    private BigDecimal co2ReducedKg;
+
     @Column(name = "project_source_info", nullable = false, length = 500)
     private String projectSourceInfo;
 
