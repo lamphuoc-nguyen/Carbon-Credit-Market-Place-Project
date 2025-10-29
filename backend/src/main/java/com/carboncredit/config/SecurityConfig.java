@@ -69,6 +69,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/api/payment/vnpay-return").permitAll() // Thêm dòng này
+                        .requestMatchers("/api/payment/vnpay/create").authenticated()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter(), UsernamePasswordAuthenticationFilter.class);
 
