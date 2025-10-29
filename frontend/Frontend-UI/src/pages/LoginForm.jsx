@@ -110,6 +110,26 @@ const LoginForm = () => {
         return Object.keys(newErrors).length === 0;
     };
 
+    // HÀM GIẢI MÃ TOKEN (Không thay đổi)
+    const decodeToken = (token) => {
+        try {
+            const base64Url = token.split('.')[1]; // Lấy phần payload
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(
+                atob(base64)
+                    .split('')
+                    .map(function (c) {
+                        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                    })
+                    .join('')
+            );
+            return JSON.parse(jsonPayload); // Đây là object: { sub, role, userId, ... }
+        } catch (error) {
+            console.error("Invalid token:", error);
+            return null;
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -123,28 +143,81 @@ const LoginForm = () => {
                     password: formData.password
                 };
 
+                // response BÂY GIỜ là { accessToken: "...", tokenType: "Bearer" }
                 const response = await authApi.login(loginPayload);
-                console.log('✅ Login success:', response);
+                console.log('✅ Login success (response data):', response);
 
-                if (!response || !response.accessToken) {
+                // --- SỬA LỖI Ở ĐÂY ---
+                // 1. Lấy token trực tiếp từ response
+                const token = response?.accessToken;
+
+                if (!token) {
                     setErrors({
-                        submit: 'Invalid username or password'
+                        // Đây là lỗi bạn đang thấy
+                        submit: 'Login successful, but no token was provided by the server.'
                     });
+                    setIsLoading(false);
                     return;
                 }
 
-                // Save token
+                // 2. Giải mã token để lấy thông tin user (payload)
+                const userPayload = decodeToken(token); // userPayload là { sub, role, userId... }
+                console.log('Decoded user payload:', userPayload);
+
+                // 3. Kiểm tra xem payload và role có hợp lệ không
+                if (!userPayload || !userPayload.role) {
+                    setErrors({
+                        submit: 'Invalid token received. Role not found.'
+                    });
+                    setIsLoading(false);
+                    return;
+                }
+
+                // 4. Lưu trữ
                 const storage = formData.rememberMe ? localStorage : sessionStorage;
-                storage.setItem('authToken', response.accessToken);
+                storage.setItem('authToken', token);
+                storage.setItem('user', JSON.stringify(userPayload)); // Lưu toàn bộ payload
 
-                console.log('✅ Token saved successfully');
+                console.log('✅ Token and user info saved successfully');
 
-                // Redirect to home page after successful login
-                navigate('/home');
+                // 5. Lấy userRole từ payload đã giải mã
+                const userRole = userPayload.role;
+                console.log('User role is:', userRole);
+
+                // --- KẾT THÚC SỬA LỖI ---
+
+                switch (userRole) {
+                    case 'CVA':
+                        console.log('Redirecting CVA user to /cva/pending-verifications');
+                        navigate('/cva');
+                        break;
+
+                    case 'ADMIN':
+                        console.log('Redirecting Admin user to /admin/dashboard');
+                        navigate('/admin/dashboard');
+                        break;
+
+                    case 'EV_OWNER':
+                        // (Giữ nguyên phần còn lại của file)
+                        // ...
+                        console.log('Redirecting EV Owner to /ev-dashboard');
+                        navigate('/ev-dashboard');
+                        break;
+
+                    case 'BUYER':
+                        console.log('Redirecting Buyer to /marketplace');
+                        navigate('/marketplace');
+                        break;
+
+                    default:
+                        console.log('Redirecting default user to /home');
+                        navigate('/home');
+                }
 
             } catch (error) {
-                console.error('❌ Login error:', error);
-
+                // (Giữ nguyên phần còn lại của file)
+                // ...
+                console.error(' Login error:', error);
                 if (error.response) {
                     const status = error.response.status;
                     const message = error.response.data?.message || error.response.data?.error;
@@ -161,11 +234,14 @@ const LoginForm = () => {
 
                     setErrors({
                         submit: errorMessages[status] || `Error ${status}: ${message || 'Please try again'}`
+
                     });
                 } else if (error.request) {
                     setErrors({
                         submit: 'Unable to connect to server. Please check your connection.'
+
                     });
+                    _
                 } else {
                     setErrors({
                         submit: error.message || 'An unexpected error occurred'
@@ -241,8 +317,8 @@ const LoginForm = () => {
                                 onChange={handleChange}
                                 onBlur={() => handleBlur('usernameOrEmail')}
                                 className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${errors.usernameOrEmail && touched.usernameOrEmail
-                                        ? 'border-red-500 bg-red-50'
-                                        : 'border-gray-300'
+                                    ? 'border-red-500 bg-red-50'
+                                    : 'border-gray-300'
                                     }`}
                                 placeholder="Enter your username or email"
                             />
@@ -266,8 +342,8 @@ const LoginForm = () => {
                                 onChange={handleChange}
                                 onBlur={() => handleBlur('password')}
                                 className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${errors.password && touched.password
-                                        ? 'border-red-500 bg-red-50'
-                                        : 'border-gray-300'
+                                    ? 'border-red-500 bg-red-50'
+                                    : 'border-gray-300'
                                     }`}
                                 placeholder="Enter your password"
                             />

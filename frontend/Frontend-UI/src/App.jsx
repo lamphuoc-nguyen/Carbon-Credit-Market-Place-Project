@@ -11,11 +11,18 @@ import Footer from './Components/Footer';
 import HomePage from './pages/HomePage';
 import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
+import CvaPage from './pages/CvaPage';
 
 function App() {
+
+  // Ẩn Navbar & Footer nếu đang ở trang /cva
+  const hideLayout = location.pathname === '/cva';
+
   return (
     <>
-      <Navbar />
+      {!hideLayout && <Navbar />}
+
+      
 
       <Routes>
         <Route path="/" element={<Navigate to="/home" />} />
@@ -28,9 +35,12 @@ function App() {
         <Route path="/dashboard" element={<HomePage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
+        <Route path="/cva" element={<CvaPage />} />
       </Routes>
 
-      <Footer />
+
+      {!hideLayout && <Footer />}
+      
     </>
   );
 }

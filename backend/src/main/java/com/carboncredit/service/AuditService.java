@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import com.carboncredit.entity.AuditLog;;
+import com.carboncredit.entity.AuditLog;
 import com.carboncredit.entity.CarbonCredit;
 import com.carboncredit.entity.User;
 import com.carboncredit.repository.AuditLogRepository;

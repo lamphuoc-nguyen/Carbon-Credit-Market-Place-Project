@@ -54,8 +54,8 @@ public class Transaction {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
-    @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Certificate> certificates;
+//    @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+//    private List<Certificate> certificates;
 
     @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Dispute> disputes;
