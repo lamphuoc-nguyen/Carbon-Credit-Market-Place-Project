@@ -1,26 +1,14 @@
 package com.carboncredit.entity;
 
-import java.time.LocalDateTime;
-import java.util.UUID;
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
-
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "notifications")
@@ -70,11 +58,15 @@ public class Notification {
         TRANSACTION_COMPLETED,
         TRANSACTION_FAILED,
         TRANSACTION_CANCELLED,
+        RETIREMENT_INITIATED,
+        RETIREMENT_COMPLETED,
+        RETIREMENT_FAILED,
         PAYMENT_RECEIVED,
         PAYMENT_FAILED,
         CREDIT_VERIFIED,
         CREDIT_REJECTED,
         CREDIT_LISTED,
+        CREDIT_RETIRED,
         CREDIT_SOLD,
         DISPUTE_CREATED,
         DISPUTE_RESOLVED,
@@ -94,6 +86,7 @@ public class Notification {
 
     public enum EntityType {
         TRANSACTION,
+        RETIREMENT_TRANSACTION,
         PAYMENT,
         CREDIT,
         LISTING,

@@ -1,5 +1,6 @@
 package com.carboncredit.service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -162,6 +163,36 @@ public class TransactionService {
         // Validate transaction preconditions
         validationService.validateTransactionPreconditions(fullTransaction, currentListing, currentCredit);
 
+        User buyer = transaction.getBuyer();
+        User seller = transaction.getSeller();
+        BigDecimal amount = transaction.getAmount();
+
+        // === WALLET OPERATIONS ===
+        log.info("Processing wallet operations for transaction {}", transaction.getId());
+
+        try {
+            // 1. Deduct cash from buyer's wallet
+            walletService.updateCashBalance(buyer.getId(), amount.negate());
+            log.info("Deducted {} from buyer's wallet {}", amount, buyer.getId());
+
+            // 2. Add cash to seller's wallet
+            walletService.updateCashBalance(seller.getId(), amount);
+            log.info("Added {} to seller's wallet {}", amount, seller.getId());
+
+            // 3. Transfer credit ownership to buyer
+            currentCredit.setUser(buyer);
+            carbonCreditRepository.save(currentCredit);
+            log.info("Transferred credit {} ownership to buyer {}", currentCredit.getId(), buyer.getId());
+
+            // 4. Add credit balance to buyer's wallet
+            walletService.updateCreditBalance(buyer.getId(), currentCredit.getCo2ReducedKg());
+            log.info("Added {} kg CO2 to buyer's credit balance", currentCredit.getCo2ReducedKg());
+
+        } catch (Exception e) {
+            log.error("Wallet operation failed for transaction {}: {}", transaction.getId(), e.getMessage());
+            throw new BusinessOperationException("Transaction failed during wallet operations: " + e.getMessage(), e);
+        }
+
         // Update transaction status
         fullTransaction.setStatus(TransactionStatus.COMPLETED);
         fullTransaction.setCompletedAt(LocalDateTime.now());
@@ -207,7 +238,7 @@ public class TransactionService {
         notificationService.notifyTransactionCompleted(completedTransaction.getBuyer(),
                 completedTransaction.getSeller(), completedTransaction.getId().toString());
 
-        log.info("Transaction {} completed successfully", completedTransaction.getId());
+        log.info("Transaction {} completed successfully with wallet updates", completedTransaction.getId());
         return completedTransaction;
     }
 
@@ -482,6 +513,21 @@ public class TransactionService {
 
         log.info("Found {} transactions in date range", transactions.getTotalElements());
         return transactions;
+    }
+
+    // Validate buyer has sufficient funds before transaction
+    private void validateBuyerBalance(User buyer, BigDecimal amount) {
+        log.info("Validating buyer {} has sufficient balance for amount {}", buyer.getId(), amount);
+
+        BigDecimal buyerCashBalance = walletService.getCashBalance(buyer.getId());
+
+        if (buyerCashBalance.compareTo(amount) < 0) {
+            throw new BusinessOperationException(
+                String.format("Insufficient funds. Required: %s, Available: %s", amount, buyerCashBalance)
+            );
+        }
+
+        log.info("Buyer {} has sufficient balance: {}", buyer.getId(), buyerCashBalance);
     }
 
 }

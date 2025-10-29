@@ -5,16 +5,20 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.carboncredit.dto.CreditListingDTO;
+import com.carboncredit.dto.TransactionDTO;
 import com.carboncredit.entity.CreditListing;
+import com.carboncredit.entity.Transaction;
 import com.carboncredit.entity.User;
 import com.carboncredit.service.CreditListingService;
 import com.carboncredit.service.CreditListingService.MarketplaceStats;
+import com.carboncredit.service.TransactionService;
 import com.carboncredit.service.UserService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -33,6 +37,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 public class CreditListingController {
 
     private final CreditListingService creditListingService;
+    private final TransactionService transactionService;
     private final UserService userService;
 
     // create fixed-price listing
@@ -117,19 +122,26 @@ public class CreditListingController {
     }
 
     // Purchase listing
-    @PostMapping("/{listingId}/purchase") // Fix: was {listngId}
-    public ResponseEntity<CreditListingDTO> purchaseListing(@PathVariable UUID listingId, Authentication authentication) { // Fix: was purchaseLisitng
+    @PostMapping("/{listingId}/purchase")
+    public ResponseEntity<?> purchaseListing(@PathVariable UUID listingId, Authentication authentication) {
         try {
             User buyer = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            CreditListing listing = creditListingService.purchaseListing(listingId, buyer);
+            // Use TransactionService to handle wallet operations properly
+            Transaction transaction = transactionService.initiatePurchase(listingId, buyer);
 
-            log.info("Listing {} purchased by user: {}", listingId, buyer.getUsername());
-            return ResponseEntity.ok(new CreditListingDTO(listing)); // Convert to DTO
+            log.info("Transaction {} initiated for listing {} by user: {}",
+                    transaction.getId(), listingId, buyer.getUsername());
+
+            // Return transaction details instead of listing
+            TransactionDTO transactionDTO = new TransactionDTO(transaction);
+            return ResponseEntity.ok(transactionDTO);
+
         } catch (Exception e) {
             log.error("Error purchasing listing {}: {}", listingId, e.getMessage());
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 

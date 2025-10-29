@@ -105,15 +105,18 @@ public class ValidationService {
             throw new ValidationException("Transaction", "transaction", "Transaction cannot be null");
         }
 
-        // validate listing exist and is active
-        if (currentCredit == null) {
+        // validate listing exists and is in valid state for transaction completion
+        if (currentListing == null) {
             throw new BusinessOperationException("Listing no longer exists");
         }
-        if (currentListing.getStatus() != ListingStatus.ACTIVE) {
-            throw new BusinessOperationException("Lisitng  no longer active");
+
+        // Accept both ACTIVE and PENDING_TRANSACTION status for transaction completion
+        if (currentListing.getStatus() != ListingStatus.ACTIVE &&
+            currentListing.getStatus() != ListingStatus.PENDING_TRANSACTION) {
+            throw new BusinessOperationException("Listing no longer available for transaction. Status: " + currentListing.getStatus());
         }
 
-        // validate credit stil exisit and available
+        // validate credit still exists and available
         if (currentCredit == null) {
             throw new BusinessOperationException("Credit no longer exists");
         }

@@ -68,6 +68,7 @@ public class CarbonCredit {
         VERIFIED,  // CVA approved
         LISTED,    // Available for sale
         SOLD,      // Purchased
-        REJECTED   // CVA rejected
+        REJECTED,   // CVA rejected
+        RETIRED    //Use for credits that have been retired by buyers
     }
 }
