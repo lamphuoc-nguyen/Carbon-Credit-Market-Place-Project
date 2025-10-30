@@ -11,6 +11,7 @@ const CreateListingPage = () => {
     creditBalance: 0
   });
   const [carbonCredits, setCarbonCredits] = useState([]);
+  const [selectedCreditId, setSelectedCreditId] = useState('');
   const [creditsToSell, setCreditsToSell] = useState('');
   const [pricePerCredit, setPricePerCredit] = useState('');
   const [totalPrice, setTotalPrice] = useState(0);
@@ -84,7 +85,7 @@ const CreateListingPage = () => {
       const profileResponse = await EvOwnerAPI.user.getProfile();
       
       // Handle different response structures
-      const userData = profileResponse.data?.data || profileResponse.data || profileResponse;
+const userData = profileResponse.data?.data || profileResponse.data || profileResponse;
       console.log('✅ User profile fetched:', userData);
       
       let userId = userData.id || userData.userId || '';
@@ -140,6 +141,11 @@ const CreateListingPage = () => {
       console.log('✅ Available credits to list:', availableCredits.length);
       
       setCarbonCredits(availableCredits);
+      
+      // Auto-select first credit if available
+      if (availableCredits.length > 0) {
+        setSelectedCreditId(availableCredits[0].id || availableCredits[0].creditId);
+      }
     } catch (error) {
       console.error('❌ Failed to fetch carbon credits:', error);
       console.error('Error details:', {
@@ -163,7 +169,7 @@ const CreateListingPage = () => {
     e.preventDefault();
 
     // Validation
-    if (!creditsToSell || parseFloat(creditsToSell) <= 0) {
+if (!creditsToSell || parseFloat(creditsToSell) <= 0) {
       alert('Please enter a valid number of credits to sell');
       return;
     }
@@ -184,6 +190,12 @@ const CreateListingPage = () => {
       return;
     }
 
+    // Check if a credit is selected
+    if (!selectedCreditId) {
+      alert('Please select a carbon credit to list.');
+      return;
+    }
+
     try {
       setSubmitting(true);
       console.log('📝 Creating listing...');
@@ -191,12 +203,10 @@ const CreateListingPage = () => {
       // Calculate total price
       const total = parseFloat(creditsToSell) * parseFloat(pricePerCredit);
       
-      // Use the first available verified credit
-      const creditId = carbonCredits[0].id || carbonCredits[0].creditId;
-      console.log('Using credit ID:', creditId);
+      console.log('Using selected credit ID:', selectedCreditId);
       
       const response = await EvOwnerAPI.marketplace.createListing(
-        creditId,
+        selectedCreditId,
         total.toFixed(2)
       );
       
@@ -208,6 +218,7 @@ const CreateListingPage = () => {
       setCreditsToSell('');
       setPricePerCredit('');
       setTotalPrice(0);
+      setSelectedCreditId('');
       
       // Refresh data
       await fetchWalletData();
@@ -250,7 +261,7 @@ const CreateListingPage = () => {
         </div>
 
         {/* Available Credits Banner */}
-        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-2xl shadow-lg p-6 mb-8 text-white">
+<div className="bg-gradient-to-r from-green-500 to-green-600 rounded-2xl shadow-lg p-6 mb-8 text-white">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-green-100 text-sm font-medium mb-1">Available Carbon Credits</p>
@@ -299,6 +310,36 @@ const CreateListingPage = () => {
         <form onSubmit={handleCreateListing} className="bg-white rounded-2xl shadow-xl p-8 space-y-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Listing Details</h2>
 
+          {/* Select Carbon Credit */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Select Carbon Credit <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={selectedCreditId}
+              onChange={(e) => setSelectedCreditId(e.target.value)}
+              required
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            >
+<option value="">-- Choose a verified credit --</option>
+              {carbonCredits.map((credit) => {
+                const creditId = credit.id || credit.creditId;
+                const journeyId = credit.journeyId || credit.journey_id || 'N/A';
+                const creditAmount = credit.creditAmount || credit.credit_amount || 0;
+                const co2Reduced = credit.co2ReducedKg || credit.co2_reduced_kg || 0;
+                
+                return (
+                  <option key={creditId} value={creditId}>
+                    Credit #{creditId.substring(0, 8)}... | Journey: {journeyId.toString().substring(0, 8)}... | {creditAmount} credits | {co2Reduced}kg CO₂
+                  </option>
+                );
+              })}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              {carbonCredits.length} verified credit{carbonCredits.length !== 1 ? 's' : ''} available
+            </p>
+          </div>
+
           {/* Credits to Sell */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -345,8 +386,7 @@ const CreateListingPage = () => {
               Suggested price: $8.00 - $15.00 per credit
             </p>
           </div>
-
-          {/* Total Price Display */}
+{/* Total Price Display */}
           {totalPrice > 0 && (
             <div className="bg-gradient-to-r from-blue-50 to-green-50 border-2 border-blue-200 rounded-xl p-6">
               <div className="flex items-center justify-between">
@@ -373,6 +413,34 @@ const CreateListingPage = () => {
           {/* Listing Preview */}
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2">
             <h3 className="font-semibold text-gray-900 mb-3">Listing Preview</h3>
+            {selectedCreditId && (
+              <div className="mb-3 pb-3 border-b border-gray-300">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Selected Credit ID:</span>
+                  <span className="font-medium text-gray-900 font-mono text-xs">
+                    {selectedCreditId.substring(0, 16)}...
+                  </span>
+                </div>
+                {carbonCredits.find(c => (c.id || c.creditId) === selectedCreditId) && (
+                  <>
+                    <div className="flex justify-between text-sm mt-2">
+                      <span className="text-gray-600">CO₂ Reduced:</span>
+                      <span className="font-medium text-green-600">
+                        {carbonCredits.find(c => (c.id || c.creditId) === selectedCreditId).co2ReducedKg || 
+                         carbonCredits.find(c => (c.id || c.creditId) === selectedCreditId).co2_reduced_kg || 0} kg
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm mt-2">
+                      <span className="text-gray-600">Credit Amount:</span>
+                      <span className="font-medium text-gray-900">
+                        {carbonCredits.find(c => (c.id || c.creditId) === selectedCreditId).creditAmount || 
+                         carbonCredits.find(c => (c.id || c.creditId) === selectedCreditId).credit_amount || 0} credits
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+)}
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Credits to sell:</span>
               <span className="font-medium text-gray-900">{creditsToSell || '0'} credits</span>
@@ -390,7 +458,7 @@ const CreateListingPage = () => {
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={submitting || walletData.creditBalance === 0}
+            disabled={submitting || walletData.creditBalance === 0 || !selectedCreditId}
             className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-semibold text-lg hover:from-green-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl"
           >
             {submitting ? (
@@ -431,7 +499,7 @@ const CreateListingPage = () => {
           </h3>
           <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-700">
             <p className="mb-2">
-              <strong>Scenario:</strong> You have 25 carbon credits and want to sell them for $250 total.
+<strong>Scenario:</strong> You have 25 carbon credits and want to sell them for $250 total.
             </p>
             <p className="mb-2">
               <strong>How to list:</strong>
