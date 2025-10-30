@@ -119,12 +119,14 @@ export const buyerApi = {
      * Khởi tạo giao dịch mua (alternative method)
      * POST /transactions/purchase
      * @param {string} listingId - UUID của listing
+     * @param {string} paymentMethodId - Phương thức thanh toán (WALLET, VNPAY, BANK)
      * @returns {Promise} Transaction object
      */
-    initiatePurchaseTransaction: async (listingId) => {
+    initiatePurchaseTransaction: async (listingId, paymentMethodId = 'WALLET') => {
         try {
             const response = await axiosInstance.post('/transactions/purchase', {
-                listingId
+                listingId,
+                paymentMethodId
             });
             return response.data;
         } catch (error) {

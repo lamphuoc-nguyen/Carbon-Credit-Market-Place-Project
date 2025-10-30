@@ -1,16 +1,44 @@
 'use client';
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import logoImage from '../../image/logo2.png';
 import { clearAuthData } from '../../utils/tokenUtils';
+import { userApi } from '../../api';
 
 export default function Navbar_Buyer() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const userName = "tumin1811"; // Có thể lấy từ props hoặc context
-  const navigate = useNavigate();
+  const [userName, setUserName] = useState('User');
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+
+  const fetchUserProfile = async () => {
+    try {
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      
+      if (!token) {
+        console.warn('⚠️ No token found');
+        return;
+      }
+
+      console.log('🔍 Fetching user profile...');
+      const userData = await userApi.getCurrentUser();
+      
+      console.log('✅ User data received:', userData);
+      setUserName(userData.username || userData.fullName || 'User');
+      console.log('✅ Username set to:', userData.username || userData.fullName);
+    } catch (error) {
+      console.error('❌ Failed to fetch user profile:', error);
+      console.error('Error details:', error.response?.data);
+      setUserName('User');
+    }
+  };
 
   // Hàm xử lý logout
   const handleLogout = () => {
+    console.log('🚪 Logging out...');
+    
     // Xóa tất cả authentication data và cookies
     clearAuthData();
     
@@ -24,8 +52,10 @@ export default function Navbar_Buyer() {
     // Đóng menu
     setMenuOpen(false);
     
-    // Chuyển về trang home
-    navigate('/home');
+    console.log('✅ Auth data cleared, redirecting to home...');
+    
+    // Chuyển về trang home và reload
+    window.location.href = '/home';
   };
 
   return (
@@ -102,7 +132,7 @@ export default function Navbar_Buyer() {
           {/* Menu Items */}
           <div className="py-2">
             <Link
-              to="/dashboard"
+              to="/buyer"
               className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors duration-200 font-bold"
               onClick={() => setMenuOpen(false)}
             >
@@ -162,7 +192,7 @@ export default function Navbar_Buyer() {
           <div className="border-t border-gray-100 pt-2">
             <button
               onClick={handleLogout}
-              className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200 font-bold"
+              className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200 font-bold cursor-pointer"
             >
               <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />

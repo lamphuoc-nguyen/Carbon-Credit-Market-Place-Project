@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Navbar_Buyer from '../../Components/BuyerComponents/Navbar-Buyer';
 import { buyerApi } from '../../api';
 
-const DetailPage = () => {
+const Detailpage = () => {
   const { listingId } = useParams();
   const navigate = useNavigate();
   
@@ -294,4 +294,4 @@ const DetailPage = () => {
   );
 };
 
-export default DetailPage;
+export default Detailpage;

@@ -1,3 +1,4 @@
+
 package com.carboncredit.service;
 
 import java.time.LocalDateTime;
@@ -61,65 +62,48 @@ public class TransactionService {
     @Autowired
     private AuditService auditService;
 
+    @Autowired
+    private WalletService walletService;
+
     // ==== TRANSACTION AND PROCESSING ================
 
     // Initiates transaction for purchasing a carbon credit
-    @Transactional
-    public Transaction initiatePurchase(UUID listingId, User buyer) {
-        log.info("Initiating purchase for listing {} by user {}", listingId, buyer.getUsername());
-
-        // Validate parameters
-        validationService.validateId(listingId, "CreditListing");
-        validationService.validateUser(buyer);
-
-        // Find and validate listing
+    public Transaction initiatePurchase(UUID listingId, User buyer, String paymentMethodId) {
         CreditListing listing = creditListingRepository.findById(listingId)
-                .orElseThrow(() -> new EntityNotFoundException("Listing not found"));
+                .orElseThrow(() -> new RuntimeException("Listing not found"));
 
-        // Validate purchase request
-        validationService.validatePurchaseRequest(listing, buyer);
-
-        // Get associated carbon credit
-        CarbonCredit credit = listing.getCredit();
-        User seller = credit.getUser();
-
-        // Create transaction
-        Transaction transaction = new Transaction();
-        transaction.setCredit(credit);
-        transaction.setListing(listing);
-        transaction.setBuyer(buyer);
-        transaction.setSeller(seller);
-        transaction.setAmount(listing.getPrice());
-        transaction.setStatus(TransactionStatus.PENDING);
-        transaction.setCreatedAt(LocalDateTime.now());
-
-        Transaction savedTransaction = transactionRepository.save(transaction);
-
-        // Update listing status to prevent concurrent purchases
-        listing.setStatus(ListingStatus.PENDING_TRANSACTION);
-        creditListingRepository.save(listing);
-
-        // Process payment
-        try {
-            processPayment(savedTransaction);
-        } catch (Exception e) {
-            log.error("Payment failed for transaction {}: {}", savedTransaction.getId(), e.getMessage());
-            // Rollback listing status
-            listing.setStatus(ListingStatus.ACTIVE);
-            creditListingRepository.save(listing);
-
-            savedTransaction.setStatus(TransactionStatus.CANCELLED);
-            transactionRepository.save(savedTransaction);
-
-            throw new PaymentException("Payment processing failed: " + e.getMessage(), e);
+        // Kiểm tra listing còn available không
+        if (listing.getStatus() != ListingStatus.ACTIVE) {
+            throw new RuntimeException("Listing is not available for purchase");
         }
 
-        // Log audit trail
-        // auditService.logTransactionInitiated(savedTransaction.getId().toString(),
-        //         buyer.getId().toString(), seller.getId().toString(), savedTransaction.getAmount().toString());
+        // Lấy credit từ listing
+        CarbonCredit credit = listing.getCredit();
+        if (credit == null) {
+            throw new RuntimeException("Listing has no associated carbon credit");
+        }
+        Transaction transaction = new Transaction();
+        transaction.setListing(listing);
+        transaction.setCredit(credit); // Set credit vào transaction
+        transaction.setBuyer(buyer);
+        transaction.setSeller(credit.getUser()); // Set seller từ owner của credit
+        transaction.setAmount(listing.getPrice()); // Lấy giá từ listing
+        transaction.setPaymentMethodId(paymentMethodId);
 
-        log.info("Transaction {} initiated successfully", savedTransaction.getId());
-        return savedTransaction;
+        // Set payment method based on paymentMethodId
+        if (paymentMethodId != null && paymentMethodId.toUpperCase().contains("VNPAY")) {
+            transaction.setPaymentMethod(Transaction.PaymentMethod.VNPAY);
+        } else if (paymentMethodId != null && paymentMethodId.toUpperCase().contains("BANK")) {
+            transaction.setPaymentMethod(Transaction.PaymentMethod.BANK_TRANSFER);
+        } else {
+            transaction.setPaymentMethod(Transaction.PaymentMethod.WALLET);
+        }
+
+        transaction.setStatus(Transaction.TransactionStatus.PENDING);
+        transaction.setCreatedAt(LocalDateTime.now());
+
+        log.info("Created transaction {} with payment method: {}", transaction.getId(), transaction.getPaymentMethod());
+        return transactionRepository.save(transaction);
     }
 
     // Process payment for a transaction
@@ -148,25 +132,69 @@ public class TransactionService {
     public Transaction completeTransaction(Transaction transaction) {
         log.info("Completing transaction {}", transaction.getId());
 
-        // Validate current transaction state
-        CreditListing currentListing = creditListingRepository.findById(transaction.getListing().getId())
+        // Reload transaction with all relationships to ensure they are loaded
+        Transaction fullTransaction = transactionRepository.findById(transaction.getId())
+                .orElseThrow(() -> new EntityNotFoundException("Transaction not found"));
+
+        // Validate listing exists
+        if (fullTransaction.getListing() == null) {
+            throw new IllegalStateException("Transaction has no associated listing");
+        }
+
+        // Load current listing
+        CreditListing currentListing = creditListingRepository.findById(fullTransaction.getListing().getId())
                 .orElseThrow(() -> new EntityNotFoundException("Listing not found"));
-        CarbonCredit currentCredit = carbonCreditRepository.findById(transaction.getCredit().getId())
-                .orElseThrow(() -> new EntityNotFoundException("Carbon credit not found"));
+
+        // Get credit from listing if transaction.credit is null
+        CarbonCredit currentCredit = null;
+        if (fullTransaction.getCredit() != null) {
+            currentCredit = carbonCreditRepository.findById(fullTransaction.getCredit().getId())
+                    .orElseThrow(() -> new EntityNotFoundException("Carbon credit not found"));
+        } else if (currentListing.getCredit() != null) {
+            // If transaction doesn't have credit, get it from listing
+            currentCredit = currentListing.getCredit();
+            fullTransaction.setCredit(currentCredit);
+        } else {
+            throw new IllegalStateException("No carbon credit associated with this transaction");
+        }
 
         // Validate transaction preconditions
-        validationService.validateTransactionPreconditions(transaction, currentListing, currentCredit);
+        validationService.validateTransactionPreconditions(fullTransaction, currentListing, currentCredit);
 
         // Update transaction status
-        transaction.setStatus(TransactionStatus.COMPLETED);
-        transaction.setCompletedAt(LocalDateTime.now());
+        fullTransaction.setStatus(TransactionStatus.COMPLETED);
+        fullTransaction.setCompletedAt(LocalDateTime.now());
 
         // Update listing status
         currentListing.setStatus(ListingStatus.CLOSED);
         creditListingRepository.save(currentListing);
 
+        // Transfer credit ownership to buyer
+        currentCredit.setUser(fullTransaction.getBuyer());
+        carbonCreditRepository.save(currentCredit);
+
+        // Update wallets based on payment method
+        // ✅ CHỈ TRỪ TIỀN WALLET KHI THANH TOÁN BẰNG WALLET
+        if (fullTransaction.getPaymentMethod() == Transaction.PaymentMethod.WALLET) {
+            // Thanh toán bằng wallet - Trừ tiền từ wallet người mua
+            log.info("💰 Payment via WALLET - Deducting {} from buyer's wallet", fullTransaction.getAmount());
+            walletService.updateCashBalance(fullTransaction.getBuyer().getId(), fullTransaction.getAmount().negate());
+        } else {
+            // Thanh toán bằng VNPay hoặc phương thức khác - Không trừ wallet
+            log.info("💳 Payment via {} - No wallet deduction (already paid externally)",
+                    fullTransaction.getPaymentMethod());
+        }
+
+        // ✅ LUÔN CỘNG CREDIT CHO NGƯỜI MUA (bất kể phương thức thanh toán)
+        walletService.updateCreditBalance(fullTransaction.getBuyer().getId(), currentCredit.getCreditAmount());
+        log.info("✅ Added {} credits to buyer's wallet", currentCredit.getCreditAmount());
+
+        // ✅ LUÔN CỘNG TIỀN CHO NGƯỜI BÁN (bất kể phương thức thanh toán)
+        walletService.updateCashBalance(fullTransaction.getSeller().getId(), fullTransaction.getAmount());
+        log.info("✅ Added {} cash to seller's wallet", fullTransaction.getAmount());
+
         // Save completed transaction
-        Transaction completedTransaction = transactionRepository.save(transaction);
+        Transaction completedTransaction = transactionRepository.save(fullTransaction);
 
         // Log audit trail
         auditService.logTransactionCompleted(
@@ -442,7 +470,7 @@ public class TransactionService {
     // get transaction for specific date range
     @Transactional(readOnly = true)
     public Page<Transaction> getTransactionsByDateRange(LocalDateTime startDate, LocalDateTime endDate, int page,
-                                                        int size) {
+            int size) {
         log.info("Fetching transactions by date range: {} to {}, page: {}, size: {}",
                 startDate, endDate, page, size);
 

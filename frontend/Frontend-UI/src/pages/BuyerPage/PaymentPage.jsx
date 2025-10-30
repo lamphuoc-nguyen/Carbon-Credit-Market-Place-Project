@@ -15,7 +15,7 @@ const PaymentPage = () => {
   // Get data from navigation state
   const { listing, quantity, totalPrice } = location.state || {};
   
-  const [paymentMethod, setPaymentMethod] = useState('wallet'); // 'wallet' or 'banking'
+  const [paymentMethod, setPaymentMethod] = useState('wallet'); // 'wallet', 'vnpay', or 'banking'
   const [wallet, setWallet] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -81,13 +81,22 @@ const PaymentPage = () => {
       }
 
       // Step 1: Create transaction and process payment
-      // Note: initiatePurchaseTransaction automatically processes payment and completes the transaction
+      // Note: Backend automatically handles all payment methods including VNPAY
+      // - WALLET: Deducts from buyer's wallet, adds to seller's wallet
+      // - VNPAY: Does NOT deduct wallet (external payment already done), just completes transaction
+      // - BANKING: Similar to VNPAY
       console.log('🔄 Calling API to create transaction...');
       console.log('API endpoint: POST /transactions/purchase');
-      console.log('Request body:', { listingId: listing.id });
+      console.log('Request body:', { 
+        listingId: listing.id, 
+        paymentMethodId: paymentMethod.toUpperCase() 
+      });
       
       // Call API to create transaction (backend will handle payment processing)
-      const completedTransaction = await buyerApi.initiatePurchaseTransaction(listing.id);
+      const completedTransaction = await buyerApi.initiatePurchaseTransaction(
+        listing.id, 
+        paymentMethod.toUpperCase()
+      );
       
       console.log('✅ Transaction API Response:', completedTransaction);
       console.log('Transaction ID:', completedTransaction.id);
@@ -246,6 +255,48 @@ const PaymentPage = () => {
                         )}
                       </div>
                     )}
+                  </div>
+                </div>
+              </div>
+
+              {/* VNPay Payment */}
+              <div
+                onClick={() => setPaymentMethod('vnpay')}
+                className={`p-4 rounded-xl border-2 cursor-pointer transition mb-4 ${
+                  paymentMethod === 'vnpay'
+                    ? 'border-orange-600 bg-orange-50'
+                    : 'border-gray-200 hover:border-orange-300'
+                }`}
+              >
+                <div className="flex items-start">
+                  <div className={`w-6 h-6 rounded-full border-2 mt-1 mr-3 flex items-center justify-center ${
+                    paymentMethod === 'vnpay' ? 'border-orange-600' : 'border-gray-300'
+                  }`}>
+                    {paymentMethod === 'vnpay' && (
+                      <div className="w-3 h-3 rounded-full bg-orange-600"></div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                        <span className="text-2xl">🏦</span> VNPay
+                      </h3>
+                      <span className="text-sm text-orange-600 font-semibold">Fast & Secure</span>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Thanh toán nhanh chóng qua cổng thanh toán VNPay
+                    </p>
+                    <div className="mt-3 flex gap-2 flex-wrap">
+                      <div className="px-3 py-1 bg-white rounded border border-orange-200 text-xs font-semibold text-orange-700">
+                        VNPAY-QR
+                      </div>
+                      <div className="px-3 py-1 bg-white rounded border border-orange-200 text-xs font-semibold text-orange-700">
+                        ATM Card
+                      </div>
+                      <div className="px-3 py-1 bg-white rounded border border-orange-200 text-xs font-semibold text-orange-700">
+                        Visa/Master
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -439,7 +490,9 @@ const PaymentPage = () => {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Payment Method:</span>
                   <span className="font-semibold text-gray-900">
-                    {paymentMethod === 'wallet' ? '💳 Carbon Wallet' : '🏦 Online Banking'}
+                    {paymentMethod === 'wallet' ? '💳 Carbon Wallet' : 
+                     paymentMethod === 'vnpay' ? '🏦 VNPay' : 
+                     '🏦 Online Banking'}
                   </span>
                 </div>
                 <div className="border-t border-gray-200 pt-3 mt-3">
