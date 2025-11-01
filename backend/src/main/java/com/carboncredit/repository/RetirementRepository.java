@@ -25,18 +25,9 @@ public interface RetirementRepository extends JpaRepository<RetirementTransactio
     List<RetirementTransaction> findByRetiringUserIdOrderByCreatedAtDesc(UUID userId);
 
     /**
-     * Find retirement transactions by user ID and status
-     */
-    List<RetirementTransaction> findByRetiringUserIdAndStatus(UUID userId, RetirementTransaction.RetirementStatus status);
-
-    /**
-     * Count retirement transactions by user ID and status
-     */
-    long countByRetiringUserIdAndStatus(UUID userId, RetirementTransaction.RetirementStatus status);
-
-    /**
      * Get total amount retired by user
      */
     @Query("SELECT COALESCE(SUM(rt.amountRetiredKg), 0) FROM RetirementTransaction rt WHERE rt.retiringUser.id = :userId AND rt.status = :status")
     java.math.BigDecimal getTotalAmountRetiredByUserAndStatus(@Param("userId") UUID userId, @Param("status") RetirementTransaction.RetirementStatus status);
+
 }

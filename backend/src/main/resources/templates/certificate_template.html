@@ -1,219 +1,216 @@
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <meta charset="UTF-8"/>
+    <meta charset="UTF-8" />
     <title>Carbon Credit Retirement Certificate</title>
-    <style>
+    <style type="text/css">
         @page {
             size: A4;
-            margin: 20mm;
+            margin: 10mm;
         }
 
         body {
             font-family: 'Times New Roman', serif;
-            line-height: 1.6;
-            color: #333;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            line-height: 1.4;
+            color: #333333;
+            background-color: #ffffff;
             margin: 0;
-            padding: 20px;
+            padding: 0;
         }
 
-        .certificate-container {
-            background: white;
-            border: 8px solid #2c5234;
-            border-radius: 15px;
-            padding: 40px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-            max-width: 800px;
-            margin: 0 auto;
+        .container {
+            width: 550px;
+            border: 6px solid #2c5234;
+            padding: 25px;
+            margin: 10px auto;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 40px;
-            border-bottom: 3px solid #2c5234;
-            padding-bottom: 20px;
+            border-bottom: 2px solid #2c5234;
+            padding-bottom: 12px;
+            margin-bottom: 18px;
+        }
+
+        .logo-img {
+            width: 60px;
+            height: 60px;
+            display: block;
+            margin: 0 auto 12px auto;
         }
 
         .title {
-            font-size: 36px;
+            font-size: 22px;
             font-weight: bold;
             color: #2c5234;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 1.5px;
         }
 
         .subtitle {
-            font-size: 18px;
-            color: #666;
+            font-size: 13px;
+            color: #666666;
             font-style: italic;
         }
 
-        .certificate-body {
-            margin: 30px 0;
+        .body {
+            margin: 18px 0;
             text-align: center;
         }
 
-        .main-text {
-            font-size: 20px;
-            margin-bottom: 30px;
-            line-height: 1.8;
+        .text {
+            font-size: 13px;
+            margin-bottom: 10px;
+            line-height: 1.5;
         }
 
         .buyer-name {
-            font-size: 28px;
+            font-size: 18px;
             font-weight: bold;
             color: #2c5234;
             text-decoration: underline;
-            margin: 20px 0;
+            margin: 12px 0;
         }
 
-        .details-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin: 30px 0;
-            text-align: left;
-        }
-
-        .detail-item {
-            background: #f8f9fa;
+        .highlight {
+            background-color: #2c5234;
+            color: white;
             padding: 15px;
-            border-radius: 8px;
-            border-left: 4px solid #2c5234;
+            margin: 18px 0;
+            text-align: center;
         }
 
-        .detail-label {
+        .amount {
+            font-size: 16px;
             font-weight: bold;
-            color: #2c5234;
             margin-bottom: 5px;
         }
 
-        .detail-value {
-            font-size: 16px;
-            color: #333;
+        .info-table {
+            width: 100%;
+            margin: 18px 0;
+            border-collapse: collapse;
         }
 
-        .amount-highlight {
-            background: #2c5234;
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 30px 0;
-            text-align: center;
+        .info-table td {
+            width: 50%;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-left: 3px solid #2c5234;
+            vertical-align: top;
         }
 
-        .amount-text {
-            font-size: 24px;
+        .info-table tr td:first-child {
+            padding-right: 8px;
+        }
+
+        .label {
             font-weight: bold;
+            color: #2c5234;
+            margin-bottom: 3px;
+            display: block;
+            font-size: 12px;
+        }
+
+        .value {
+            font-size: 11px;
+            color: #333333;
+            line-height: 1.3;
         }
 
         .footer {
-            margin-top: 40px;
+            margin-top: 25px;
             border-top: 2px solid #2c5234;
-            padding-top: 20px;
+            padding-top: 12px;
             text-align: center;
+            font-size: 12px;
         }
 
-        .certificate-id {
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            color: #666;
-            margin-top: 20px;
-        }
-
-        .logo {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 20px;
-            background: #2c5234;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 24px;
-            font-weight: bold;
-        }
-
-        .date-section {
+        .date {
             text-align: right;
-            margin-top: 30px;
+            margin-top: 18px;
             font-style: italic;
-            color: #666;
+            color: #666666;
+            font-size: 11px;
+        }
+
+        .cert-id {
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            color: #666666;
+            margin-top: 12px;
         }
     </style>
 </head>
 <body>
-    <div class="certificate-container">
+    <div class="container">
+        <!-- Header -->
         <div class="header">
-            <div class="logo">🌱</div>
             <div class="title">Certificate of Carbon Credit Retirement</div>
             <div class="subtitle">Carbon Credit Marketplace Platform</div>
         </div>
 
-        <div class="certificate-body">
-            <div class="main-text">
-                This certificate hereby acknowledges that
-            </div>
+        <!-- Body -->
+        <div class="body">
+            <p class="text">This certificate hereby acknowledges that</p>
 
-            <div class="buyer-name" th:text="${buyerName}">Buyer Name</div>
+            <p class="buyer-name" th:text="${certificate.buyerNameSnapshot}">[Buyer Name]</p>
 
-            <div class="main-text">
-                has successfully retired carbon credits for environmental impact reduction
-            </div>
+            <p class="text">has successfully retired carbon credits for environmental impact reduction</p>
 
-            <div class="amount-highlight">
-                <div class="amount-text">
-                    <span th:text="${amountRetired}">0.00</span> kg CO₂ equivalent
+            <div class="highlight">
+                <div class="amount">
+                    <span th:text="${certificate.amountRetiredKg}">[0.00]</span> kg CO2 equivalent
                 </div>
                 <div>Successfully Retired from Circulation</div>
             </div>
 
-            <div class="details-grid">
-                <div class="detail-item">
-                    <div class="detail-label">Certificate Code</div>
-                    <div class="detail-value" th:text="${certificateCode}">CERT-000000</div>
-                </div>
+            <!-- Information Table -->
+            <table class="info-table">
+                <tr>
+                    <td>
+                        <span class="label">Certificate Code</span>
+                        <span class="value" th:text="${certificate.certificateCode}">[CERT-000000]</span>
+                    </td>
+                    <td>
+                        <span class="label">Retirement Date</span>
+                        <span class="value" th:text="${#temporals.format(certificate.retirementDate, 'dd/MM/yyyy')}">[01/01/2024]</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <span class="label">Buyer Email</span>
+                        <span class="value" th:text="${certificate.buyerEmailSnapshot}">[buyer@example.com]</span>
+                    </td>
+                    <td>
+                        <span class="label">Project Source</span>
+                        <span class="value" th:text="${certificate.projectSourceInfo}">[Project Information]</span>
+                    </td>
+                </tr>
+            </table>
 
-                <div class="detail-item">
-                    <div class="detail-label">Retirement Date</div>
-                    <div class="detail-value" th:text="${#temporals.format(retirementDate, 'dd/MM/yyyy')}">01/01/2024</div>
-                </div>
-
-                <div class="detail-item">
-                    <div class="detail-label">Buyer Email</div>
-                    <div class="detail-value" th:text="${buyerEmail}">buyer@example.com</div>
-                </div>
-
-                <div class="detail-item">
-                    <div class="detail-label">Project Source</div>
-                    <div class="detail-value" th:text="${projectInfo}">Project Information</div>
-                </div>
-            </div>
-
-            <div class="main-text">
+            <p class="text">
                 These carbon credits have been permanently retired and cannot be resold or transferred.
                 This retirement contributes to global carbon reduction efforts and environmental sustainability.
-            </div>
+            </p>
         </div>
 
+        <!-- Footer -->
         <div class="footer">
             <div>
-                <strong>Carbon Credit Marketplace Platform</strong><br/>
+                <strong>Carbon Credit Marketplace Platform</strong><br />
                 Verified Carbon Retirement System
             </div>
 
-            <div class="date-section">
-                Certificate Generated: <span th:text="${#temporals.format(createdAt, 'dd/MM/yyyy HH:mm:ss')}">01/01/2024 12:00:00</span>
+            <div class="date">
+                Certificate Generated: <span th:text="${#temporals.format(certificate.createdAt, 'dd/MM/yyyy HH:mm:ss')}">[01/01/2024 12:00:00]</span>
             </div>
 
-            <div class="certificate-id">
-                Document ID: <span th:text="${certificateCode}">CERT-000000</span>
+            <div class="cert-id">
+                Document ID: <span th:text="${certificate.certificateCode}">[CERT-000000]</span>
             </div>
         </div>
     </div>
 </body>
 </html>
-

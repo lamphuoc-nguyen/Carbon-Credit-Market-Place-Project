@@ -186,11 +186,15 @@ public class TransactionService {
                     fullTransaction.getPaymentMethod());
         }
 
-        // ✅ LUÔN CỘNG CREDIT CHO NGƯỜI MUA (bất kể phương thức thanh toán)
+        // ✅ SELLER: DECREASE CREDIT BALANCE (selling credits)
+        walletService.updateCreditBalance(fullTransaction.getSeller().getId(), currentCredit.getCreditAmount().negate());
+        log.info("✅ Deducted {} credits from seller's wallet", currentCredit.getCreditAmount());
+
+        // ✅ BUYER: INCREASE CREDIT BALANCE (buying credits)
         walletService.updateCreditBalance(fullTransaction.getBuyer().getId(), currentCredit.getCreditAmount());
         log.info("✅ Added {} credits to buyer's wallet", currentCredit.getCreditAmount());
 
-        // ✅ LUÔN CỘNG TIỀN CHO NGƯỜI BÁN (bất kể phương thức thanh toán)
+        // ✅ SELLER: INCREASE CASH BALANCE (receiving payment)
         walletService.updateCashBalance(fullTransaction.getSeller().getId(), fullTransaction.getAmount());
         log.info("✅ Added {} cash to seller's wallet", fullTransaction.getAmount());
 

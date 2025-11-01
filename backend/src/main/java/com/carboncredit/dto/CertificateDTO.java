@@ -3,7 +3,9 @@ package com.carboncredit.dto;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import com.carboncredit.entity.Certificate;
 
@@ -24,6 +26,8 @@ public class CertificateDTO {
     private BigDecimal amountRetiredKg;
     private String projectSourceInfo;
     private LocalDate retirementDate;
+    private LocalDate issueDate; // NEW
+    private List<UUID> retiredCreditIds; // Fetched from RetirementTransaction
     private String status;
     private String pdfUrl;
     private Instant createdAt;
@@ -40,8 +44,16 @@ public class CertificateDTO {
         this.amountRetiredKg = certificate.getAmountRetiredKg();
         this.projectSourceInfo = certificate.getProjectSourceInfo();
         this.retirementDate = certificate.getRetirementDate();
+        this.issueDate = certificate.getIssueDate(); // NEW
+
+        // Get credit IDs from RetirementTransaction (current data)
+        this.retiredCreditIds = certificate.getRetirementTransaction() != null
+            ? certificate.getRetirementTransaction().getRetiredCarbonCreditIds()
+            : null;
+
         this.status = certificate.getStatus().name();
         this.pdfUrl = certificate.getPdfUrl();
         this.createdAt = certificate.getCreatedAt();
     }
 }
+

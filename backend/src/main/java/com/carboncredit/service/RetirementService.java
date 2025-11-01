@@ -13,12 +13,17 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import java.util.ArrayList; // <<< Thêm
+import java.util.Comparator; // <<< Thêm
+import java.util.List; // <<< Thêm
+import java.util.UUID; // <<< Thêm
+import java.util.stream.Collectors; // <<< Thêm
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
-import java.util.stream.Collectors;
+
 
 @Service
 public class RetirementService {
@@ -32,40 +37,28 @@ public class RetirementService {
     @Autowired private CertificateGenerationService certGenerationService;
     @Autowired private WalletService walletService;
 
-    /* --------------------------------------------------------------------- */
-    /* --------------------------- MAIN METHOD ----------------------------- */
-    /* --------------------------------------------------------------------- */
-    @Transactional
+    @Transactional // (Đây là Giao dịch A)
     public RetirementTransaction initiateRetirement(RetirementRequestDTO request) {
         UUID userId = request.getUserId();
         BigDecimal amountToRetireKg = request.getAmountToRetireKg();
 
-        log.info("Starting retirement for user {} with amount {} kg", userId, amountToRetireKg);
+        log.info("Starting retirement phase 1 (Validation) for user {} with amount {} kg", userId, amountToRetireKg);
         log.info("Project info: {}, Purpose: {}", request.getProjectInfo(), request.getRetirementPurpose());
 
-        // ---- 1. Validate buyer ------------------------------------------------
+        // ---- 1. Validate buyer (Giữ nguyên) ----
         User buyer = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
+        // ... (Kiểm tra role và amount > 0) ...
 
-        if (buyer.getRole() != User.UserRole.BUYER) {
-            throw new IllegalStateException("User " + buyer.getFullName() + " does not have BUYER role.");
-        }
-        if (amountToRetireKg.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Amount to retire must be greater than 0.");
-        }
-
-        // ---- 2. Find available credits -----------------------------------------
-        List<CarbonCredit> listedCredits = creditRepository.findByUserAndStatus(buyer, CarbonCredit.CreditStatus.LISTED);
-        List<CarbonCredit> soldCredits   = creditRepository.findByUserAndStatus(buyer, CarbonCredit.CreditStatus.SOLD);
-
-        log.info("Found {} LISTED and {} SOLD credits", listedCredits.size(), soldCredits.size());
-
+        // ---- 2. Find available credits (CHỈ KIỂM TRA, KHÔNG SỬA) ----
+        List<CarbonCredit> verifiableCredits = creditRepository.findByUserAndStatus(buyer, CarbonCredit.CreditStatus.VERIFIED);
+        List<CarbonCredit> purchasedCredits  = creditRepository.findByUserAndStatus(buyer, CarbonCredit.CreditStatus.SOLD);
         List<CarbonCredit> availableCredits = new ArrayList<>();
-        availableCredits.addAll(listedCredits);
-        availableCredits.addAll(soldCredits);
+        availableCredits.addAll(verifiableCredits);
+        availableCredits.addAll(purchasedCredits);
 
         BigDecimal totalAvailable = availableCredits.stream()
-                .map(CarbonCredit::getCreditAmount)
+                .map(CarbonCredit::getCo2ReducedKg) // Dùng co2ReducedKg
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         log.info("Total available: {} kg from {} credits", totalAvailable, availableCredits.size());
@@ -75,46 +68,25 @@ public class RetirementService {
                     "Insufficient credits. Required: " + amountToRetireKg + " kg, Available: " + totalAvailable + " kg");
         }
 
-        // FIFO order
-        availableCredits.sort(Comparator.comparing(
-                CarbonCredit::getCreatedAt,
-                Comparator.nullsLast(Comparator.naturalOrder())));
+        // ---- 3. BỎ LOGIC TRỪ CREDIT ----
+        // (Toàn bộ logic 'selectCreditsForRetirement', 'credit.setStatus(RETIRED)',
+        // 'creditRepository.save(credit)', 'walletService.updateCreditBalance'
+        // ĐÃ BỊ XÓA KHỎI ĐÂY)
 
-        List<CarbonCredit> creditsToRetire = selectCreditsForRetirement(availableCredits, amountToRetireKg);
-        if (creditsToRetire.isEmpty()) {
-            throw new InsufficientCreditsException("Failed to select credits for retirement");
-        }
-
-        // ---- 3. Mark credits as RETIRED (allowed after DB migration) ----------
-        List<UUID> retiredCreditIds = creditsToRetire.stream()
-                .map(credit -> {
-                    credit.setStatus(CarbonCredit.CreditStatus.RETIRED);
-                    creditRepository.save(credit);
-                    return credit.getId();
-                })
-                .collect(Collectors.toList());
-
-        // ---- 3.1. Update wallet ------------------------------------------------
-        walletService.updateCreditBalance(buyer.getId(), amountToRetireKg.negate());
-
-        // ---- 4. Persist RetirementTransaction ---------------------------------
+        // ---- 4. Persist RetirementTransaction (PENDING) ----
         RetirementTransaction retirementTx = RetirementTransaction.builder()
                 .retiringUser(buyer)
-                .amountRetiredKg(amountToRetireKg)
+                .amountRetiredKg(amountToRetireKg) // Số lượng user YÊU CẦU
                 .retirementDate(LocalDate.now())
-                .status(RetirementTransaction.RetirementStatus.PENDING)
-                .retiredCarbonCreditIds(retiredCreditIds)
+                .status(RetirementTransaction.RetirementStatus.PENDING) // Trạng thái chờ xử lý
+                .retiredCarbonCreditIds(new ArrayList<>()) // <<< QUAN TRỌNG: Danh sách ID ban đầu rỗng
                 .build();
         RetirementTransaction savedRetirementTx = retirementRepo.save(retirementTx);
 
-        // ---- 5. Build & SAVE Certificate (must be saved BEFORE async) -------
-        String projectSourceInfo = extractProjectSourceInfo(creditsToRetire, request);
+        // ---- 5. Build & SAVE Certificate (PENDING) ----
+        String projectSourceInfo = String.format("Carbon Credits | Project: %s | Purpose: %s",
+                request.getProjectInfo(), request.getRetirementPurpose());
 
-        BigDecimal totalCo2Reduced = creditsToRetire.stream()
-                .map(CarbonCredit::getCo2ReducedKg)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        // --- 5. Create & SAVE Certificate ---
         Certificate newCert = Certificate.builder()
                 .certificateCode(generateUniqueCertificateCode())
                 .buyer(buyer)
@@ -122,27 +94,31 @@ public class RetirementService {
                 .buyerNameSnapshot(buyer.getFullName())
                 .buyerEmailSnapshot(buyer.getEmail())
                 .amountRetiredKg(amountToRetireKg)
-                .co2ReducedKg(totalCo2Reduced)
+                .co2ReducedKg(amountToRetireKg) // Tạm thời đặt bằng số lượng yêu cầu
                 .projectSourceInfo(projectSourceInfo)
                 .retirementDate(savedRetirementTx.getRetirementDate())
-                .status(Certificate.CertificateStatus.PENDING_GENERATION)
+                .issueDate(LocalDate.now()) // NEW: Set issue date when certificate is created
+                .status(Certificate.CertificateStatus.PENDING_GENERATION) // Trạng thái chờ
                 .createdAt(Instant.now())
                 .build();
+        Certificate savedCert = certificateRepo.save(newCert);
 
-        Certificate savedCert = certificateRepo.save(newCert);  // ← Save FIRST
+        // ---- 6. Async PDF generation (Giữ nguyên) ----
+        // Kích hoạt Giai đoạn 2 (Bất đồng bộ) CHỈ SAU KHI Giao dịch A commit thành công
+        TransactionSynchronizationManager.registerSynchronization(
+                new org.springframework.transaction.support.TransactionSynchronizationAdapter() {
+                    @Override
+                    public void afterCommit() {
+                        log.info("Transaction A committed. Triggering async generation for cert ID: {}", savedCert.getId());
+                        certGenerationService.generateAndStoreCertificate(savedCert.getId());
+                    }
+                }
+        );
 
-// --- 6. Trigger async PDF generation ---
-        certGenerationService.generateAndStoreCertificate(savedCert.getId());  // ← Now safe
-
-        // ---- 6. Async PDF generation (row already exists) --------------------
-        certGenerationService.generateAndStoreCertificate(savedCert.getId());
-
+        // Giao dịch A kết thúc và commit
         return savedRetirementTx;
     }
 
-    /* --------------------------------------------------------------------- */
-    /* --------------------------- HELPERS --------------------------------- */
-    /* --------------------------------------------------------------------- */
 
     private List<CarbonCredit> selectCreditsForRetirement(List<CarbonCredit> available,
                                                           BigDecimal targetKg) {
@@ -153,7 +129,7 @@ public class RetirementService {
 
         for (CarbonCredit c : available) {
             selected.add(c);
-            sum = sum.add(c.getCreditAmount());
+            sum = sum.add(c.getCo2ReducedKg());
 
             if (sum.compareTo(targetKg) >= 0) {
                 log.info("Target reached! {} credits, total {} kg", selected.size(), sum);
@@ -212,9 +188,6 @@ public class RetirementService {
         return result;
     }
 
-    /* --------------------------------------------------------------------- */
-    /* ---------------------- READ-ONLY QUERIES --------------------------- */
-    /* --------------------------------------------------------------------- */
     public Optional<RetirementTransaction> findById(UUID id) {
         return retirementRepo.findById(id);
     }

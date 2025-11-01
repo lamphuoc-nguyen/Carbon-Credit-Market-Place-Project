@@ -10,6 +10,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -56,6 +57,10 @@ public class Certificate {
 
     @Column(name = "retirement_date", nullable = false)
     private LocalDate retirementDate;
+
+    // --- NEW: Issue date (explicit field for certificate issuance) ---
+    @Column(name = "issue_date", nullable = false)
+    private LocalDate issueDate;
 
     // --- Thông tin Quản lý và Trạng thái ---
     @Enumerated(EnumType.STRING)

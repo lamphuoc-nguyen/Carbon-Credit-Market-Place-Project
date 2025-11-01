@@ -47,7 +47,9 @@ public class RetirementResponseDTO {
 
         // Include certificate if available
         if (retirement.getCertificate() != null) {
-            this.certificate = new CertificateDTO(retirement.getCertificate());
+            this.certificate = new CertificateDTO(retirement.getCertificate()); // Dùng DTO mới của bạn
+        } else {
+            this.certificate = null;
         }
     }
 
