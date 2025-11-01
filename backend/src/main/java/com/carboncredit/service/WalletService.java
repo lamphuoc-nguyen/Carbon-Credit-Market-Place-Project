@@ -73,13 +73,4 @@ public class WalletService {
         return wallet.getCreditBalance();
     }
 
-    @Transactional(readOnly = true)
-    public BigDecimal getCashBalance(UUID userId) {
-        Wallet wallet = findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("Wallet not found for user: " + userId));
-        return wallet.getCashBalance();
-    }
-
-
-
 }

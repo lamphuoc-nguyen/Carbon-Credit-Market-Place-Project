@@ -43,7 +43,15 @@ public class JourneyDataService {
     public JourneyData createJourney(JourneyData journeyData) {
         log.info("Creating new journey for user {}", journeyData.getUser().getId());
 
-        // Inpue validation
+        // Log incoming data for debugging
+        log.info("Journey data - Vehicle: {}, Start: {}, End: {}, Distance: {} km, Energy: {} kWh",
+                journeyData.getVehicle() != null ? journeyData.getVehicle().getId() : "null",
+                journeyData.getStartLocation(),
+                journeyData.getEndLocation(),
+                journeyData.getDistanceKm(),
+                journeyData.getEnergyConsumedKwh());
+
+        // Input validation
         validateJourneyData(journeyData);
 
         // Calculate CO2 reduction
@@ -52,7 +60,7 @@ public class JourneyDataService {
 
         journeyData.setCo2ReducedKg(co2Reduced);
 
-        // INITILA VERIFICATION STATUS
+        // INITIAL VERIFICATION STATUS
         journeyData.setVerificationStatus(JourneyData.VerificationStatus.PENDING_VERIFICATION);
 
         // Set creation time if not already set
@@ -60,14 +68,19 @@ public class JourneyDataService {
             journeyData.setCreatedAt(LocalDateTime.now());
         }
 
+        // Save journey with all fields
         JourneyData savedJourney = journeyDataRepository.save(journeyData);
+
+        log.info("Journey saved with ID: {}, Vehicle: {}, ",
+                savedJourney.getId(),
+                savedJourney.getVehicle() != null ? savedJourney.getVehicle().getId() : "null");
 
         CarbonCredit credit = new CarbonCredit();
         credit.setJourney(savedJourney);
         credit.setUser(journeyData.getUser());
         credit.setCo2ReducedKg(co2Reduced);
         credit.setCreditAmount(co2Reduced);
-        credit.setStatus(CarbonCredit.CreditStatus.PENDING); // ⭐ PENDING
+        credit.setStatus(CarbonCredit.CreditStatus.PENDING);
 
         carbonCreditRepository.save(credit);
 
@@ -97,7 +110,7 @@ public class JourneyDataService {
         return journeyDataRepository.findByUser(user);
     }
 
-    // find journeys by user wuith data range
+    // find journeys by user with date range
     @Transactional(readOnly = true)
     public List<JourneyData> findByUserAndDateRange(User user, LocalDateTime startDate, LocalDateTime endDate) {
         if (user == null) {
@@ -112,7 +125,7 @@ public class JourneyDataService {
 
         }
 
-        return journeyDataRepository.findByUserAndStartTimeBetween(user, startDate, endDate);
+        return journeyDataRepository.findByUserAndCreatedAtBetween(user, startDate, endDate);
     }
 
     // get total co2 reduction by user
@@ -160,10 +173,11 @@ public class JourneyDataService {
         validateJourneyData(updatedData);
 
         // Update fields
+        existing.setStartLocation(updatedData.getStartLocation());
+        existing.setEndLocation(updatedData.getEndLocation());
         existing.setDistanceKm(updatedData.getDistanceKm());
         existing.setEnergyConsumedKwh(updatedData.getEnergyConsumedKwh());
-        existing.setStartTime(updatedData.getStartTime());
-        existing.setEndTime(updatedData.getEndTime());
+        existing.setJourneyDate(updatedData.getJourneyDate());
 
         // Recalculate CO2 reductionn
         BigDecimal co2Reduced = carbonCreditService.calculateCO2Reduction(existing.getDistanceKm(),

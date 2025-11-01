@@ -5,10 +5,12 @@ import com.carboncredit.dto.JourneyDataDTO;
 import com.carboncredit.dto.JourneyStatistics;
 import com.carboncredit.entity.JourneyData;
 import com.carboncredit.entity.User;
+import com.carboncredit.entity.Vehicle;
 import com.carboncredit.exception.ResourceNotFoundException;
 import com.carboncredit.service.JourneyDataService;
 import com.carboncredit.service.UserService;
 
+import com.carboncredit.service.VehicleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +22,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -33,38 +36,78 @@ public class JourneyController {
 
     private final JourneyDataService journeyDataService;
     private final UserService userService;
+    private final VehicleService vehicleService;
 
-    // ================ EV OWNER ENDPOINTS ===================
-    /*
-     * Create a new EV journey
-     * Joirst starts wit pending status
-     * Carbon credit created with pending
-     *
-     * only EV_OWNER can create journeys
-     */
     @PostMapping()
     @PreAuthorize("hasRole('EV_OWNER')")
-    public ResponseEntity<ApiResponse<JourneyDataDTO>> createJourney(@Valid @RequestBody JourneyData journeyData,
-                                                                     Authentication authentication) {
+    public ResponseEntity<ApiResponse<JourneyDataDTO>> createJourney(
+            @RequestBody Map<String, Object> requestBody,
+            Authentication authentication) {
         try {
             User user = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-            // set user for the journey
+            // Create JourneyData from request body
+            JourneyData journeyData = new JourneyData();
             journeyData.setUser(user);
+
+            // Handle vehicleId if provided
+            if (requestBody.containsKey("vehicleId") && requestBody.get("vehicleId") != null) {
+                String vehicleIdStr = requestBody.get("vehicleId").toString();
+                UUID vehicleId = UUID.fromString(vehicleIdStr);
+                Vehicle vehicle = vehicleService.findById(vehicleId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with ID: " + vehicleId));
+
+                // Verify vehicle belongs to user
+                if (!vehicle.getUser().getId().equals(user.getId())) {
+                    throw new IllegalArgumentException("Vehicle does not belong to the authenticated user");
+                }
+
+                journeyData.setVehicle(vehicle);
+                log.info("Vehicle {} linked to journey", vehicleId);
+            }
+
+            // Set other fields from request body
+            if (requestBody.containsKey("startLocation")) {
+                journeyData.setStartLocation(requestBody.get("startLocation").toString());
+            }
+            if (requestBody.containsKey("endLocation")) {
+                journeyData.setEndLocation(requestBody.get("endLocation").toString());
+            }
+            if (requestBody.containsKey("distanceKm")) {
+                journeyData.setDistanceKm(new java.math.BigDecimal(requestBody.get("distanceKm").toString()));
+            }
+            if (requestBody.containsKey("energyConsumedKwh")) {
+                journeyData.setEnergyConsumedKwh(new java.math.BigDecimal(requestBody.get("energyConsumedKwh").toString()));
+            }
+            if (requestBody.containsKey("journeyDate")) {
+                journeyData.setJourneyDate(java.time.LocalDateTime.parse(requestBody.get("journeyDate").toString()));
+            }
+
 
             // Create journey (automatically sets PENDING_VERIFICATION status)
             JourneyData savedJourney = journeyDataService.createJourney(journeyData);
 
-            log.info("Journey created for user {}: {} km, {} kwH, {} kg C02 (PENDING verification)", user.getUsername(),
+            log.info("Journey created for user {}: {} km, {} kWh, {} kg CO2 (PENDING verification)",
+                    user.getUsername(),
                     savedJourney.getDistanceKm(),
-                    savedJourney.getEnergyConsumedKwh(), savedJourney.getCo2ReducedKg());
+                    savedJourney.getEnergyConsumedKwh(),
+                    savedJourney.getCo2ReducedKg());
 
             return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(
                     "Journey created successfully. Awaiting CVA verification", new JourneyDataDTO(savedJourney)));
+        } catch (ResourceNotFoundException e) {
+            log.error("Resource not found: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid request: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             log.error("Error creating journey: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to create journey: " + e.getMessage()));
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to create journey: " + e.getMessage()));
         }
     }
 

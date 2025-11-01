@@ -30,3 +30,6 @@ logs/
 package-lock.json
 yarn.lock
 
+# Documentation files (ignore all markdown files)
+*.md
+!README.md
