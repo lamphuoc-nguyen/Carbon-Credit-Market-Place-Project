@@ -63,7 +63,8 @@ public class CertificateGenerationService {
         log.info("Starting async certificate generation for certificate ID: {}", certificateId);
 
         // Giờ đây, findById sẽ thành công vì Transaction A đã commit
-        Certificate certificate = certificateRepository.findById(certificateId)
+        // Use the new method to eagerly load the retirement transaction for PDF generation
+        Certificate certificate = certificateRepository.findByIdWithRetirementTransaction(certificateId)
                 .orElseThrow(() -> new IllegalStateException("Certificate not found: " + certificateId));
 
         RetirementTransaction retirementTx = certificate.getRetirementTransaction();

@@ -79,4 +79,8 @@ public class VehicleService {
                 .filter(vehicle -> vehicle.getUser().getId().equals(userId))
                 .toList();
     }
+
+    public Optional<Vehicle> findByIdAndUser(UUID id, User user) {
+        return vehicleRepository.findByIdAndUser(id,user);
+    }
 }

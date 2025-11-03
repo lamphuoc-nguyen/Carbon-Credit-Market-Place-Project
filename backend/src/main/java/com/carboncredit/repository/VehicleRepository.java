@@ -19,4 +19,6 @@ public interface VehicleRepository extends JpaRepository<Vehicle, UUID> {
     boolean existsByVin(String vin);
 
     List<Vehicle> findByModel(String model);
+
+    Optional<Vehicle> findByIdAndUser(UUID id, User user);
 }

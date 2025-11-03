@@ -79,6 +79,50 @@ public class StorageService {
     }
 
     /**
+     * Generate Pre-signed URL for file on GCS with auto-download support
+     * This URL has limited validity time and forces browser download
+     *
+     * @param objectName Object name on GCS
+     * @param filename Desired filename for download
+     * @param duration Validity duration
+     * @param timeUnit Time unit
+     * @return Pre-signed URL with Content-Disposition header
+     */
+    public String generateSignedDownloadUrl(String objectName, String filename, long duration, TimeUnit timeUnit) {
+        log.info("Generating signed download URL for: {} with filename: {} (Enabled: {})", objectName, filename, storageEnabled);
+
+        if (!storageEnabled || storage == null) {
+            // Mock signed URL for development/testing
+            String mockUrl = String.format("https://mock-storage.example.com/%s/%s?signed=true&filename=%s", bucketName, objectName, filename);
+            log.info("Mock signed download URL generated for: {}", objectName);
+            return mockUrl;
+        }
+
+        try {
+            BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(bucketName, objectName)).build();
+
+            // Create signed URL with Content-Disposition header for auto-download
+            URL signedUrl = storage.signUrl(
+                blobInfo,
+                duration,
+                timeUnit,
+                Storage.SignUrlOption.withV4Signature(),
+                Storage.SignUrlOption.httpMethod(com.google.cloud.storage.HttpMethod.GET),
+                Storage.SignUrlOption.withQueryParams(java.util.Map.of(
+                    "response-content-disposition", "attachment; filename=\"" + filename + "\""
+                ))
+            );
+
+            log.info("Signed download URL generated for: {} with filename: {}", objectName, filename);
+            return signedUrl.toString();
+
+        } catch (Exception e) {
+            log.error("Failed to generate signed download URL for: {}", objectName, e);
+            throw new RuntimeException("Failed to generate signed download URL: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Tạo Pre-signed URL cho file trên GCS (Secure access)
      * URL này có thời hạn sử dụng giới hạn
      *
@@ -122,5 +166,20 @@ public class StorageService {
     public String uploadCertificatePdf(byte[] pdfBytes, String certificateCode) throws IOException {
         String objectName = String.format("certificates/%s.pdf", certificateCode);
         return uploadFile(pdfBytes, objectName, "application/pdf");
+    }
+
+    /**
+     * Generate secure download URL for certificate PDF
+     * Creates a signed URL with auto-download behavior
+     *
+     * @param certificateCode Certificate code for filename
+     * @return Signed download URL with Content-Disposition header
+     */
+    public String generateCertificateDownloadUrl(String certificateCode) {
+        String objectName = String.format("certificates/%s.pdf", certificateCode);
+        String filename = String.format("%s.pdf", certificateCode);
+
+        // URL valid for 1 hour - enough time for user to download
+        return generateSignedDownloadUrl(objectName, filename, 1, TimeUnit.HOURS);
     }
 }

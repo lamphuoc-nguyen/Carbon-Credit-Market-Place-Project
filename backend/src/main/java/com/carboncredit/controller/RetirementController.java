@@ -9,6 +9,7 @@ import com.carboncredit.exception.InsufficientCreditsException;
 import com.carboncredit.exception.UserNotFoundException;
 import com.carboncredit.repository.CertificateRepository;
 import com.carboncredit.service.RetirementService;
+import com.carboncredit.service.StorageService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -42,6 +43,9 @@ public class RetirementController {
 
     @Autowired
     private CertificateRepository certificateRepository;
+
+    @Autowired
+    private StorageService storageService;
 
     /**
      * Initiate carbon credit retirement
@@ -217,6 +221,58 @@ public class RetirementController {
     }
 
     /**
+     * Generate secure download URL for certificate PDF
+     * GET /api/retirement/{retirementId}/certificate/download
+     *
+     * This endpoint implements the auto-download workflow:
+     * 1. Validates user authorization
+     * 2. Generates signed URL with Content-Disposition header
+     * 3. Returns download URL to frontend
+     * 4. Frontend triggers automatic download
+     */
+    @GetMapping("/{retirementId}/certificate/download")
+    @PreAuthorize("hasRole('BUYER') or hasRole('CVA') or hasRole('ADMIN')")
+    public ResponseEntity<?> getCertificateDownloadUrl(@PathVariable UUID retirementId) {
+        log.info("Generating download URL for certificate with retirement ID: {}", retirementId);
+
+        try {
+            // Find certificate by retirement transaction ID
+            Optional<Certificate> optCert = certificateRepository.findByRetirementTransactionId(retirementId);
+
+            if (optCert.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ErrorResponse("Certificate not found for retirement: " + retirementId));
+            }
+
+            Certificate certificate = optCert.get();
+
+            // Check if certificate is completed and has PDF
+            if (certificate.getStatus() != Certificate.CertificateStatus.COMPLETED) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new ErrorResponse("Certificate is not ready for download. Status: " + certificate.getStatus()));
+            }
+
+            // Generate secure download URL via StorageService
+            String downloadUrl = storageService.generateCertificateDownloadUrl(certificate.getCertificateCode());
+
+            // Return download URL in response
+            DownloadUrlResponse response = new DownloadUrlResponse(
+                downloadUrl,
+                certificate.getCertificateCode() + ".pdf",
+                "Certificate download URL generated successfully. Valid for 1 hour."
+            );
+
+            log.info("Download URL generated for certificate: {} - URL valid for 1 hour", certificate.getCertificateCode());
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error generating download URL for retirement: {}", retirementId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("Failed to generate download URL: " + e.getMessage()));
+        }
+    }
+
+    /**
      * Error response class
      */
     @Data
@@ -237,5 +293,16 @@ public class RetirementController {
         private long totalElements;
         private int totalPages;
         private boolean last;
+    }
+
+    /**
+     * Response object for download URL
+     */
+    @Data
+    @AllArgsConstructor
+    public static class DownloadUrlResponse {
+        private String url;
+        private String fileName;
+        private String message;
     }
 }

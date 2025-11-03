@@ -19,9 +19,7 @@ public interface JourneyDataRepository extends JpaRepository<JourneyData, UUID> 
 
     List<JourneyData> findByVehicle(Vehicle vehicle);
 
-    List<JourneyData> findByUserAndJourneyDateBetween(User user, LocalDateTime start, LocalDateTime end);
-
-    List<JourneyData> findByUserAndCreatedAtBetween(User user, LocalDateTime start, LocalDateTime end);
+    List<JourneyData> findByUserAndStartTimeBetween(User user, LocalDateTime start, LocalDateTime end);
 
     @Query("SELECT SUM(j.co2ReducedKg) FROM JourneyData j WHERE j.user = :user")
     BigDecimal getTotalCo2ReductionByUser(User user);

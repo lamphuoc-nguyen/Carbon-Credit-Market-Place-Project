@@ -43,3 +43,7 @@ application-prod.properties
 ### Logs ###
 *.log
 logs/
+
+### Documentation ###
+*.md
+

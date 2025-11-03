@@ -174,8 +174,18 @@
                         <span class="value" th:text="${certificate.certificateCode}">[CERT-000000]</span>
                     </td>
                     <td>
+                        <span class="label">Issue Date</span>
+                        <span class="value" th:text="${#temporals.format(certificate.issueDate, 'dd/MM/yyyy')}">[01/01/2024]</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
                         <span class="label">Retirement Date</span>
                         <span class="value" th:text="${#temporals.format(certificate.retirementDate, 'dd/MM/yyyy')}">[01/01/2024]</span>
+                    </td>
+                    <td>
+                        <span class="label">Transaction ID</span>
+                        <span class="value" th:text="${certificate.retirementTransaction.id}">[TXN-000000]</span>
                     </td>
                 </tr>
                 <tr>
@@ -186,6 +196,16 @@
                     <td>
                         <span class="label">Project Source</span>
                         <span class="value" th:text="${certificate.projectSourceInfo}">[Project Information]</span>
+                    </td>
+                </tr>
+                <tr th:if="${certificate.retirementTransaction.retiredCarbonCreditIds != null and !certificate.retirementTransaction.retiredCarbonCreditIds.isEmpty()}">
+                    <td colspan="2">
+                        <span class="label">Retired Credit IDs</span>
+                        <span class="value">
+                            <span th:each="creditId, iterStat : ${certificate.retirementTransaction.retiredCarbonCreditIds}">
+                                <span th:text="${creditId}"></span><span th:if="${!iterStat.last}">, </span>
+                            </span>
+                        </span>
                     </td>
                 </tr>
             </table>

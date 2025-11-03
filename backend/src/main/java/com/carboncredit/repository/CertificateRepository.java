@@ -54,4 +54,10 @@ public interface CertificateRepository extends JpaRepository<Certificate, UUID> 
      * Find certificate by certificate code
      */
     Optional<Certificate> findByCertificateCode(String certificateCode);
+
+    /**
+     * Find certificate by ID with retirement transaction eagerly loaded for PDF generation
+     */
+    @Query("SELECT c FROM Certificate c JOIN FETCH c.retirementTransaction WHERE c.id = :certificateId")
+    Optional<Certificate> findByIdWithRetirementTransaction(@Param("certificateId") UUID certificateId);
 }
