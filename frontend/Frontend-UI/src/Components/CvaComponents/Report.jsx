@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cvaApi } from '../../api/cvaApi';
 import LoadingOverlay from '../../Components/LoadingOverlay';
@@ -12,7 +12,14 @@ import {
     TrendingUp,
     Activity,
     RefreshCcw,
-    AlertCircle
+    AlertCircle,
+    Zap,
+    Target,
+    Award,
+    Calendar,
+    ArrowUp,
+    ArrowDown,
+    Sparkles,
 } from 'lucide-react';
 
 const Report = () => {
@@ -22,7 +29,7 @@ const Report = () => {
     const [refreshing, setRefreshing] = useState(false);
     const navigate = useNavigate();
 
-    const fetchStats = async (isRefresh = false) => {
+    const fetchStats = useCallback(async (isRefresh = false) => {
         try {
             if (isRefresh) {
                 setRefreshing(true);
@@ -34,29 +41,28 @@ const Report = () => {
             const data = await cvaApi.getCVAStatistics();
             setStats(data);
         } catch (err) {
-            console.error("Error fetching CVA statistics:", err);
+            console.error('Error fetching CVA statistics:', err);
 
             if (err.response?.status === 401) {
                 navigate('/login');
                 return;
             }
 
-            setError('Không thể tải dữ liệu thống kê. Vui lòng thử lại sau.');
+            setError('Could not load statistics. Please try again later.');
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
-    };
+    }, [navigate]);
 
     useEffect(() => {
         fetchStats();
-    }, []);
+    }, [fetchStats]);
 
     const handleRefresh = () => {
         fetchStats(true);
     };
 
-    // Calculate additional metrics
     const calculateMetrics = () => {
         if (!stats) return {};
 
@@ -66,8 +72,8 @@ const Report = () => {
 
         return {
             rejectionRate: total > 0 ? ((rejected / total) * 100).toFixed(1) : 0,
-            avgPerDay: total > 0 ? (total / 30).toFixed(1) : 0, // Giả sử 30 ngày
-            efficiency: total > 0 ? ((verified / total) * 100).toFixed(0) : 0
+            avgPerDay: total > 0 ? (total / 30).toFixed(1) : 0,
+            efficiency: total > 0 ? ((verified / total) * 100).toFixed(0) : 0,
         };
     };
 
@@ -78,19 +84,22 @@ const Report = () => {
     }
 
     if (error) {
+        // Giữ nguyên màn hình lỗi, nó sẽ hoạt động tốt trên nền sáng/tối
         return (
-            <div className="min-h-screen flex items-center justify-center p-4">
+            <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
                 <div className="text-center max-w-md">
-                    <div className="bg-rose-100 rounded-full p-4 inline-block mb-4">
-                        <XCircle className="h-12 w-12 text-rose-600" />
+                    <div className="bg-rose-100 border border-rose-200 rounded-3xl p-8 inline-block mb-6 shadow-sm">
+                        <XCircle className="h-16 w-16 text-rose-500" />
                     </div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Statistics</h3>
-                    <p className="text-gray-600 mb-4">{error}</p>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                        Data Load Error
+                    </h3>
+                    <p className="text-gray-600 mb-6">{error}</p>
                     <button
                         onClick={handleRefresh}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+                        className="bg-rose-600 hover:bg-rose-700 text-white font-semibold py-3 px-8 rounded-xl transition-all shadow-lg"
                     >
-                        Retry
+                        Try Again
                     </button>
                 </div>
             </div>
@@ -98,19 +107,20 @@ const Report = () => {
     }
 
     if (!stats) {
+        // Giữ nguyên màn hình không có dữ liệu
         return (
-            <div className="min-h-screen flex items-center justify-center p-4">
+            <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
                 <div className="text-center max-w-md">
-                    <div className="bg-gray-100 rounded-full p-4 inline-block mb-4">
-                        <BarChart className="h-16 w-16 text-gray-400" />
+                    <div className="bg-slate-100 border border-slate-200 rounded-3xl p-8 inline-block mb-6 shadow-sm">
+                        <BarChart className="h-16 w-16 text-slate-400" />
                     </div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No Statistics Available</h3>
-                    <p className="text-gray-600 mb-4">Could not retrieve CVA statistics data.</p>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-3">No Data</h3>
+                    <p className="text-gray-600 mb-6">Could not retrieve CVA statistics.</p>
                     <button
                         onClick={handleRefresh}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-xl transition-all shadow-lg"
                     >
-                        Refresh
+                        Reload
                     </button>
                 </div>
             </div>
@@ -118,192 +128,307 @@ const Report = () => {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 p-4 md:p-8">
-            {/* Header with Refresh Button */}
-            <div className="mb-8">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg">
-                                <BarChart className="h-8 w-8 text-white" />
-                            </div>
-                            <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
-                                Verification Reports
+        <div className="min-h-screen bg-gray-100 p-4 md:p-8">
+            <div className="relative z-10">
+                {/* Header đơn giản */}
+                <div className="mb-8">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-3xl font-bold text-gray-900">
+                                Verification Report
                             </h1>
+                            <p className="text-gray-500 mt-1">
+                                Overview of your verification activity
+                            </p>
                         </div>
-                        <p className="text-gray-600 ml-14">Overview of your verification activities</p>
-                    </div>
-
-                    <button
-                        onClick={handleRefresh}
-                        disabled={refreshing}
-                        className={`flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 font-medium py-2.5 px-4 rounded-lg shadow-sm border border-gray-200 transition-all ${refreshing ? 'opacity-50 cursor-not-allowed' : ''
-                            }`}
-                    >
-                        <RefreshCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-                        <span className="hidden sm:inline">Refresh</span>
-                    </button>
-                </div>
-            </div>
-
-            {/* Main Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                {/* Total Processed */}
-                <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Total Processed</h3>
-                        <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl">
-                            <ListChecks className="h-6 w-6 text-blue-600" />
-                        </div>
-                    </div>
-                    <p className="text-4xl font-bold text-gray-900 mb-2">{stats.totalProcessed ?? 0}</p>
-                    <div className="flex items-center gap-2 text-sm">
-                        <Activity className="h-4 w-4 text-gray-400" />
-                        <span className="text-gray-500">~{metrics.avgPerDay} per day</span>
+                        <button
+                            onClick={handleRefresh}
+                            disabled={refreshing}
+                            className={`flex items-center gap-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold py-2 px-4 rounded-lg shadow-sm transition-all ${refreshing ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
+                        >
+                            <RefreshCcw
+                                className={`h-5 w-5 ${refreshing ? 'animate-spin' : ''}`}
+                            />
+                            <span className="hidden sm:inline">Refresh</span>
+                        </button>
                     </div>
                 </div>
 
-                {/* Approved */}
-                <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-sm font-semibold text-emerald-100 uppercase tracking-wide">Approved</h3>
-                        <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                            <CheckCircle className="h-6 w-6 text-white" />
+                {/* Hero Stats Grid - Style đơn giản */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    {/* Total Processed */}
+                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">
+                                Total Processed
+                            </h3>
+                            <div className="p-3 bg-cyan-100 rounded-full">
+                                <ListChecks className="h-6 w-6 text-cyan-600" />
+                            </div>
                         </div>
-                    </div>
-                    <p className="text-4xl font-bold text-white mb-2">{stats.totalVerified ?? 0}</p>
-                    <div className="flex items-center gap-2 text-sm">
-                        <TrendingUp className="h-4 w-4 text-emerald-100" />
-                        <span className="text-emerald-100">Journeys verified</span>
-                    </div>
-                </div>
-
-                {/* Rejected */}
-                <div className="bg-white rounded-2xl shadow-lg p-6 border border-rose-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Rejected</h3>
-                        <div className="p-3 bg-gradient-to-br from-rose-100 to-rose-200 rounded-xl">
-                            <XCircle className="h-6 w-6 text-rose-600" />
-                        </div>
-                    </div>
-                    <p className="text-4xl font-bold text-rose-600 mb-2">{stats.totalRejected ?? 0}</p>
-                    <div className="flex items-center gap-2 text-sm">
-                        <Percent className="h-4 w-4 text-gray-400" />
-                        <span className="text-gray-500">{metrics.rejectionRate}% rejection rate</span>
-                    </div>
-                </div>
-
-                {/* Pending */}
-                <div className="bg-white rounded-2xl shadow-lg p-6 border border-amber-100 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Pending Review</h3>
-                        <div className="p-3 bg-gradient-to-br from-amber-100 to-amber-200 rounded-xl">
-                            <Clock className="h-6 w-6 text-amber-600" />
-                        </div>
-                    </div>
-                    <p className="text-4xl font-bold text-amber-600 mb-2">{stats.pendingReview ?? 0}</p>
-                    <div className="flex items-center gap-2 text-sm">
-                        <AlertCircle className="h-4 w-4 text-gray-400" />
-                        <span className="text-gray-500">System-wide pending</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Secondary Stats Row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                {/* Approval Rate Card */}
-                <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-all duration-300">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-base font-semibold text-gray-800">Approval Rate</h3>
-                        <div className="p-2 bg-indigo-100 rounded-lg">
-                            <Percent className="h-5 w-5 text-indigo-600" />
-                        </div>
-                    </div>
-                    <div className="flex items-end gap-2 mb-3">
-                        <p className="text-5xl font-bold text-indigo-600">
-                            {stats.approvalRate != null ? stats.approvalRate.toFixed(1) : '0.0'}
+                        <p className="text-4xl font-bold text-gray-900 mb-2 tracking-tight">
+                            {stats.totalProcessed ?? 0}
                         </p>
-                        <span className="text-2xl font-semibold text-indigo-600 mb-1">%</span>
-                    </div>
-                    {/* Progress Bar */}
-                    <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
-                        <div
-                            className="bg-gradient-to-r from-indigo-500 to-indigo-600 h-2.5 rounded-full transition-all duration-500"
-                            style={{ width: `${stats.approvalRate || 0}%` }}
-                        ></div>
-                    </div>
-                    <p className="text-xs text-gray-500">Percentage of approved journeys</p>
-                </div>
-
-                {/* Work Efficiency */}
-                <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl shadow-lg p-6 hover:shadow-xl transition-all duration-300">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-base font-semibold text-purple-100">Work Efficiency</h3>
-                        <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                            <TrendingUp className="h-5 w-5 text-white" />
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <Activity className="h-4 w-4" />
+                            <span>~{metrics.avgPerDay} / day</span>
                         </div>
                     </div>
-                    <div className="flex items-end gap-2 mb-3">
-                        <p className="text-5xl font-bold text-white">{metrics.efficiency}</p>
-                        <span className="text-2xl font-semibold text-purple-100 mb-1">%</span>
+
+                    {/* Approved */}
+                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">
+                                Approved
+                            </h3>
+                            <div className="p-3 bg-green-100 rounded-full">
+                                <CheckCircle className="h-6 w-6 text-green-600" />
+                            </div>
+                        </div>
+                        <p className="text-4xl font-bold text-gray-900 mb-2 tracking-tight">
+                            {stats.totalVerified ?? 0}
+                        </p>
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <TrendingUp className="h-4 w-4" />
+                            <span className="font-medium">Verified journeys</span>
+                        </div>
                     </div>
-                    <p className="text-xs text-purple-100">Based on approval ratio</p>
+
+                    {/* Rejected */}
+                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">
+                                Rejected
+                            </h3>
+                            <div className="p-3 bg-rose-100 rounded-full">
+                                <XCircle className="h-6 w-6 text-rose-600" />
+                            </div>
+                        </div>
+                        <p className="text-4xl font-bold text-gray-900 mb-2 tracking-tight">
+                            {stats.totalRejected ?? 0}
+                        </p>
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <Percent className="h-4 w-4" />
+                            <span>{metrics.rejectionRate}% rejection rate</span>
+                        </div>
+                    </div>
+
+                    {/* Pending */}
+                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">
+                                Pending
+                            </h3>
+                            <div className="p-3 bg-amber-100 rounded-full">
+                                <Clock className="h-6 w-6 text-amber-600" />
+                            </div>
+                        </div>
+                        <p className="text-4xl font-bold text-gray-900 mb-2 tracking-tight">
+                            {stats.pendingReview ?? 0}
+                        </p>
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <AlertCircle className="h-4 w-4" />
+                            <span className="font-medium">Awaiting review</span>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Quick Actions */}
-                <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-all duration-300">
-                    <h3 className="text-base font-semibold text-gray-800 mb-4">Quick Actions</h3>
-                    <div className="space-y-3">
-                        <button
-                            onClick={() => navigate('/cva/pending')}
-                            className="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium py-2.5 px-4 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
-                        >
-                            <Clock className="h-4 w-4" />
-                            View Pending ({stats.pendingReview ?? 0})
-                        </button>
-                        <button
-                            onClick={() => navigate('/cva/verified')}
-                            className="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium py-2.5 px-4 rounded-lg transition-colors text-sm flex items-center justify-center gap-2"
-                        >
-                            <CheckCircle className="h-4 w-4" />
-                            View History
-                        </button>
+                {/* Metrics Section - Style đơn giản */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    {/* Approval Rate - Circular Progress */}
+                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                <Target className="h-5 w-5 text-indigo-600" />
+                                Approval Rate
+                            </h3>
+                        </div>
+                        <div className="flex items-center justify-center mb-6">
+                            <div className="relative w-40 h-40">
+                                <svg className="transform -rotate-90 w-40 h-40">
+                                    <circle
+                                        cx="80"
+                                        cy="80"
+                                        r="70"
+                                        stroke="currentColor"
+                                        strokeWidth="12"
+                                        fill="transparent"
+                                        className="text-gray-200"
+                                    />
+                                    <circle
+                                        cx="80"
+                                        cy="80"
+                                        r="70"
+                                        stroke="url(#gradient1)"
+                                        strokeWidth="12"
+                                        fill="transparent"
+                                        strokeDasharray={`${2 * Math.PI * 70}`}
+                                        strokeDashoffset={`${2 * Math.PI * 70 * (1 - (stats.approvalRate || 0) / 100)
+                                            }`}
+                                        className="transition-all duration-1000"
+                                        strokeLinecap="round"
+                                    />
+                                    <defs>
+                                        <linearGradient
+                                            id="gradient1"
+                                            x1="0%"
+                                            y1="0%"
+                                            x2="100%"
+                                            y2="100%"
+                                        >
+                                            <stop offset="0%" stopColor="#6366f1" />
+                                            <stop offset="100%" stopColor="#a855f7" />
+                                        </linearGradient>
+                                    </defs>
+                                </svg>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                    <span className="text-4xl font-bold text-gray-900">
+                                        {stats.approvalRate != null
+                                            ? stats.approvalRate.toFixed(1)
+                                            : '0.0'}
+                                    </span>
+                                    <span className="text-lg font-bold text-indigo-600">%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <p className="text-center text-sm text-gray-500">
+                            Percentage of journeys approved
+                        </p>
+                    </div>
+
+                    {/* Work Efficiency - Card đơn giản */}
+                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                <Zap className="h-5 w-5 text-purple-600" />
+                                Efficiency
+                            </h3>
+                            <div className="p-2 bg-purple-100 rounded-lg">
+                                <Award className="h-6 w-6 text-purple-600" />
+                            </div>
+                        </div>
+                        <div className="mb-6">
+                            <div className="flex items-end gap-2">
+                                <p className="text-7xl font-bold text-gray-900 tracking-tighter">
+                                    {metrics.efficiency}
+                                </p>
+                                <span className="text-3xl font-bold text-gray-500 mb-2">%</span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-gray-200 rounded-full h-3">
+                                <div
+                                    className="bg-purple-600 h-3 rounded-full transition-all duration-1000"
+                                    style={{ width: `${metrics.efficiency}%` }}
+                                ></div>
+                            </div>
+                        </div>
+                        <p className="text-sm text-gray-500 mt-4">Based on approval rate</p>
+                    </div>
+
+                    {/* Quick Actions - Card đơn giản */}
+                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+                        <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                            <Sparkles className="h-5 w-5 text-yellow-500" />
+                            Quick Actions
+                        </h3>
+                        <div className="space-y-4">
+                            <button
+                                onClick={() => navigate('/cva/pending')}
+                                className="w-full bg-amber-100 hover:bg-amber-200 text-amber-800 font-semibold py-4 px-5 rounded-xl transition-all duration-300"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <Clock className="h-5 w-5" />
+                                        <span>View Pending</span>
+                                    </div>
+                                    <span className="bg-amber-200 text-amber-800 px-3 py-1 rounded-full text-sm font-bold">
+                                        {stats.pendingReview ?? 0}
+                                    </span>
+                                </div>
+                            </button>
+                            <button
+                                onClick={() => navigate('/cva/verified')}
+                                className="w-full bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-semibold py-4 px-5 rounded-xl transition-all duration-300"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <CheckCircle className="h-5 w-5" />
+                                        <span>View History</span>
+                                    </div>
+                                    <ArrowUp className="h-5 w-5" />
+                                </div>
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Performance Summary */}
-            <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                        <Activity className="h-6 w-6 text-blue-600" />
+                {/* Performance Summary - Bento Grid đơn giản */}
+                <div className="bg-white p-6 md:p-8 rounded-xl border border-gray-200 shadow-sm mb-8">
+                    <div className="flex items-center gap-3 mb-6">
+                        <h2 className="text-2xl font-bold text-gray-900">
+                            Performance Summary
+                        </h2>
                     </div>
-                    <h2 className="text-xl font-bold text-gray-900">Performance Summary</h2>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                            <div className="flex items-center gap-2 mb-2">
+                                <ListChecks className="h-5 w-5 text-blue-600" />
+                                <p className="text-sm text-gray-500 font-semibold">
+                                    Total Verified
+                                </p>
+                            </div>
+                            <p className="text-3xl font-bold text-blue-600">
+                                {stats.totalVerified ?? 0}
+                            </p>
+                        </div>
+                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                            <div className="flex items-center gap-2 mb-2">
+                                <XCircle className="h-5 w-5 text-rose-600" />
+                                <p className="text-sm text-gray-500 font-semibold">
+                                    Total Rejected
+                                </p>
+                            </div>
+                            <p className="text-3xl font-bold text-rose-600">
+                                {stats.totalRejected ?? 0}
+                            </p>
+                        </div>
+                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                            <div className="flex items-center gap-2 mb-2">
+                                <TrendingUp className="h-5 w-5 text-emerald-600" />
+                                <p className="text-sm text-gray-500 font-semibold">
+                                    Success Rate
+                                </p>
+                            </div>
+                            <p className="text-3xl font-bold text-emerald-600">
+                                {metrics.efficiency}%
+                            </p>
+                        </div>
+                        <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Calendar className="h-5 w-5 text-amber-600" />
+                                <p className="text-sm text-gray-500 font-semibold">
+                                    Average/Day
+                                </p>
+                            </div>
+                            <p className="text-3xl font-bold text-amber-600">
+                                {metrics.avgPerDay}
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
-                        <p className="text-sm text-gray-600 mb-1">Total Verifications</p>
-                        <p className="text-2xl font-bold text-blue-600">{stats.totalVerified ?? 0}</p>
-                    </div>
-                    <div className="p-4 bg-gradient-to-br from-rose-50 to-rose-100 rounded-xl">
-                        <p className="text-sm text-gray-600 mb-1">Total Rejections</p>
-                        <p className="text-2xl font-bold text-rose-600">{stats.totalRejected ?? 0}</p>
-                    </div>
-                    <div className="p-4 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl">
-                        <p className="text-sm text-gray-600 mb-1">Success Rate</p>
-                        <p className="text-2xl font-bold text-emerald-600">{metrics.efficiency}%</p>
-                    </div>
-                    <div className="p-4 bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl">
-                        <p className="text-sm text-gray-600 mb-1">Avg Daily</p>
-                        <p className="text-2xl font-bold text-amber-600">{metrics.avgPerDay}</p>
-                    </div>
+                {/* Footer đơn giản */}
+                <div className="text-center mt-8">
+                    <p className="text-sm text-gray-500">
+                        Last updated:{' '}
+                        <span className="text-gray-700 font-semibold">
+                            {new Date().toLocaleString('en-US')}
+                        </span>
+                    </p>
                 </div>
-            </div>
-
-            {/* Footer Info */}
-            <div className="mt-6 text-center text-sm text-gray-500">
-                <p>Last updated: {new Date().toLocaleString('vi-VN')}</p>
             </div>
         </div>
     );

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Store, Leaf, DollarSign, TrendingUp, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react';
 import EvOwnerAPI from '../../api/EvOwnerAPI';
+import Navbar from '../../Components/EVComponents/Navbar';
+
 
 const CreateListingPage = () => {
   const navigate = useNavigate();
@@ -85,7 +87,7 @@ const CreateListingPage = () => {
       const profileResponse = await EvOwnerAPI.user.getProfile();
       
       // Handle different response structures
-const userData = profileResponse.data?.data || profileResponse.data || profileResponse;
+      const userData = profileResponse.data?.data || profileResponse.data || profileResponse;
       console.log('✅ User profile fetched:', userData);
       
       let userId = userData.id || userData.userId || '';
@@ -169,7 +171,7 @@ const userData = profileResponse.data?.data || profileResponse.data || profileRe
     e.preventDefault();
 
     // Validation
-if (!creditsToSell || parseFloat(creditsToSell) <= 0) {
+    if (!creditsToSell || parseFloat(creditsToSell) <= 0) {
       alert('Please enter a valid number of credits to sell');
       return;
     }
@@ -249,6 +251,7 @@ if (!creditsToSell || parseFloat(creditsToSell) <= 0) {
   }
 
   return (
+    <><Navbar />
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 py-8 px-4">
       <div className="max-w-3xl mx-auto">
         {/* Header */}
@@ -261,7 +264,7 @@ if (!creditsToSell || parseFloat(creditsToSell) <= 0) {
         </div>
 
         {/* Available Credits Banner */}
-<div className="bg-gradient-to-r from-green-500 to-green-600 rounded-2xl shadow-lg p-6 mb-8 text-white">
+        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-2xl shadow-lg p-6 mb-8 text-white">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-green-100 text-sm font-medium mb-1">Available Carbon Credits</p>
@@ -321,7 +324,7 @@ if (!creditsToSell || parseFloat(creditsToSell) <= 0) {
               required
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
             >
-<option value="">-- Choose a verified credit --</option>
+              <option value="">-- Choose a verified credit --</option>
               {carbonCredits.map((credit) => {
                 const creditId = credit.id || credit.creditId;
                 const journeyId = credit.journeyId || credit.journey_id || 'N/A';
@@ -386,7 +389,8 @@ if (!creditsToSell || parseFloat(creditsToSell) <= 0) {
               Suggested price: $8.00 - $15.00 per credit
             </p>
           </div>
-{/* Total Price Display */}
+
+          {/* Total Price Display */}
           {totalPrice > 0 && (
             <div className="bg-gradient-to-r from-blue-50 to-green-50 border-2 border-blue-200 rounded-xl p-6">
               <div className="flex items-center justify-between">
@@ -440,7 +444,7 @@ if (!creditsToSell || parseFloat(creditsToSell) <= 0) {
                   </>
                 )}
               </div>
-)}
+            )}
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Credits to sell:</span>
               <span className="font-medium text-gray-900">{creditsToSell || '0'} credits</span>
@@ -499,7 +503,7 @@ if (!creditsToSell || parseFloat(creditsToSell) <= 0) {
           </h3>
           <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-700">
             <p className="mb-2">
-<strong>Scenario:</strong> You have 25 carbon credits and want to sell them for $250 total.
+              <strong>Scenario:</strong> You have 25 carbon credits and want to sell them for $250 total.
             </p>
             <p className="mb-2">
               <strong>How to list:</strong>
@@ -516,6 +520,7 @@ if (!creditsToSell || parseFloat(creditsToSell) <= 0) {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

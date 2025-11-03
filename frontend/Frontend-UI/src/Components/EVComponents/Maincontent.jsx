@@ -8,7 +8,7 @@ const MainContent = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('highest');
   const [viewMode, setViewMode] = useState('grid');
-  const [filters, setFilters] = useState({
+  const [setFilters] = useState({
     country: [],
     category: [],
     vintage: [],

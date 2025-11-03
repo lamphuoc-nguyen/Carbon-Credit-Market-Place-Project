@@ -11,7 +11,8 @@ import {
   LogOut, 
   Menu, 
   X,
-  ChevronDown 
+  ChevronDown,
+  List
 } from 'lucide-react'
 import { userApi } from '../../api/userApi'
 
@@ -65,8 +66,10 @@ function Navbar() {
   }, [navigate])
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('refreshToken')
+    localStorage.removeItem('authToken')
+    localStorage.removeItem('user')
+    sessionStorage.removeItem('authToken')
+    sessionStorage.removeItem('user')
     navigate('/login')
   }
 
@@ -107,77 +110,7 @@ function Navbar() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-6">
-            <NavLink
-              to="/ev-dashboard"
-              className={({ isActive }) =>
-                `flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-all duration-300 ${
-                  isActive
-                    ? 'text-green-600 bg-green-50'
-                    : 'text-gray-600 hover:text-green-500 hover:bg-gray-50'
-                }`
-              }
-            >
-              <Award size={18} />
-              Dashboard
-            </NavLink>
-
-            <NavLink
-              to="/ev-dashboard/vehicles"
-              className={({ isActive }) =>
-                `flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-all duration-300 ${
-                  isActive
-                    ? 'text-green-600 bg-green-50'
-                    : 'text-gray-600 hover:text-green-500 hover:bg-gray-50'
-                }`
-              }
-            >
-              <Car size={18} />
-              My Vehicles
-            </NavLink>
-
-            <NavLink
-              to="/ev-dashboard/journeys"
-              className={({ isActive }) =>
-                `flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-all duration-300 ${
-                  isActive
-                    ? 'text-green-600 bg-green-50'
-                    : 'text-gray-600 hover:text-green-500 hover:bg-gray-50'
-                }`
-              }
-            >
-              <MapPin size={18} />
-              Journeys
-            </NavLink>
-
-            <NavLink
-              to="/ev-dashboard/marketplace"
-              className={({ isActive }) =>
-                `flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-all duration-300 ${
-                  isActive
-                    ? 'text-green-600 bg-green-50'
-                    : 'text-gray-600 hover:text-green-500 hover:bg-gray-50'
-                }`
-              }
-            >
-              <ShoppingCart size={18} />
-              Marketplace
-            </NavLink>
-
-            <NavLink
-              to="/ev-dashboard/wallet"
-              className={({ isActive }) =>
-                `flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-all duration-300 ${
-                  isActive
-                    ? 'text-green-600 bg-green-50'
-                    : 'text-gray-600 hover:text-green-500 hover:bg-gray-50'
-                }`
-              }
-            >
-              <Wallet size={18} />
-              Wallet
-            </NavLink>
-          </div>
+          
 
           {/* User Profile Dropdown */}
           <div className="hidden md:flex items-center gap-4">
@@ -224,15 +157,23 @@ function Navbar() {
                     className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                     onClick={() => setIsProfileDropdownOpen(false)}
                   >
-                    <MapPin size={16} />
+                    <Wallet size={16} />
                     Wallet
+                  </Link>
+                  <Link
+                    to="/ev-dashboard/marketplace"
+                    className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    onClick={() => setIsProfileDropdownOpen(false)}
+                  >
+                    <ShoppingCart size={16} />
+                    Marketplace
                   </Link>
                   <Link
                     to="/ev-dashboard/Listing"
                     className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                     onClick={() => setIsProfileDropdownOpen(false)}
                   >
-                    <MapPin size={16} />
+                    <List size={16} />
                     Listing
                   </Link>
                   <button

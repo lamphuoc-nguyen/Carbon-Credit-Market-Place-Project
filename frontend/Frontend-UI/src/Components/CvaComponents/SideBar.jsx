@@ -1,11 +1,12 @@
 import React from 'react';
-// ✅ BƯỚC 1: Import NavLink
 import { NavLink } from 'react-router-dom';
 import {
-    LayoutDashboard, Clock, CheckCircle, FileText, Hammer, Moon, LogOut, Shield, X, Leaf, Menu
+    LayoutDashboard, Clock, CheckCircle, FileText, Hammer, X, Leaf, Menu,
+    Shield // ✅ 1. IMPORT SHIELD INSTEAD OF SETTINGS
 } from 'lucide-react';
+import LogoutButton from '../LogoutButton'; // Adjust path if needed
 
-const PUBLIC_LOGO_PATH = "/organic.png";
+const PUBLIC_LOGO_PATH = "/organic.png"; // Make sure path is correct
 
 const iconMap = {
     Dashboard: LayoutDashboard,
@@ -13,22 +14,19 @@ const iconMap = {
     VerifiedCredits: CheckCircle,
     Reports: FileText,
     AuditTools: Hammer,
+    // Settings removed as it's not used by navItems anymore
 };
 
-// ✅ BƯỚC 2: Cập nhật 'key' để khớp với đường dẫn (path) trong App.jsx
 const navItems = [
     { name: 'Dashboard', key: 'dashboard', icon: 'Dashboard' },
-    // Sửa 'pending_verifications' thành 'pending' để khớp với route
     { name: 'Pending Verifications', key: 'pending', icon: 'PendingVerifications' },
     { name: 'Verified Credits', key: 'verified-credits', icon: 'VerifiedCredits' },
     { name: 'Reports', key: 'reports', icon: 'Reports' },
     { name: 'Audit Tools', key: 'audit-tools', icon: 'AuditTools' },
 ];
 
-// ✅ BƯỚC 3: Bỏ props 'currentPage' và 'setCurrentPage'
 const Sidebar = ({ isOpen, setIsOpen }) => {
 
-    // Hàm render Icon (Không đổi)
     const RenderIcon = ({ name, className }) => {
         const IconComponent = iconMap[name] || Leaf;
         return <IconComponent className={className} />;
@@ -36,16 +34,16 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
     return (
         <div
-            className={`relative h-screen bg-white border-r border-gray-200 
+            className={`relative h-screen bg-white border-r border-gray-200
                       shadow-xl z-50 transition-all duration-300 ease-in-out
                       ${isOpen ? 'w-64' : 'w-20'}`}
         >
             <div className={`flex flex-col h-full overflow-hidden`}>
 
-                {/* 1. Header (Không đổi) */}
+                {/* 1. Header (Unchanged) */}
                 <div
-                    className={`flex items-center h-16 border-b border-gray-100 
-                  ${isOpen ? 'justify-between p-4' : 'justify-center p-4'}`}
+                    className={`flex items-center h-16 border-b border-gray-100
+                              ${isOpen ? 'justify-between p-4' : 'justify-center p-4'}`}
                 >
                     {isOpen && (
                         <div className="flex items-center">
@@ -64,35 +62,42 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                     </button>
                 </div>
 
-                {/* 2. User Profile/Badge (Không đổi) */}
+                {/* 2. User Profile/Badge - UPDATED ICON */}
                 <div className={`p-4 border-b border-gray-100 flex items-center mb-4 ${!isOpen && 'justify-center'}`}>
-                    {/* ... (code profile Dr. Nguyen Dai) ... */}
+                    <div className={`p-2 rounded-full ${isOpen ? 'bg-blue-100' : 'bg-blue-100'}`}> {/* Changed color to blue */}
+                        {/* ✅ 2. USE SHIELD ICON HERE */}
+                        <Shield className={`h-6 w-6 ${isOpen ? 'text-blue-600' : 'text-blue-600'}`} />
+                    </div>
+                    {isOpen && (
+                        <div className="ml-3">
+                            <p className="font-semibold text-sm text-gray-800">CVA User</p>
+                            <div className="flex items-center mt-1 space-x-1">
+                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">cva</span>
+                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">Verified</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
-                {/* 3. Navigation Items (Menu chính - ĐÃ SỬA) */}
+                {/* 3. Navigation Items (Unchanged) */}
                 <nav className="flex-1 px-4 space-y-1">
                     {navItems.map((item) => (
-
-                        // ✅ BƯỚC 4: Thay thế <button> bằng <NavLink>
                         <NavLink
                             key={item.key}
-                            // Đường dẫn đầy đủ, ví dụ: /cva/dashboard
                             to={`/cva/${item.key}`}
-
-                            // NavLink sẽ tự động quản lý class 'active'
                             className={({ isActive }) =>
-                                `w-full flex items-center p-3 rounded-xl transition-colors duration-200 
-                                ${!isOpen && 'justify-center'} 
-                                ${isActive
-                                    ? 'bg-gray-100 text-gray-900 font-semibold' // Style khi active
-                                    : 'text-gray-600 hover:bg-gray-50' // Style mặc định
+                                `w-full flex items-center p-3 rounded-xl transition-colors duration-200
+                                 ${!isOpen && 'justify-center'}
+                                 ${isActive
+                                    ? 'bg-gray-100 text-gray-900 font-semibold'
+                                    : 'text-gray-600 hover:bg-gray-50'
                                 }`
                             }
                         >
                             <RenderIcon name={item.icon} className="h-5 w-5 flex-shrink-0" />
                             <span
-                                className={`text-base ml-3 whitespace-nowrap transition-opacity 
-                                          ${!isOpen ? 'opacity-0 w-0' : 'opacity-100'}`}
+                                className={`text-sm ml-3 whitespace-nowrap transition-opacity duration-200 ${!isOpen ? 'opacity-0 w-0 pointer-events-none' : 'opacity-100'
+                                    }`}
                             >
                                 {item.name}
                             </span>
@@ -100,12 +105,13 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                     ))}
                 </nav>
 
-                {/* 4. Footer Items (Không đổi) */}
-                <div className="p-4 border-t border-gray-100 space-y-1">
-                    <button className={`w-full flex items-center p-3 rounded-xl text-gray-600 hover:bg-gray-50 ${!isOpen && 'justify-center'}`}>
-                        <LogOut className="h-5 w-5 mr-3 flex-shrink-0" />
-                        <span className={`text-base whitespace-nowrap transition-opacity ${!isOpen ? 'opacity-0 w-0' : 'opacity-100'}`}>Logout</span>
-                    </button>
+                {/* 4. Footer Items (Unchanged) */}
+                <div className="p-4 border-t border-gray-100 mt-auto">
+                    <LogoutButton
+                        className={`w-full flex items-center p-3 rounded-xl text-gray-600 hover:bg-red-50 hover:text-red-700 transition-colors duration-200 ${!isOpen && 'justify-center'}`}
+                        variant="sidebar"
+                        showText={isOpen}
+                    />
                 </div>
             </div>
         </div>

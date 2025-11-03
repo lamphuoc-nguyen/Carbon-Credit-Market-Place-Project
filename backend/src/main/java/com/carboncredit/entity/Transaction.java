@@ -47,6 +47,13 @@ public class Transaction {
     @Column(nullable = false, length = 20)
     private TransactionStatus status;
 
+    @Column(name = "payment_method_id", length = 20)
+    private String paymentMethodId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", length = 20)
+    private PaymentMethod paymentMethod;
+
     @CreatedDate
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -62,5 +69,16 @@ public class Transaction {
 
     public enum TransactionStatus {
         PENDING, COMPLETED, CANCELLED, DISPUTED
+    }
+    public enum PaymentMethod {
+        CREDIT_CARD,
+        DEBIT_CARD,
+        BANK_TRANSFER,
+        PAYPAL,
+        STRIPE,
+        WALLET,
+        CRYPTOCURRENCY,
+        OTHER,
+        VNPAY
     }
 }

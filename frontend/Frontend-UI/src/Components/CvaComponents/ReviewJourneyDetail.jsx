@@ -4,23 +4,17 @@ import {
     CheckCircle, XCircle, User, Zap, Map, Clock, Hash, Calendar, Dna, Car, AtSign
 } from 'lucide-react';
 
-// Import CẢ BA API service
+// Import các API service
 import { journeyApi } from '../../api/journeyApi';
-import { carbonCreditApi } from '../../api/carbonCreditApi';
+// import { carbonCreditApi } from '../../api/carbonCreditApi'; // Tạm thời không cần
 import { vehicleApi } from '../../api/vehicleApi';
+import { cvaApi } from '../../api/cvaApi'; // ✅ API chính chúng ta sẽ dùng
 
-// --- Component con để hiển thị chi tiết (ĐÃ SỬA) ---
-
-// ✅ SỬA: Chúng ta sẽ nhận 'props' trực tiếp thay vì destructure
-// Linter của bạn sẽ không còn báo lỗi 'IconComponent' nữa
+// --- Component con để hiển thị chi tiết ---
 const DetailItem = (props) => (
     <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-
-        {/* Truy cập prop bằng 'props.IconComponent' */}
         <props.IconComponent className="h-5 w-5 text-purple-600 mt-1 flex-shrink-0" />
-
         <div>
-            {/* Truy cập prop bằng 'props.label' và 'props.value' */}
             <p className="text-sm font-medium text-gray-500">{props.label}</p>
             <p className="text-lg font-semibold text-gray-900 break-words">
                 {props.value || 'N/A'}
@@ -29,10 +23,9 @@ const DetailItem = (props) => (
     </div>
 );
 
-
-// --- Component chính (Không thay đổi) ---
+// --- Component chính ---
 const ReviewJourneyDetail = () => {
-    const { journeyId } = useParams();
+    const { journeyId } = useParams(); // ✅ Lấy ID hành trình từ URL
     const navigate = useNavigate();
 
     const [journey, setJourney] = useState(null);
@@ -40,7 +33,9 @@ const ReviewJourneyDetail = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [comments, setComments] = useState('');
-    const [carbonCreditId, setCarbonCreditId] = useState(null);
+
+    // ❌ Không cần state carbonCreditId nữa
+    // const [carbonCreditId, setCarbonCreditId] = useState(null); 
 
     useEffect(() => {
         const fetchData = async () => {
@@ -51,11 +46,8 @@ const ReviewJourneyDetail = () => {
                 const journeyData = await journeyApi.getJourneyById(journeyId);
                 setJourney(journeyData);
 
-                if (journeyData.carbonCreditId) {
-                    setCarbonCreditId(journeyData.carbonCreditId);
-                } else {
-                    throw new Error('Journey does not have an associated carbon credit.');
-                }
+                // ❌ Không cần lấy carbonCreditId
+                // if (journeyData.carbonCreditId) { ... }
 
                 if (journeyData.vehicleId) {
                     const vehicleData = await vehicleApi.getVehicleById(journeyData.vehicleId);
@@ -77,12 +69,13 @@ const ReviewJourneyDetail = () => {
         fetchData();
     }, [journeyId]);
 
+    // ✅ HÀM QUAN TRỌNG ĐÃ SỬA
     const handleVerification = async (action) => {
-        if (!carbonCreditId) {
-            alert('Lỗi: Không tìm thấy Carbon Credit ID.');
-            return;
-        }
 
+        // ❌ Không cần kiểm tra carbonCreditId
+        // if (!carbonCreditId) { ... }
+
+        // Kiểm tra lý do từ chối (vẫn giữ)
         if (action === 'reject' && !comments) {
             alert('Vui lòng nhập lý do từ chối.');
             return;
@@ -90,22 +83,26 @@ const ReviewJourneyDetail = () => {
 
         try {
             setLoading(true);
+
             if (action === 'approve') {
-                await carbonCreditApi.verifyCredit(carbonCreditId, comments);
+                // ✅ SỬA: Gọi cvaApi.approveJourney với journeyId
+                await cvaApi.approveJourney(journeyId, comments || 'Approved by CVA');
             } else {
-                await carbonCreditApi.rejectCredit(carbonCreditId, comments);
+                // ✅ SỬA: Gọi cvaApi.rejectJourney với journeyId
+                await cvaApi.rejectJourney(journeyId, comments);
             }
-            alert(`Tín chỉ đã được ${action === 'approve' ? 'phê duyệt' : 'từ chối'}!`);
+
+            alert(`Hành trình đã được ${action === 'approve' ? 'phê duyệt' : 'từ chối'}!`);
             navigate('/cva/pending');
 
         } catch (err) {
-            console.error(`Lỗi khi ${action} tín chỉ:`, err);
+            console.error(`Lỗi khi ${action} hành trình:`, err);
             alert('Đã xảy ra lỗi: ' + err.message);
             setLoading(false);
         }
     };
 
-    // --- PHẦN RENDER ---
+    // --- PHẦN RENDER (Không có gì thay đổi) ---
     if (loading && !journey) {
         return <div className="p-10 text-center text-gray-500">Đang tải chi tiết...</div>;
     }
@@ -130,8 +127,6 @@ const ReviewJourneyDetail = () => {
                     <div className="bg-white p-6 rounded-xl shadow-lg">
                         <h2 className="text-xl font-semibold text-gray-900 mb-4">Journey Details</h2>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-                            {/* ✅ SỬA: Đổi tên prop thành 'IconComponent' */}
                             <DetailItem IconComponent={Map} label="Distance" value={`${journey.distanceKm} km`} />
                             <DetailItem IconComponent={Zap} label="Energy Consumed" value={`${journey.energyConsumedKwh} kWh`} />
                             <DetailItem IconComponent={Dna} label="CO₂ Reduced" value={`${journey.co2ReducedKg} kg`} />
@@ -144,8 +139,6 @@ const ReviewJourneyDetail = () => {
                     <div className="bg-white p-6 rounded-xl shadow-lg">
                         <h2 className="text-xl font-semibold text-gray-900 mb-4">Vehicle & User Details</h2>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-                            {/* ✅ SỬA: Đổi tên prop thành 'IconComponent' */}
                             <DetailItem IconComponent={Hash} label="Vehicle VIN" value={vehicle?.vin} />
                             <DetailItem IconComponent={Car} label="Vehicle Model" value={vehicle?.model} />
                             <DetailItem IconComponent={Calendar} label="Reg. Date" value={vehicle ? new Date(vehicle.registrationDate).toLocaleDateString('vi-VN') : 'N/A'} />
@@ -156,7 +149,7 @@ const ReviewJourneyDetail = () => {
                     </div>
                 </div>
 
-                {/* CỘT 3: HÀNH ĐỘNG (Không thay đổi) */}
+                {/* CỘT 3: HÀNH ĐỘNG */}
                 <div className="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg h-fit">
                     <h2 className="text-xl font-semibold text-gray-900 mb-4">Verification Actions</h2>
                     <div className="space-y-4">
