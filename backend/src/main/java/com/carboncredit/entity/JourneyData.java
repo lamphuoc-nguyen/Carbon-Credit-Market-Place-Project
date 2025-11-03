@@ -31,23 +31,20 @@ public class JourneyData {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @Column(name = "start_location", length = 255)
-    private String startLocation;
-
-    @Column(name = "end_location", length = 255)
-    private String endLocation;
-
     @Column(name = "distance_km", precision = 10, scale = 2)
     private BigDecimal distanceKm;
 
     @Column(name = "energy_consumed_kwh", precision = 10, scale = 2)
     private BigDecimal energyConsumedKwh;
 
+    @Column(name = "start_time")
+    private LocalDateTime startTime;
+
+    @Column(name = "end_time")
+    private LocalDateTime endTime;
+
     @Column(name = "co2_reduced_kg", precision = 10, scale = 2)
     private BigDecimal co2ReducedKg;
-
-    @Column(name = "journey_date")
-    private LocalDateTime journeyDate;
 
     @CreatedDate
     @Column(name = "created_at")

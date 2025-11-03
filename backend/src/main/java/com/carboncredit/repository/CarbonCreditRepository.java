@@ -20,9 +20,6 @@ public interface CarbonCreditRepository extends JpaRepository<CarbonCredit, UUID
 
     List<CarbonCredit> findByUserAndStatus(User user, CarbonCredit.CreditStatus status);
 
-    // Find credits by user with multiple statuses (for retirement - VERIFIED or SOLD)
-    List<CarbonCredit> findByUserAndStatusIn(User user, List<CarbonCredit.CreditStatus> statuses);
-
     @Query("SELECT SUM(c.creditAmount) FROM CarbonCredit c WHERE c.user = :user AND c.status = 'VERIFIED'")
     BigDecimal getTotalVerifiedCreditsByUser(User user);
 
@@ -31,4 +28,6 @@ public interface CarbonCreditRepository extends JpaRepository<CarbonCredit, UUID
 
     @Query("SELECT c FROM CarbonCredit c WHERE c.status IN ('VERIFIED', 'LISTED') ORDER BY c.createdAt DESC")
     List<CarbonCredit> findAvailableCredits();
+
+    List<CarbonCredit> findByUserAndStatusIn(User buyer, List<CarbonCredit.CreditStatus> list);
 }

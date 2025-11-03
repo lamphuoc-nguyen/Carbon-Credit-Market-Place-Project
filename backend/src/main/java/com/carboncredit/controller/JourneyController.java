@@ -5,12 +5,12 @@ import com.carboncredit.dto.JourneyDataDTO;
 import com.carboncredit.dto.JourneyStatistics;
 import com.carboncredit.entity.JourneyData;
 import com.carboncredit.entity.User;
-import com.carboncredit.entity.Vehicle;
 import com.carboncredit.exception.ResourceNotFoundException;
+import com.carboncredit.service.JourneyCsvImportService;
 import com.carboncredit.service.JourneyDataService;
 import com.carboncredit.service.UserService;
 
-import com.carboncredit.service.VehicleService;
+import com.carboncredit.dto.ImportCSVResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,9 +20,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -36,77 +36,55 @@ public class JourneyController {
 
     private final JourneyDataService journeyDataService;
     private final UserService userService;
-    private final VehicleService vehicleService;
+    private final JourneyCsvImportService JourneyCsvImportService;
 
-    @PostMapping()
+    // ================ EV OWNER ENDPOINTS ===================
+    /*
+     * Create a new EV journey
+     * Joirst starts wit pending status
+     * Carbon credit created with pending
+     *
+     * only EV_OWNER can create journeys
+     */
+    @PostMapping("/import-csv")
     @PreAuthorize("hasRole('EV_OWNER')")
-    public ResponseEntity<ApiResponse<JourneyDataDTO>> createJourney(@Valid @RequestBody JourneyData journeyData,
+    public ResponseEntity<ApiResponse<ImportCSVResponse>> importJourneys(
+            @RequestParam("file") MultipartFile file,
             Authentication authentication) {
         try {
             User user = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-            // Create JourneyData from request body
-            JourneyData journeyData = new JourneyData();
+            ImportCSVResponse result = JourneyCsvImportService.importCsv(file, user);
+            return ResponseEntity.ok(ApiResponse.success("Import finished", result));
+        } catch (Exception e) {
+            log.error("Error importing journeys: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to import journeys: " + e.getMessage()));
+        }
+    }
+    @PostMapping()
+    @PreAuthorize("hasRole('EV_OWNER')")
+    public ResponseEntity<ApiResponse<JourneyDataDTO>> createJourney(@Valid @RequestBody JourneyData journeyData,
+                                                                     Authentication authentication) {
+        try {
+            User user = userService.findByUsername(authentication.getName())
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+            // set user for the journey
             journeyData.setUser(user);
-
-            // Handle vehicleId if provided
-            if (requestBody.containsKey("vehicleId") && requestBody.get("vehicleId") != null) {
-                String vehicleIdStr = requestBody.get("vehicleId").toString();
-                UUID vehicleId = UUID.fromString(vehicleIdStr);
-                Vehicle vehicle = vehicleService.findById(vehicleId)
-                        .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with ID: " + vehicleId));
-
-                // Verify vehicle belongs to user
-                if (!vehicle.getUser().getId().equals(user.getId())) {
-                    throw new IllegalArgumentException("Vehicle does not belong to the authenticated user");
-                }
-
-                journeyData.setVehicle(vehicle);
-                log.info("Vehicle {} linked to journey", vehicleId);
-            }
-
-            // Set other fields from request body
-            if (requestBody.containsKey("startLocation")) {
-                journeyData.setStartLocation(requestBody.get("startLocation").toString());
-            }
-            if (requestBody.containsKey("endLocation")) {
-                journeyData.setEndLocation(requestBody.get("endLocation").toString());
-            }
-            if (requestBody.containsKey("distanceKm")) {
-                journeyData.setDistanceKm(new java.math.BigDecimal(requestBody.get("distanceKm").toString()));
-            }
-            if (requestBody.containsKey("energyConsumedKwh")) {
-                journeyData.setEnergyConsumedKwh(new java.math.BigDecimal(requestBody.get("energyConsumedKwh").toString()));
-            }
-            if (requestBody.containsKey("journeyDate")) {
-                journeyData.setJourneyDate(java.time.LocalDateTime.parse(requestBody.get("journeyDate").toString()));
-            }
-
 
             // Create journey (automatically sets PENDING_VERIFICATION status)
             JourneyData savedJourney = journeyDataService.createJourney(journeyData);
 
-            log.info("Journey created for user {}: {} km, {} kWh, {} kg CO2 (PENDING verification)",
-                    user.getUsername(),
+            log.info("Journey created for user {}: {} km, {} kwH, {} kg C02 (PENDING verification)", user.getUsername(),
                     savedJourney.getDistanceKm(),
-                    savedJourney.getEnergyConsumedKwh(),
-                    savedJourney.getCo2ReducedKg());
+                    savedJourney.getEnergyConsumedKwh(), savedJourney.getCo2ReducedKg());
 
             return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success(
                     "Journey created successfully. Awaiting CVA verification", new JourneyDataDTO(savedJourney)));
-        } catch (ResourceNotFoundException e) {
-            log.error("Resource not found: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(ApiResponse.error(e.getMessage()));
-        } catch (IllegalArgumentException e) {
-            log.error("Invalid request: {}", e.getMessage());
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             log.error("Error creating journey: {}", e.getMessage());
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Failed to create journey: " + e.getMessage()));
+            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to create journey: " + e.getMessage()));
         }
     }
 
