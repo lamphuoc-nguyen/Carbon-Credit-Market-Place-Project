@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourcePerFileMappings">
-    <file url="file://$APPLICATION_CONFIG_DIR$/consoles/db/b952493b-8f28-4e2e-affa-62dcdfae5c77/console_1.sql" value="b952493b-8f28-4e2e-affa-62dcdfae5c77" />
-    <file url="file://$APPLICATION_CONFIG_DIR$/consoles/db/b952493b-8f28-4e2e-affa-62dcdfae5c77/console_2.sql" value="b952493b-8f28-4e2e-affa-62dcdfae5c77" />
-    <file url="file://$APPLICATION_CONFIG_DIR$/consoles/db/b952493b-8f28-4e2e-affa-62dcdfae5c77/console_3.sql" value="b952493b-8f28-4e2e-affa-62dcdfae5c77" />
-    <file url="file://$APPLICATION_CONFIG_DIR$/consoles/db/b952493b-8f28-4e2e-affa-62dcdfae5c77/console_4.sql" value="b952493b-8f28-4e2e-affa-62dcdfae5c77" />
     <file url="file://$APPLICATION_CONFIG_DIR$/consoles/db/debbb6c0-efb5-4a74-ba06-68d0c50d3485/console.sql" value="debbb6c0-efb5-4a74-ba06-68d0c50d3485" />
     <file url="file://$APPLICATION_CONFIG_DIR$/consoles/db/debbb6c0-efb5-4a74-ba06-68d0c50d3485/console_1.sql" value="debbb6c0-efb5-4a74-ba06-68d0c50d3485" />
+    <file url="file://$APPLICATION_CONFIG_DIR$/consoles/db/debbb6c0-efb5-4a74-ba06-68d0c50d3485/console_2.sql" value="debbb6c0-efb5-4a74-ba06-68d0c50d3485" />
+    <file url="file://$PROJECT_DIR$/backend/src/main/java/com/carboncredit/repository/UserRepository.java" value="debbb6c0-efb5-4a74-ba06-68d0c50d3485" />
   </component>
 </project>

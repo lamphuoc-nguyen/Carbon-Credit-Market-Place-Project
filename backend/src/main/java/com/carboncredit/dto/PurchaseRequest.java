@@ -1,8 +1,7 @@
 package com.carboncredit.dto;
 
-import java.math.BigDecimal;
 import java.util.UUID;
-
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -11,8 +10,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PurchaseRequest {
+    @NotNull(message = "Listing ID is required")
     private UUID listingId;
-    private BigDecimal offerPrice;
+
+    @NotNull(message = "Payment method ID is required")
     private String paymentMethodId;
-    private String notes;
 }

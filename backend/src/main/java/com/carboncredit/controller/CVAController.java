@@ -73,7 +73,7 @@ public class CVAController {
     }
 
     /**
-     * Get speciofc journey for review
+     * Get specific journey for review
      *
      */
     @GetMapping("/journey/{id}")
@@ -91,7 +91,7 @@ public class CVAController {
     }
 
     /**
-     * Approve journey and carboncreidt
+     * Approve journey and carbon credit
      */
     @PostMapping("/journey/{id}/approve")
     @PreAuthorize("hasRole('CVA')")
@@ -122,7 +122,7 @@ public class CVAController {
     }
 
     /**
-     * Reject journey with a reasom
+     * Reject journey with a reason
      */
     @PostMapping("/journey/{id}/reject")
     @PreAuthorize("hasRole('CVA')")

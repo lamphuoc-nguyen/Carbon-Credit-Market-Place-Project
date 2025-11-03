@@ -105,15 +105,18 @@ public class ValidationService {
             throw new ValidationException("Transaction", "transaction", "Transaction cannot be null");
         }
 
-        // validate listing exist and is active
-        if (currentCredit == null) {
+        // validate listing exists and is in valid state for transaction completion
+        if (currentListing == null) {
             throw new BusinessOperationException("Listing no longer exists");
         }
-        if (currentListing.getStatus() != ListingStatus.ACTIVE) {
-            throw new BusinessOperationException("Lisitng  no longer active");
+
+        // Accept both ACTIVE and PENDING_TRANSACTION status for transaction completion
+        if (currentListing.getStatus() != ListingStatus.ACTIVE &&
+            currentListing.getStatus() != ListingStatus.PENDING_TRANSACTION) {
+            throw new BusinessOperationException("Listing no longer available for transaction. Status: " + currentListing.getStatus());
         }
 
-        // validate credit stil exisit and available
+        // validate credit still exists and available
         if (currentCredit == null) {
             throw new BusinessOperationException("Credit no longer exists");
         }
@@ -623,33 +626,24 @@ public class ValidationService {
      * Validate journey times
      */
     private void validateJourneyTimes(JourneyData journeyData) {
-        if (journeyData.getStartTime() != null && journeyData.getEndTime() != null) {
-            if (journeyData.getStartTime().isAfter(journeyData.getEndTime())) {
-                throw new ValidationException("JourneyData", "startTime/endTime",
-                        "Start time cannot be after end time");
-            }
-
-            // Journey shouldn't be longer than 24 hours
-            if (journeyData.getStartTime().plusDays(1).isBefore(journeyData.getEndTime())) {
-                throw new ValidationException("JourneyData", "duration",
-                        "Journey duration cannot exceed 24 hours");
-            }
-
-            // Journey times shouldn't be in the future
+        // Validate journey date if provided
+        if (journeyData.getJourneyDate() != null) {
             LocalDateTime now = LocalDateTime.now();
-            if (journeyData.getStartTime().isAfter(now)) {
-                throw new ValidationException("JourneyData", "startTime",
-                        "Journey start time cannot be in the future");
+
+            // Journey date shouldn't be in the future
+            if (journeyData.getJourneyDate().isAfter(now)) {
+                throw new ValidationException("JourneyData", "journeyDate",
+                        "Journey date cannot be in the future");
             }
 
-            if (journeyData.getEndTime().isAfter(now)) {
-                throw new ValidationException("JourneyData", "endTime",
-                        "Journey end time cannot be in the future");
+            // Journey date shouldn't be too old (more than 1 year)
+            if (journeyData.getJourneyDate().isBefore(now.minusYears(1))) {
+                throw new ValidationException("JourneyData", "journeyDate",
+                        "Journey date cannot be more than 1 year in the past");
             }
         }
 
-        // Validate creation date is not in the future (this is auto-generated but just
-        // in case)
+        // Validate creation date is not in the future (this is auto-generated but just in case)
         if (journeyData.getCreatedAt() != null && journeyData.getCreatedAt().isAfter(LocalDateTime.now())) {
             throw new ValidationException("JourneyData", "createdAt",
                     "Creation date cannot be in the future");
@@ -730,16 +724,10 @@ public class ValidationService {
                     "CO2 reduction must be calculated before creating carbon credit");
         }
 
-        // Journey must have both start and end times for credit creation
-        if (journeyData.getStartTime() == null || journeyData.getEndTime() == null) {
-            throw new ValidationException("JourneyData", "journeyTimes",
-                    "Both start and end times are required for carbon credit creation");
-        }
-
-        // Journey must be completed (end time must be set and in the past)
-        if (journeyData.getEndTime().isAfter(LocalDateTime.now())) {
-            throw new ValidationException("JourneyData", "endTime",
-                    "Journey must be completed before creating carbon credit");
+        // Journey must have a journey date for credit creation
+        if (journeyData.getJourneyDate() == null && journeyData.getCreatedAt() == null) {
+            throw new ValidationException("JourneyData", "journeyDate",
+                    "Journey date or creation date is required for carbon credit creation");
         }
 
         // Minimum distance for carbon credit (e.g., 1 km)

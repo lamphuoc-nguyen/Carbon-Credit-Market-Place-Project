@@ -39,7 +39,7 @@ public class CarbonCredit {
     private BigDecimal creditAmount;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(name = "status",nullable = false, length = 20)
     private CreditStatus status;
 
     @CreatedDate
@@ -68,6 +68,7 @@ public class CarbonCredit {
         VERIFIED,  // CVA approved
         LISTED,    // Available for sale
         SOLD,      // Purchased
-        REJECTED   // CVA rejected
+        REJECTED,   // CVA rejected
+        RETIRED    //Use for credits that have been retired by buyers
     }
 }

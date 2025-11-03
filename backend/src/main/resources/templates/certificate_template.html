@@ -1,0 +1,216 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>Carbon Credit Retirement Certificate</title>
+    <style type="text/css">
+        @page {
+            size: A4;
+            margin: 10mm;
+        }
+
+        body {
+            font-family: 'Times New Roman', serif;
+            line-height: 1.4;
+            color: #333333;
+            background-color: #ffffff;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 550px;
+            border: 6px solid #2c5234;
+            padding: 25px;
+            margin: 10px auto;
+        }
+
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #2c5234;
+            padding-bottom: 12px;
+            margin-bottom: 18px;
+        }
+
+        .logo-img {
+            width: 60px;
+            height: 60px;
+            display: block;
+            margin: 0 auto 12px auto;
+        }
+
+        .title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #2c5234;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: #666666;
+            font-style: italic;
+        }
+
+        .body {
+            margin: 18px 0;
+            text-align: center;
+        }
+
+        .text {
+            font-size: 13px;
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        .buyer-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c5234;
+            text-decoration: underline;
+            margin: 12px 0;
+        }
+
+        .highlight {
+            background-color: #2c5234;
+            color: white;
+            padding: 15px;
+            margin: 18px 0;
+            text-align: center;
+        }
+
+        .amount {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .info-table {
+            width: 100%;
+            margin: 18px 0;
+            border-collapse: collapse;
+        }
+
+        .info-table td {
+            width: 50%;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-left: 3px solid #2c5234;
+            vertical-align: top;
+        }
+
+        .info-table tr td:first-child {
+            padding-right: 8px;
+        }
+
+        .label {
+            font-weight: bold;
+            color: #2c5234;
+            margin-bottom: 3px;
+            display: block;
+            font-size: 12px;
+        }
+
+        .value {
+            font-size: 11px;
+            color: #333333;
+            line-height: 1.3;
+        }
+
+        .footer {
+            margin-top: 25px;
+            border-top: 2px solid #2c5234;
+            padding-top: 12px;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .date {
+            text-align: right;
+            margin-top: 18px;
+            font-style: italic;
+            color: #666666;
+            font-size: 11px;
+        }
+
+        .cert-id {
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            color: #666666;
+            margin-top: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="title">Certificate of Carbon Credit Retirement</div>
+            <div class="subtitle">Carbon Credit Marketplace Platform</div>
+        </div>
+
+        <!-- Body -->
+        <div class="body">
+            <p class="text">This certificate hereby acknowledges that</p>
+
+            <p class="buyer-name" th:text="${certificate.buyerNameSnapshot}">[Buyer Name]</p>
+
+            <p class="text">has successfully retired carbon credits for environmental impact reduction</p>
+
+            <div class="highlight">
+                <div class="amount">
+                    <span th:text="${certificate.amountRetiredKg}">[0.00]</span> kg CO2 equivalent
+                </div>
+                <div>Successfully Retired from Circulation</div>
+            </div>
+
+            <!-- Information Table -->
+            <table class="info-table">
+                <tr>
+                    <td>
+                        <span class="label">Certificate Code</span>
+                        <span class="value" th:text="${certificate.certificateCode}">[CERT-000000]</span>
+                    </td>
+                    <td>
+                        <span class="label">Retirement Date</span>
+                        <span class="value" th:text="${#temporals.format(certificate.retirementDate, 'dd/MM/yyyy')}">[01/01/2024]</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <span class="label">Buyer Email</span>
+                        <span class="value" th:text="${certificate.buyerEmailSnapshot}">[buyer@example.com]</span>
+                    </td>
+                    <td>
+                        <span class="label">Project Source</span>
+                        <span class="value" th:text="${certificate.projectSourceInfo}">[Project Information]</span>
+                    </td>
+                </tr>
+            </table>
+
+            <p class="text">
+                These carbon credits have been permanently retired and cannot be resold or transferred.
+                This retirement contributes to global carbon reduction efforts and environmental sustainability.
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div>
+                <strong>Carbon Credit Marketplace Platform</strong><br />
+                Verified Carbon Retirement System
+            </div>
+
+            <div class="date">
+                Certificate Generated: <span th:text="${#temporals.format(certificate.createdAt, 'dd/MM/yyyy HH:mm:ss')}">[01/01/2024 12:00:00]</span>
+            </div>
+
+            <div class="cert-id">
+                Document ID: <span th:text="${certificate.certificateCode}">[CERT-000000]</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
