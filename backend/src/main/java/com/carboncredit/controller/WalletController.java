@@ -77,7 +77,8 @@ public class WalletController {
 
             boolean hasSufficientBalance;
             if ("CREDIT".equalsIgnoreCase(balanceType)) {
-                hasSufficientBalance = wallet.getCreditBalance().compareTo(amount) >= 0;  // Fixed: use getCreditBalance()
+                hasSufficientBalance = wallet.getCreditBalance().compareTo(amount) >= 0; // Fixed: use
+                                                                                         // getCreditBalance()
             } else {
                 hasSufficientBalance = wallet.getCashBalance().compareTo(amount) >= 0;
             }
@@ -129,7 +130,7 @@ public class WalletController {
     // Withdraw funds from wallet
     @PostMapping("/withdraw")
     public ResponseEntity<WalletResponse> withdrawFunds(@Valid @RequestBody WithdrawRequest request,
-                                                        Authentication authentication) {
+            Authentication authentication) {
         try {
             User user = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
@@ -144,7 +145,7 @@ public class WalletController {
 
             // Process banking withdrawal
             boolean withdrawalSuccessful = bankingService.processWithdrawal(user.getId(), request.getAmount(),
-                    request.getBankAccountInfo());  // Fixed: correct field name
+                    request.getBankAccountInfo()); // Fixed: correct field name
 
             if (!withdrawalSuccessful) {
                 log.warn("Banking withdrawal failed for user: {}", user.getUsername());
@@ -193,7 +194,10 @@ public class WalletController {
 
     // Admin: Get any user's wallet (admin only)
     @GetMapping("/admin/user/{userId}")
-    public ResponseEntity<WalletResponse> getUserWallet(@PathVariable UUID userId, Authentication authentication) {  // Fixed: @PathVariable not @RequestParam
+    public ResponseEntity<WalletResponse> getUserWallet(@PathVariable UUID userId, Authentication authentication) { // Fixed:
+                                                                                                                    // @PathVariable
+                                                                                                                    // not
+                                                                                                                    // @RequestParam
         try {
             User currentUser = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
@@ -222,8 +226,8 @@ public class WalletController {
     // Admin: Update user's wallet balance (admin only)
     @PutMapping("/admin/user/{userId}/balance")
     public ResponseEntity<WalletResponse> updateUserBalance(@PathVariable UUID userId,
-                                                            @RequestParam BigDecimal creditAmount, @RequestParam BigDecimal cashAmount,
-                                                            @RequestParam(required = false) String reason, Authentication authentication) {
+            @RequestParam BigDecimal creditAmount, @RequestParam BigDecimal cashAmount,
+            @RequestParam(required = false) String reason, Authentication authentication) {
         try {
             User currentUser = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
@@ -258,6 +262,7 @@ public class WalletController {
                 wallet.getId(),
                 wallet.getUser().getId(),
                 wallet.getUser().getUsername(),
+                wallet.getUser().getFullName(),
                 wallet.getCreditBalance(),
                 wallet.getCashBalance(),
                 wallet.getUpdatedAt());

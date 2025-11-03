@@ -40,8 +40,7 @@ public class JourneyController {
 
     @PostMapping()
     @PreAuthorize("hasRole('EV_OWNER')")
-    public ResponseEntity<ApiResponse<JourneyDataDTO>> createJourney(
-            @RequestBody Map<String, Object> requestBody,
+    public ResponseEntity<ApiResponse<JourneyDataDTO>> createJourney(@Valid @RequestBody JourneyData journeyData,
             Authentication authentication) {
         try {
             User user = userService.findByUsername(authentication.getName())
@@ -142,7 +141,7 @@ public class JourneyController {
      */
     @GetMapping("/{journeyId}")
     public ResponseEntity<ApiResponse<JourneyDataDTO>> getJourney(@PathVariable UUID journeyId,
-                                                                  Authentication authentication) {
+            Authentication authentication) {
         try {
             User user = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new ResourceNotFoundException("user not found"));

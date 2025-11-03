@@ -15,6 +15,7 @@ public class WalletResponse {
     private UUID walletId;
     private UUID userId;
     private String username;
+    private String fullName;
     private BigDecimal creditBalance;
     private BigDecimal cashBalance;
     private LocalDateTime lastUpdated;

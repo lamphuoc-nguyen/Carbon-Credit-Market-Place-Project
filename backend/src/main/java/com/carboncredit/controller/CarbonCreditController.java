@@ -68,7 +68,7 @@ public class CarbonCreditController {
     // FIX: Change to return DTO instead of entity
     @PostMapping("/{creditId}/verify")
     public ResponseEntity<CarbonCreditDTO> verifyCredit(@PathVariable UUID creditId,
-                                                        @RequestBody(required = false) VerifyRequest request, Authentication authentication) {
+            @RequestBody(required = false) VerifyRequest request, Authentication authentication) {
         User verifier = userService.findByUsername(authentication.getName()).orElse(null);
         if (verifier == null || verifier.getRole() != User.UserRole.CVA) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -86,7 +86,7 @@ public class CarbonCreditController {
     // FIX: Change to return DTO instead of entity
     @PostMapping("/{creditId}/reject")
     public ResponseEntity<CarbonCreditDTO> rejectCredit(@PathVariable UUID creditId,
-                                                        @RequestBody(required = false) VerifyRequest request, Authentication authentication) {
+            @RequestBody(required = false) VerifyRequest request, Authentication authentication) {
         User verifier = userService.findByUsername(authentication.getName()).orElse(null);
         if (verifier == null || verifier.getRole() != User.UserRole.CVA) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();

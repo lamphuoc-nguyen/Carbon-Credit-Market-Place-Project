@@ -1,3 +1,4 @@
+
 package com.carboncredit.service;
 
 import java.time.LocalDateTime;
@@ -169,9 +170,8 @@ public class TransactionService {
         currentListing.setStatus(ListingStatus.CLOSED);
         creditListingRepository.save(currentListing);
 
-        // Transfer credit ownership to buyer and update status
+        // Transfer credit ownership to buyer
         currentCredit.setUser(fullTransaction.getBuyer());
-        currentCredit.setStatus(CarbonCredit.CreditStatus.SOLD);
         carbonCreditRepository.save(currentCredit);
 
         // Update wallets based on payment method
@@ -186,15 +186,11 @@ public class TransactionService {
                     fullTransaction.getPaymentMethod());
         }
 
-        // ✅ SELLER: DECREASE CREDIT BALANCE (selling credits)
-        walletService.updateCreditBalance(fullTransaction.getSeller().getId(), currentCredit.getCreditAmount().negate());
-        log.info("✅ Deducted {} credits from seller's wallet", currentCredit.getCreditAmount());
-
-        // ✅ BUYER: INCREASE CREDIT BALANCE (buying credits)
+        // ✅ LUÔN CỘNG CREDIT CHO NGƯỜI MUA (bất kể phương thức thanh toán)
         walletService.updateCreditBalance(fullTransaction.getBuyer().getId(), currentCredit.getCreditAmount());
         log.info("✅ Added {} credits to buyer's wallet", currentCredit.getCreditAmount());
 
-        // ✅ SELLER: INCREASE CASH BALANCE (receiving payment)
+        // ✅ LUÔN CỘNG TIỀN CHO NGƯỜI BÁN (bất kể phương thức thanh toán)
         walletService.updateCashBalance(fullTransaction.getSeller().getId(), fullTransaction.getAmount());
         log.info("✅ Added {} cash to seller's wallet", fullTransaction.getAmount());
 
@@ -475,7 +471,7 @@ public class TransactionService {
     // get transaction for specific date range
     @Transactional(readOnly = true)
     public Page<Transaction> getTransactionsByDateRange(LocalDateTime startDate, LocalDateTime endDate, int page,
-                                                        int size) {
+            int size) {
         log.info("Fetching transactions by date range: {} to {}, page: {}, size: {}",
                 startDate, endDate, page, size);
 
