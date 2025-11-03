@@ -1,17 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import { Leaf } from 'lucide-react';
 import { Link, NavLink } from 'react-router-dom';
-import LogoutButton from './LogoutButton';
 import { getValidToken } from '../utils/tokenUtils';
+    
 
 const Navbar = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [userRole, setUserRole] = useState(null);
 
     // Check authentication status on component mount and when storage changes
     useEffect(() => {
         const checkAuth = () => {
             const token = getValidToken();
             setIsAuthenticated(!!token);
+
+            if (token) {
+                // Get user data to determine role
+                const userStr = localStorage.getItem('user') || sessionStorage.getItem('user');
+                if (userStr) {
+                    try {
+                        const userData = JSON.parse(userStr);
+                        setUserRole(userData.role);
+                    } catch (error) {
+                        console.error('Error parsing user data:', error);
+                        setUserRole(null);
+                    }
+                }
+            } else {
+                setUserRole(null);
+            }
         };
 
         checkAuth();
@@ -24,6 +41,25 @@ const Navbar = () => {
         window.addEventListener('storage', handleStorageChange);
         return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
+
+    // Get the appropriate dashboard link based on role
+    const getDashboardLink = () => {
+        if (userRole === 'EV_OWNER') {
+            return '/ev-dashboard';
+        } else if (userRole === 'BUYER') {
+            return '/marketplace';
+        }
+        return '/marketplace'; // Default fallback
+    };
+
+    const getDashboardText = () => {
+        if (userRole === 'EV_OWNER') {
+            return 'Go to Marketplace';
+        } else if (userRole === 'BUYER') {
+            return 'Go to Marketplace';
+        }
+        return 'Go to Dashboard'; // Default fallback
+    };
 
     return (
         <div className='border-b border-gray-300 relative z-50'>
@@ -71,21 +107,20 @@ const Navbar = () => {
                                 </NavLink>
                             </li>
 
-                            {/* Authentication-aware menu items - SIMPLIFIED */}
+                            {/* Authentication-aware menu items */}
                             {isAuthenticated ? (
-                                // When logged in: Show only logout button
-                                <li className='inline-block'>
-                                    <LogoutButton
-                                        variant="button"
-                                        className="text-sm"
-                                        showText={true}
-                                    />
+                                // When logged in: Show Go to Dashboard/Marketplace button based on role
+                                <li className='inline-block py-2.5 px-5 text-[16px] text-white bg-green-500 rounded-lg font-semibold transition hover:bg-green-600 shadow-sm border-green-700'>
+                                    <NavLink to={getDashboardLink()}>{getDashboardText()}</NavLink>
                                 </li>
                             ) : (
-                                // When NOT logged in: Show only Sign In button
-                                <li className='inline-block py-2.5 px-5 text-[16px] text-white bg-green-500 rounded-lg font-semibold transition hover:bg-green-600 shadow-sm border-green-700'>
-                                    <NavLink to="/login">Sign In</NavLink>
-                                </li>
+                                // When NOT logged in: Show Sign In and Register buttons
+                                <>
+                                    <li className='inline-block py-2.5 px-5 text-[16px] text-white bg-green-500 rounded-lg font-semibold transition hover:bg-green-600 shadow-sm border-green-700'>
+                                        <NavLink to="/login">Sign In</NavLink>
+                                    </li>
+                                    
+                                </>
                             )}
                         </ul>
                     </div>

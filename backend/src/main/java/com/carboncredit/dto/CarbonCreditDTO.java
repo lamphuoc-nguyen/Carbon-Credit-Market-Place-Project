@@ -40,7 +40,8 @@ public class CarbonCreditDTO {
     // Lightweight constructor for preventing circular references
     public CarbonCreditDTO(CarbonCredit credit, boolean lightweight) {
         this.id = credit.getId();
-        if (!lightweight && credit.getUser() != null) {
+        // Always include owner username for marketplace display
+        if (credit.getUser() != null) {
             this.owner = new UserDTO();
             this.owner.setId(credit.getUser().getId());
             this.owner.setUsername(credit.getUser().getUsername());

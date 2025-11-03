@@ -119,7 +119,7 @@ public class JourneyController {
      */
     @GetMapping("/{journeyId}")
     public ResponseEntity<ApiResponse<JourneyDataDTO>> getJourney(@PathVariable UUID journeyId,
-                                                                  Authentication authentication) {
+            Authentication authentication) {
         try {
             User user = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new ResourceNotFoundException("user not found"));

@@ -38,7 +38,7 @@ public class CreditListingController {
     // create fixed-price listing
     @PostMapping("/create")
     public ResponseEntity<CreditListingDTO> createListing(@RequestParam UUID creditId, @RequestParam BigDecimal price,
-                                                          Authentication authentication) {
+            Authentication authentication) {
         try {
             User owner = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
@@ -68,8 +68,8 @@ public class CreditListingController {
     // search by price range
     @GetMapping("/search")
     public ResponseEntity<Page<CreditListingDTO>> searchByPriceRange(@RequestParam BigDecimal minPrice,
-                                                                     @RequestParam BigDecimal maxPrice, @RequestParam(defaultValue = "0") int page,
-                                                                     @RequestParam(defaultValue = "20") int size) {
+            @RequestParam BigDecimal maxPrice, @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
         try {
             Page<CreditListing> listings = creditListingService.searchByPriceRange(minPrice, maxPrice, page, size);
             Page<CreditListingDTO> dtos = listings.map(CreditListingDTO::new); // Convert to DTO
@@ -83,7 +83,7 @@ public class CreditListingController {
     // get my lisitngs
     @GetMapping("/my-listings")
     public ResponseEntity<Page<CreditListingDTO>> getMyListings(@RequestParam(defaultValue = "0") int page,
-                                                                @RequestParam(defaultValue = "20") int size, Authentication authentication) {
+            @RequestParam(defaultValue = "20") int size, Authentication authentication) {
 
         try {
             User user = userService.findByUsername(authentication.getName())
@@ -102,7 +102,7 @@ public class CreditListingController {
     // get my active listings only
     @GetMapping("/my-active-listings")
     public ResponseEntity<Page<CreditListingDTO>> getMyActiveListings(@RequestParam(defaultValue = "0") int page,
-                                                                      @RequestParam(defaultValue = "20") int size, Authentication authentication) {
+            @RequestParam(defaultValue = "20") int size, Authentication authentication) {
         try {
             User user = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
@@ -118,7 +118,8 @@ public class CreditListingController {
 
     // Purchase listing
     @PostMapping("/{listingId}/purchase") // Fix: was {listngId}
-    public ResponseEntity<CreditListingDTO> purchaseListing(@PathVariable UUID listingId, Authentication authentication) { // Fix: was purchaseLisitng
+    public ResponseEntity<CreditListingDTO> purchaseListing(@PathVariable UUID listingId,
+            Authentication authentication) { // Fix: was purchaseLisitng
         try {
             User buyer = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
@@ -136,7 +137,7 @@ public class CreditListingController {
     // update lisitng price
     @PutMapping("/{listingId}/price")
     public ResponseEntity<CreditListingDTO> updatePrice(@PathVariable UUID listingId, @RequestParam BigDecimal newPrice,
-                                                        Authentication authentication) {
+            Authentication authentication) {
         try {
             User owner = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));

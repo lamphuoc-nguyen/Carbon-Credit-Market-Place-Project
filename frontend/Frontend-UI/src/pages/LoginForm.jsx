@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaGoogle, FaFacebook, FaUser, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CircleCheckBig } from 'lucide-react';
 import backgroundImage from '../image/background.png';
 import logoImage from '../image/logo1.png';
@@ -21,15 +21,24 @@ const LoginForm = () => {
 
     const handleGoogleLogin = () => {
         console.log('Google OAuth2 login clicked');
-        // Redirect to backend OAuth2 endpoint for Google
         window.location.href = 'http://localhost:8080/oauth2/authorization/google';
     };
 
     const handleFacebookLogin = () => {
         console.log('GitHub OAuth2 login clicked');
-        // Redirect to backend OAuth2 endpoint for GitHub (using GitHub instead of Facebook)
         window.location.href = 'http://localhost:8080/oauth2/authorization/github';
     };
+
+    useEffect(() => {
+        const savedUsername = localStorage.getItem('rememberedUsername');
+        if (savedUsername) {
+            setFormData(prev => ({
+                ...prev,
+                usernameOrEmail: savedUsername,
+                rememberMe: true
+            }));
+        }
+    }, []);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -110,10 +119,9 @@ const LoginForm = () => {
         return Object.keys(newErrors).length === 0;
     };
 
-    // HÀM GIẢI MÃ TOKEN (Không thay đổi)
     const decodeToken = (token) => {
         try {
-            const base64Url = token.split('.')[1]; // Lấy phần payload
+            const base64Url = token.split('.')[1];
             const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
             const jsonPayload = decodeURIComponent(
                 atob(base64)
@@ -123,7 +131,7 @@ const LoginForm = () => {
                     })
                     .join('')
             );
-            return JSON.parse(jsonPayload); // Đây là object: { sub, role, userId, ... }
+            return JSON.parse(jsonPayload);
         } catch (error) {
             console.error("Invalid token:", error);
             return null;
@@ -143,28 +151,22 @@ const LoginForm = () => {
                     password: formData.password
                 };
 
-                // response BÂY GIỜ là { accessToken: "...", tokenType: "Bearer" }
                 const response = await authApi.login(loginPayload);
                 console.log('✅ Login success (response data):', response);
 
-                // --- SỬA LỖI Ở ĐÂY ---
-                // 1. Lấy token trực tiếp từ response
                 const token = response?.accessToken;
 
                 if (!token) {
                     setErrors({
-                        // Đây là lỗi bạn đang thấy
                         submit: 'Login successful, but no token was provided by the server.'
                     });
                     setIsLoading(false);
                     return;
                 }
 
-                // 2. Giải mã token để lấy thông tin user (payload)
-                const userPayload = decodeToken(token); // userPayload là { sub, role, userId... }
+                const userPayload = decodeToken(token);
                 console.log('Decoded user payload:', userPayload);
 
-                // 3. Kiểm tra xem payload và role có hợp lệ không
                 if (!userPayload || !userPayload.role) {
                     setErrors({
                         submit: 'Invalid token received. Role not found.'
@@ -173,18 +175,21 @@ const LoginForm = () => {
                     return;
                 }
 
-                // 4. Lưu trữ
                 const storage = formData.rememberMe ? localStorage : sessionStorage;
                 storage.setItem('authToken', token);
-                storage.setItem('user', JSON.stringify(userPayload)); // Lưu toàn bộ payload
+                storage.setItem('user', JSON.stringify(userPayload));
+
+                // Handle Remember Me for username
+                if (formData.rememberMe) {
+                    localStorage.setItem('rememberedUsername', formData.usernameOrEmail);
+                } else {
+                    localStorage.removeItem('rememberedUsername');
+                }
 
                 console.log('✅ Token and user info saved successfully');
 
-                // 5. Lấy userRole từ payload đã giải mã
                 const userRole = userPayload.role;
                 console.log('User role is:', userRole);
-
-                // --- KẾT THÚC SỬA LỖI ---
 
                 switch (userRole) {
                     case 'CVA':
@@ -198,8 +203,6 @@ const LoginForm = () => {
                         break;
 
                     case 'EV_OWNER':
-                        // (Giữ nguyên phần còn lại của file)
-                        // ...
                         console.log('Redirecting EV Owner to /ev-dashboard');
                         navigate('/ev-dashboard');
                         break;
@@ -215,9 +218,7 @@ const LoginForm = () => {
                 }
 
             } catch (error) {
-                // (Giữ nguyên phần còn lại của file)
-                // ...
-                console.error(' Login error:', error);
+                console.error('❌ Login error:', error);
                 if (error.response) {
                     const status = error.response.status;
                     const message = error.response.data?.message || error.response.data?.error;
@@ -234,14 +235,11 @@ const LoginForm = () => {
 
                     setErrors({
                         submit: errorMessages[status] || `Error ${status}: ${message || 'Please try again'}`
-
                     });
                 } else if (error.request) {
                     setErrors({
                         submit: 'Unable to connect to server. Please check your connection.'
-
                     });
-                    _
                 } else {
                     setErrors({
                         submit: error.message || 'An unexpected error occurred'
@@ -254,160 +252,211 @@ const LoginForm = () => {
     };
 
     return (
-        <div className="min-h-screen bg-cover bg-center flex items-center justify-center"
-            style={{ backgroundImage: `url(${backgroundImage})` }}>
-            <div className="bg-white bg-opacity-95 backdrop-blur-sm p-8 rounded-2xl shadow-2xl w-full max-w-md">
-
+        <>
+            {/* Main Container */}
+            <div className="min-h-screen flex justify-center items-stretch gap-0 bg-gradient-to-br from-green-50 to-emerald-100 bg-no-repeat bg-contain relative" style={{ backgroundImage: `url(${backgroundImage})`, backgroundSize: 'auto' }}>
                 {/* Logo */}
-                <div className="text-center mb-8">
-                    <img src={logoImage} alt="Logo" className="mx-auto h-16 w-auto mb-4" />
-                    <h2 className="text-3xl font-bold text-gray-800 mb-2">Welcome Back</h2>
-                    <p className="text-gray-600">Sign in to your account</p>
+                <div className="absolute top-[-70px] -ml-160 h-60 pointer-events-none ">
+                    <img
+                        src={logoImage}
+                        alt="Carbon Credit Marketplace"
+                        className="w-100 h-auto"
+                    />
                 </div>
 
-                {/* OAuth Buttons */}
-                <div className="space-y-3 mb-6">
-                    <button
-                        onClick={handleGoogleLogin}
-                        className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                    >
-                        <FaGoogle className="text-red-500" />
-                        Continue with Google
-                    </button>
-                    <button
-                        onClick={handleFacebookLogin}
-                        className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                    >
-                        <FaFacebook className="text-blue-600" />
-                        Continue with GitHub
-                    </button>
-                </div>
+                <div className="flex items-stretch gap-0 max-w-[1400px] w-full pt-32">
+                    {/* Left Side - Marketing Content */}
+                    <div className="flex-1 flex items-center justify-end px-12 mt-5 mr-20">
+                        <div className="max-w-2xl pr-8">
+                            <h1 className="text-[19.2px] font-medium text-gray-500 mb-6 w-150">
+                                The premier platform for carbon credit trading. Join thousands building sustainable businesses.
+                            </h1>
+                            <p className="text-2xl font-bold text-dark mb-5">
+                                Welcome Back to CarbonTrade
+                            </p>
+                            <div className="space-y-5">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-2xl"><CircleCheckBig size={26} color="#2bff00" /></span>
+                                    <span className="text-gray-700">Track your performance with real-time dashboards and detailed reports</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className="text-2xl"><CircleCheckBig size={26} color="#2bff00" /></span>
+                                    <span className="text-gray-700">Industry-leading security with verified transactions and secure payments</span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className="text-2xl"><CircleCheckBig size={26} color="#2bff00" /></span>
+                                    <span className="text-gray-700">Connect with buyers worldwide and expand your market reach</span>
+                                </div>
+                            </div>
 
-                {/* Divider */}
-                <div className="relative mb-6">
-                    <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-gray-300"></div>
-                    </div>
-                    <div className="relative flex justify-center text-sm">
-                        <span className="px-2 bg-white text-gray-500">Or continue with email</span>
-                    </div>
-                </div>
-
-                {/* Login Form */}
-                <form onSubmit={handleSubmit} className="space-y-4">
-
-                    {/* Submit Error */}
-                    {errors.submit && (
-                        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
-                            {errors.submit}
+                            {/* Stats */}
+                            <div className="grid grid-cols-3 gap-4 mt-8">
+                                <div className="text-center p-5 rounded-xl bg-white/70 backdrop-blur-sm shadow-sm border border-green-100 hover:shadow-md transition-shadow">
+                                    <div className="text-3xl font-bold text-green-600 mb-1">10M+</div>
+                                    <div className="text-xs font-medium text-gray-600 uppercase tracking-wide">Credits Traded</div>
+                                </div>
+                                <div className="text-center p-5 rounded-xl bg-white/70 backdrop-blur-sm shadow-sm border border-green-100 hover:shadow-md transition-shadow">
+                                    <div className="text-3xl font-bold text-green-600 mb-1">5,000+</div>
+                                    <div className="text-xs font-medium text-gray-600 uppercase tracking-wide">Active Sellers</div>
+                                </div>
+                                <div className="text-center p-5 rounded-xl bg-white/70 backdrop-blur-sm shadow-sm border border-green-100 hover:shadow-md transition-shadow">
+                                    <div className="text-3xl font-bold text-green-600 mb-1">150+</div>
+                                    <div className="text-xs font-medium text-gray-600 uppercase tracking-wide">Countries</div>
+                                </div>
+                            </div>
                         </div>
-                    )}
+                    </div>
 
-                    {/* Username/Email Field */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Username or Email
-                        </label>
-                        <div className="relative">
-                            <FaUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                            <input
-                                type="text"
-                                name="usernameOrEmail"
-                                value={formData.usernameOrEmail}
-                                onChange={handleChange}
-                                onBlur={() => handleBlur('usernameOrEmail')}
-                                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${errors.usernameOrEmail && touched.usernameOrEmail
-                                    ? 'border-red-500 bg-red-50'
-                                    : 'border-gray-300'
-                                    }`}
-                                placeholder="Enter your username or email"
-                            />
+                    {/* Right Side - Login Form */}
+                    <div className="w-[525px] flex items-center justify-start py-6 pl-8 pr-12 -mt-50">
+                        <div className='bg-white/95 backdrop-blur-md border border-gray-200 rounded-lg p-6 shadow-2xl w-full' style={{ boxShadow: '0 0 40px rgba(0, 0, 0, 0.1), 0 0 80px rgba(34, 197, 94, 0.15)' }}>
+                            <h1 className='text-3xl font-bold text-center mb-4 text-black'>Welcome Back</h1>
+                            <p className='text-center text-gray-600 mb-6'>Ready to make an impact?</p>
+
+                            <form onSubmit={handleSubmit} noValidate>
+                                {/* Submit Error */}
+                                {errors.submit && (
+                                    <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm mb-4">
+                                        {errors.submit}
+                                    </div>
+                                )}
+
+                                {/* Username/Email Field */}
+                                <div className='mb-4'>
+                                    <label htmlFor='usernameOrEmail' className='block text-xs font-medium text-gray-700 mb-1'>
+                                        Username or Email
+                                    </label>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <FaUser className="text-gray-400 text-sm" />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            id="usernameOrEmail"
+                                            name="usernameOrEmail"
+                                            value={formData.usernameOrEmail}
+                                            onChange={handleChange}
+                                            onBlur={() => handleBlur('usernameOrEmail')}
+                                            className={`block w-full pl-10 pr-3 py-2.5 text-sm border ${touched.usernameOrEmail && errors.usernameOrEmail ? 'border-red-500' : 'border-gray-300'
+                                                } rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 bg-white text-gray-700`}
+                                            placeholder='Enter your username or email'
+                                        />
+                                    </div>
+                                    {touched.usernameOrEmail && errors.usernameOrEmail && (
+                                        <p className="text-red-500 text-[10px] mt-1">{errors.usernameOrEmail}</p>
+                                    )}
+                                </div>
+
+                                {/* Password Field */}
+                                <div className='mb-4'>
+                                    <label htmlFor='password' className='block text-xs font-medium text-gray-700 mb-1'>
+                                        Password
+                                    </label>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <FaLock className="text-gray-400 text-sm" />
+                                        </div>
+                                        <input
+                                            type={showPassword ? "text" : "password"}
+                                            id="password"
+                                            name="password"
+                                            value={formData.password}
+                                            onChange={handleChange}
+                                            onBlur={() => handleBlur('password')}
+                                            className={`block w-full pl-10 pr-10 py-2.5 text-sm border ${touched.password && errors.password ? 'border-red-500' : 'border-gray-300'
+                                                } rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500 bg-white text-gray-700`}
+                                            placeholder='Enter your password'
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
+                                        >
+                                            {showPassword ? (
+                                                <FaEyeSlash className="text-gray-400 text-sm hover:text-gray-600" />
+                                            ) : (
+                                                <FaEye className="text-gray-400 text-sm hover:text-gray-600" />
+                                            )}
+                                        </button>
+                                    </div>
+                                    {touched.password && errors.password && (
+                                        <p className="text-red-500 text-[10px] mt-1">{errors.password}</p>
+                                    )}
+                                </div>
+
+                                {/* Remember Me and Forgot Password */}
+                                <div className="flex items-center justify-between mb-6">
+                                    <div className="flex items-center">
+                                        <input
+                                            type="checkbox"
+                                            id="rememberMe"
+                                            name="rememberMe"
+                                            checked={formData.rememberMe}
+                                            onChange={handleChange}
+                                            className="w-4 h-4 text-green-500 bg-white border-gray-300 rounded focus:ring-green-500 focus:ring-2 cursor-pointer"
+                                        />
+                                        <label htmlFor="rememberMe" className="ml-2 text-sm text-gray-700 cursor-pointer select-none">
+                                            Remember me
+                                        </label>
+                                    </div>
+                                    <Link to="/forgot-password" className="text-sm text-green-500 hover:text-green-600 font-medium">
+                                        Forgot password?
+                                    </Link>
+                                </div>
+
+                                {/* Submit Button */}
+                                <button
+                                    type="submit"
+                                    disabled={isLoading}
+                                    className="text-center w-full mb-4 text-[19px] rounded-lg bg-green-500 py-3 hover:bg-green-600 transition-colors duration-300 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                >
+                                    {isLoading ? (
+                                        <>
+                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                            Signing In...
+                                        </>
+                                    ) : (
+                                        'Log In'
+                                    )}
+                                </button>
+
+                                {/* Divider */}
+                                <div className="flex items-center my-4">
+                                    <div className="flex-1 border-t border-gray-400"></div>
+                                    <span className="px-3 text-gray-600 text-[15px]">or continue with</span>
+                                    <div className="flex-1 border-t border-gray-400"></div>
+                                </div>
+
+                                {/* Social Login Buttons */}
+                                <div className="flex gap-2 mb-4">
+                                    <button
+                                        type="button"
+                                        onClick={handleGoogleLogin}
+                                        className="flex-1 flex items-center justify-center gap-1.5 bg-slate-200 text-gray-800 py-2 rounded hover:bg-gray-100 transition-colors duration-300"
+                                    >
+                                        <FaGoogle className="text-sm" />
+                                        <span className="font-medium text-s">Google</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleFacebookLogin}
+                                        className="flex-1 flex items-center justify-center gap-1.5 bg-[#1877F2] text-white py-2 rounded hover:bg-[#166FE5] transition-colors duration-300"
+                                    >
+                                        <FaFacebook className="text-sm" />
+                                        <span className="font-medium text-s">GitHub</span>
+                                    </button>
+                                </div>
+
+                                {/* Register Link */}
+                                <span className="text-center text-[15px] block text-black">
+                                    Don't have an account? <Link to="/Register" className="font-semibold text-green-500 hover:text-green-400">Sign Up</Link>
+                                </span>
+                            </form>
                         </div>
-                        {errors.usernameOrEmail && touched.usernameOrEmail && (
-                            <p className="mt-1 text-sm text-red-500">{errors.usernameOrEmail}</p>
-                        )}
                     </div>
-
-                    {/* Password Field */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Password
-                        </label>
-                        <div className="relative">
-                            <FaLock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                            <input
-                                type={showPassword ? 'text' : 'password'}
-                                name="password"
-                                value={formData.password}
-                                onChange={handleChange}
-                                onBlur={() => handleBlur('password')}
-                                className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors ${errors.password && touched.password
-                                    ? 'border-red-500 bg-red-50'
-                                    : 'border-gray-300'
-                                    }`}
-                                placeholder="Enter your password"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                            >
-                                {showPassword ? <FaEyeSlash /> : <FaEye />}
-                            </button>
-                        </div>
-                        {errors.password && touched.password && (
-                            <p className="mt-1 text-sm text-red-500">{errors.password}</p>
-                        )}
-                    </div>
-
-                    {/* Remember Me */}
-                    <div className="flex items-center justify-between">
-                        <label className="flex items-center">
-                            <input
-                                type="checkbox"
-                                name="rememberMe"
-                                checked={formData.rememberMe}
-                                onChange={handleChange}
-                                className="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                            />
-                            <span className="ml-2 text-sm text-gray-700">Remember me</span>
-                        </label>
-                        <Link to="/forgot-password" className="text-sm text-green-600 hover:text-green-500">
-                            Forgot password?
-                        </Link>
-                    </div>
-
-                    {/* Submit Button */}
-                    <button
-                        type="submit"
-                        disabled={isLoading}
-                        className="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                        {isLoading ? (
-                            <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                Signing In...
-                            </>
-                        ) : (
-                            <>
-                                <CircleCheckBig size={16} />
-                                Sign In
-                            </>
-                        )}
-                    </button>
-                </form>
-
-                {/* Sign Up Link */}
-                <div className="text-center mt-6">
-                    <p className="text-sm text-gray-600">
-                        Don't have an account?{' '}
-                        <Link to="/register" className="text-green-600 hover:text-green-500 font-medium">
-                            Sign up here
-                        </Link>
-                    </p>
                 </div>
             </div>
-        </div>
+        </>
     );
 };
 

@@ -47,7 +47,7 @@ public class Transaction {
     @Column(nullable = false, length = 20)
     private TransactionStatus status;
 
-    @Column(name = "payment_method_id")
+    @Column(name = "payment_method_id", length = 20)
     private String paymentMethodId;
 
     @Enumerated(EnumType.STRING)
@@ -70,10 +70,15 @@ public class Transaction {
     public enum TransactionStatus {
         PENDING, COMPLETED, CANCELLED, DISPUTED
     }
-
     public enum PaymentMethod {
-        WALLET,    // Thanh toán bằng số dư trong ví
-        VNPAY,     // Thanh toán qua VNPay
-        BANK_TRANSFER  // Chuyển khoản ngân hàng
+        CREDIT_CARD,
+        DEBIT_CARD,
+        BANK_TRANSFER,
+        PAYPAL,
+        STRIPE,
+        WALLET,
+        CRYPTOCURRENCY,
+        OTHER,
+        VNPAY
     }
 }
