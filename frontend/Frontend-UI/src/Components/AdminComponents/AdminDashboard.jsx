@@ -14,6 +14,7 @@ import {
 // Import API services
 import { carbonCreditApi } from '../../api/carbonCreditApi';
 import { userApi } from '../../api/userApi';
+import { transactionApi } from '../../api/transactionApi';
 
 // --- HELPER COMPONENTS ---
 
@@ -34,14 +35,25 @@ const RenderStatIcon = ({ name, className }) => {
 // StatusBadge (Used for Recent Transactions)
 const StatusBadge = ({ status }) => {
     let color, text;
-    switch (status) {
-        case 'completed':
+    // Chuyển status về chữ hoa để so sánh
+    const upperStatus = status ? status.toUpperCase() : 'UNKNOWN';
+
+    switch (upperStatus) {
+        case 'COMPLETED':
             color = 'bg-green-100 text-green-700 border border-green-200';
             text = 'Completed';
             break;
-        case 'pending':
-            color = 'bg-gray-100 text-gray-700 border border-gray-200';
+        case 'PENDING':
+            color = 'bg-yellow-100 text-yellow-700 border border-yellow-200';
             text = 'Pending';
+            break;
+        case 'CANCELLED':
+            color = 'bg-red-100 text-red-700 border border-red-200';
+            text = 'Cancelled';
+            break;
+        case 'DISPUTED':
+            color = 'bg-orange-100 text-orange-700 border border-orange-200';
+            text = 'Disputed';
             break;
         default:
             color = 'bg-gray-100 text-gray-700 border border-gray-200';
@@ -135,44 +147,122 @@ const UserDistributionChart = () => (
 // --- BOTTOM ROW COMPONENTS ---
 
 // RecentTransactions (Includes mock data)
-const mockTransactions = [
-    { id: 1, from: 'GreenCorp Ltd', to: 'Michael Johnson', credits: 50, amount: 1250, date: '2024-01-20', status: 'completed' },
-    { id: 2, from: 'EcoTech Inc', to: 'Sarah Chen', credits: 25, amount: 700, date: '2024-01-20', status: 'pending' },
-    { id: 3, from: 'CleanEnergy Corp', to: 'GreenFleet Ltd', credits: 100, amount: 2200, date: '2024-01-19', status: 'completed' },
-];
-const RecentTransactions = () => (
-    <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 flex flex-col space-y-4 h-full"> {/* Added h-full */}
-        <div>
-            <div className="flex items-center space-x-2">
-                <FileText className="h-6 w-6 text-gray-500" />
-                <h2 className="text-xl font-semibold text-gray-800">Recent Transactions</h2>
+
+const RecentTransactions = () => {
+    // State để lưu trữ transactions, loading, và error
+    const [transactions, setTransactions] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchTransactions = async () => {
+            setIsLoading(true);
+            setError(null);
+            try {
+                // Lấy 5 giao dịch bị khiếu nại gần nhất (phân trang)
+                // API trả về một đối tượng Page, vì vậy chúng ta cần .content
+                const response = await transactionApi.getDisputedTransactions(0, 5);
+                setTransactions(response.content || []); // Đảm bảo transactions luôn là mảng
+            } catch (err) {
+                console.error("Failed to fetch recent transactions:", err);
+                setError(err.message || 'Could not load data.');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchTransactions();
+    }, []); // Chạy một lần khi component mount
+
+    // Helper để định dạng ngày
+    const formatDate = (dateString) => {
+        if (!dateString) return 'Invalid date';
+        return new Date(dateString).toLocaleDateString('vi-VN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+        });
+    };
+
+    return (
+        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 flex flex-col space-y-4 h-full">
+            <div>
+                <div className="flex items-center space-x-2">
+                    <FileText className="h-6 w-6 text-gray-500" />
+                    {/* Đổi tiêu đề để phản ánh đúng API đang gọi */}
+                    <h2 className="text-xl font-semibold text-gray-800">Recent Disputed Transactions</h2>
+                </div>
+                <p className="text-sm text-gray-500 mt-2">Latest platform disputes</p>
             </div>
-            <p className="text-sm text-gray-500 mt-2">Latest platform activity</p>
-        </div>
-        {mockTransactions.map(tx => (
-            <div key={tx.id} className="border-t border-gray-100 pt-4">
-                <div className="flex justify-between items-start">
-                    <div className="flex items-center font-semibold text-gray-800 text-sm">
-                        <span>{tx.from}</span>
-                        <ArrowRight className="h-4 w-4 mx-1 text-gray-400" />
-                        <span>{tx.to}</span>
+
+            {/* --- Xử lý trạng thái Loading --- */}
+            {isLoading && (
+                Array.from({ length: 3 }).map((_, index) => (
+                    <div key={index} className="border-t border-gray-100 pt-4 animate-pulse">
+                        <div className="flex justify-between items-start">
+                            <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                            <div className="h-5 bg-gray-200 rounded-full w-1/4"></div>
+                        </div>
+                        <div className="h-3 bg-gray-200 rounded w-1/2 mt-2"></div>
+                        <div className="h-3 bg-gray-200 rounded w-1/3 mt-1.5"></div>
                     </div>
-                    <StatusBadge status={tx.status} />
+                ))
+            )}
+
+            {/* --- Xử lý trạng thái Error --- */}
+            {!isLoading && error && (
+                <div className="border-t border-gray-100 pt-4 text-center text-red-500">
+                    <p>Error loading transactions: {error}</p>
                 </div>
-                <div className="flex items-center space-x-2 text-sm text-gray-500 mt-1">
-                    <span>{tx.credits} credits</span>
-                    <span className="text-gray-300">•</span>
-                    <span>${tx.amount}</span>
+            )}
+
+            {/* --- Xử lý khi không có dữ liệu --- */}
+            {!isLoading && !error && transactions.length === 0 && (
+                <div className="border-t border-gray-100 pt-4 text-center text-gray-500">
+                    <p>No disputed transactions found.</p>
                 </div>
-                <p className="text-xs text-gray-400 mt-1.5">{tx.date}</p>
-            </div>
-        ))}
-        {/* Add a "View All" link if needed */}
-        {/* <Link to="/admin/transactions" className="mt-auto text-center text-sm text-blue-600 hover:underline pt-2">
-            View All Transactions
-        </Link> */}
-    </div>
-);
+            )}
+
+            {/* --- Hiển thị dữ liệu --- */}
+            {!isLoading && !error && transactions.length > 0 && (
+                transactions.map(tx => (
+                    <div key={tx.id} className="border-t border-gray-100 pt-4">
+                        <div className="flex justify-between items-start">
+                            <div className="flex items-center font-semibold text-gray-800 text-sm">
+                                {/* LƯU Ý: Giả định TransactionDTO của bạn có 'sellerName' và 'buyerName'
+                                  Nếu không, bạn cần thay thế bằng:
+                                  tx.listing?.credit?.user?.username (cho seller)
+                                  tx.buyer?.username (cho buyer)
+                                */}
+                                <span>{tx.sellerName || 'Unknown Seller'}</span>
+                                <ArrowRight className="h-4 w-4 mx-1 text-gray-400" />
+                                <span>{tx.buyerName || 'Unknown Buyer'}</span>
+                            </div>
+                            <StatusBadge status={tx.status} />
+                        </div>
+                        <div className="flex items-center space-x-2 text-sm text-gray-500 mt-1">
+                            {/* Giả định DTO có 'credits' và 'totalPrice' */}
+                            <span>{tx.credits || 0} credits</span>
+                            <span className="text-gray-300">•</span>
+                            <span>${(tx.totalPrice || 0).toLocaleString()}</span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1.5">
+                            {/* Giả định DTO có 'createdAt' */}
+                            {formatDate(tx.createdAt)}
+                        </p>
+                    </div>
+                ))
+            )}
+
+            {/* Link để xem tất cả */}
+            {!isLoading && (
+                <Link to="/admin/disputes" className="mt-auto text-center text-sm text-blue-600 hover:underline pt-2">
+                    View All Disputes
+                </Link>
+            )}
+        </div>
+    );
+};
 
 // SystemAlerts (Displays error and pending count)
 const SystemAlerts = ({ pendingCount, isLoading, error }) => (
