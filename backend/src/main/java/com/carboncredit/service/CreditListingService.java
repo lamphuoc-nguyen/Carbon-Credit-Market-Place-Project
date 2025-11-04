@@ -35,6 +35,7 @@ public class CreditListingService {
     private final CreditListingRepository creditListingRepository;
     private final CarbonCreditRepository carbonCreditRepository;
     private final ValidationService validationService; // Keep this
+    private final WalletService walletService;
 
     // ==================== LISTING CREATION ====================
 
@@ -65,6 +66,9 @@ public class CreditListingService {
         // Update carbon credit status to LISTED
         credit.setStatus(CreditStatus.LISTED);
         credit.setListedAt(LocalDateTime.now());
+
+        // Update wallet
+        walletService.updateCreditBalance(owner.getId(), credit.getCreditAmount().negate());
 
         // Save both entities
         CreditListing savedListing = creditListingRepository.save(listing);
