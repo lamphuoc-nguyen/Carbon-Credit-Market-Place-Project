@@ -43,3 +43,4 @@ application-prod.properties
 ### Logs ###
 *.log
 logs/
+backend/
