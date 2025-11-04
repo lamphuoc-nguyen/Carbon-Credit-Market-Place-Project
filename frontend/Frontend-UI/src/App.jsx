@@ -129,6 +129,23 @@ element={
 
         </Route> {/* End of PARENT Route */}
 
+        {/* --- Admin Routes --- */}
+        <Route path="/admin" element={<AdminPage />}> {/* PARENT Route */}
+
+          {/* CHILD Routes */}
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<AdminDashboard />} />
+
+          {/* ✅ THIS IS THE ROUTE YOU NEED */}
+          <Route path="user-management" element={<UserManagement />} />
+          <Route path="transactions" element={<Transactions />} />
+          <Route path="wallets-cash-flow" element={<WalletManagement />} />
+          <Route path="platform-reports" element={<PlatformReport />} />
+
+
+
+        </Route> {/* End of PARENT Route */}
+
        
       </Routes>
 
