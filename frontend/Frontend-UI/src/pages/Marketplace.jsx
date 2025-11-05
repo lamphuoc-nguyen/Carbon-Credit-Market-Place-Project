@@ -1,12 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { buyerApi } from '../../api';
-import Navbar from '../../Components/EVComponents/Navbar';
-import { getValidToken } from '../../utils/tokenUtils';
+import { buyerApi } from '../api';
 
-const MakerPlacePage = () => {
+const Marketplace = () => {
   const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   // Helper function to format price (hide .00 for whole numbers)
   const formatPrice = (price) => {
@@ -123,12 +120,6 @@ const MakerPlacePage = () => {
     }
   }, [fetchMarketplaceData, isPriceSearchActive]);
 
-  // Check authentication status
-  useEffect(() => {
-    const token = getValidToken();
-    setIsAuthenticated(!!token);
-  }, []);
-
   // Apply filters when any filter changes
   useEffect(() => {
     applyAllFilters();
@@ -145,32 +136,19 @@ const MakerPlacePage = () => {
     fetchMarketplaceData();
   };
 
-  // View credit details or buy now - redirect to login if not authenticated
-  const handleViewDetails = (listingId) => {
-    if (!listingId) {
-      console.error('Invalid listing ID');
-      return;
-    }
-    
-    // Check if user is authenticated before allowing purchase
-    if (!isAuthenticated) {
-      console.log('User not authenticated, redirecting to login');
-      navigate('/login', { state: { from: `/marketplace/${listingId}` } });
-      return;
-    }
-    
-    navigate(`/marketplace/${listingId}`);
+  // Redirect to login when trying to buy
+  const handleBuyNow = (listingId) => {
+    console.log('Unauthenticated user trying to buy, redirecting to login');
+    navigate('/login', { state: { from: `/marketplace/${listingId}`, message: 'Please sign in to purchase carbon credits' } });
   };
 
   return (
-    <>
-    <Navbar />
     <div className="min-h-screen bg-gray-100">
       <div className="mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Main Layout: Sidebar + Listings */}
         <div className="flex flex-col lg:flex-row gap-4">
           
-          {/* Left Sidebar - Filters (OLD DESIGN) */}
+          {/* Left Sidebar - Filters */}
           <aside className="lg:w-64 flex-shrink-0">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sticky top-4">
               <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
@@ -285,7 +263,7 @@ const MakerPlacePage = () => {
           {/* Right Content - Listings */}
           <main className="flex-1">
             
-            {/* Search Bar with View Toggle (OLD DESIGN) */}
+            {/* Search Bar with View Toggle */}
             <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-200 p-4">
               <div className="flex gap-3">
                 {/* Search Input */}
@@ -375,7 +353,7 @@ const MakerPlacePage = () => {
               </div>
             )}
 
-            {/* Listings Grid - Carbonmark Style */}
+            {/* Listings Grid */}
             {!loading && paginatedListings.length > 0 && (
               <>
                 {/* Grid View */}
@@ -386,7 +364,7 @@ const MakerPlacePage = () => {
                         key={listing.id}
                         className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
                       >
-                        {/* Card Header - No Image */}
+                        {/* Card Header */}
                         <div className="bg-gradient-to-r from-green-50 to-blue-50 p-4 border-b border-gray-200">
                           <div className="flex justify-between items-start mb-3">
                             {/* Listing Type Badge */}
@@ -456,25 +434,15 @@ const MakerPlacePage = () => {
                             </div>
                           </div>
 
-                          {/* Action Buttons */}
+                          {/* Action Button - Buy Now redirects to login */}
                           <div className="flex gap-2">
                             <button
-                              onClick={() => handleViewDetails(listing.id)}
+                              onClick={() => handleBuyNow(listing.id)}
                               disabled={listing.status !== 'ACTIVE'}
                               className="flex-1 bg-green-600 text-white py-3 px-4 rounded-xl font-semibold hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all"
                             >
                               Buy Now
                             </button>
-                            {listing.id && (
-                              <button
-                                onClick={() => handleViewDetails(listing.id)}
-                                className="px-4 py-3 border-2 border-gray-200 rounded-xl hover:border-green-600 hover:bg-green-50 transition-all"
-                              >
-                                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                              </button>
-                            )}
                           </div>
 
                           {/* Posted Date */}
@@ -582,23 +550,15 @@ const MakerPlacePage = () => {
                               </p>
                             </div>
 
-                            {/* Action Buttons */}
+                            {/* Action Button - Buy Now redirects to login */}
                             <div className="space-y-2">
                               <button
-                                onClick={() => handleViewDetails(listing.id)}
+                                onClick={() => handleBuyNow(listing.id)}
                                 disabled={listing.status !== 'ACTIVE'}
                                 className="w-full bg-green-600 text-white py-3 px-4 rounded-xl font-semibold hover:bg-green-700 cursor-pointer disabled:bg-gray-300 transition-all"
                               >
                                 Buy Now
                               </button>
-                              {listing.id && (
-                                <button
-                                  onClick={() => handleViewDetails(listing.id)}
-                                  className="w-full bg-white text-gray-700 py-3 px-4 rounded-xl font-semibold border-2 border-gray-200 hover:bg-gray-50 cursor-pointer transition-all"
-                                >
-                                  View Details
-                                </button>
-                              )}
                             </div>
                           </div>
                         </div>
@@ -607,7 +567,7 @@ const MakerPlacePage = () => {
                   </div>
                 )}
 
-                {/* Pagination - Modern Style */}
+                {/* Pagination */}
                 {totalPages > 1 && (
                   <div className="flex justify-center items-center gap-3 mb-8">
                     <button
@@ -638,7 +598,7 @@ const MakerPlacePage = () => {
               </>
             )}
 
-            {/* Empty State - Modern */}
+            {/* Empty State */}
             {!loading && listings.length === 0 && (
               <div className="text-center py-20">
                 <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -668,8 +628,7 @@ const MakerPlacePage = () => {
         </div>
       </div>
     </div>
-    </>
   );
 };
 
-export default MakerPlacePage;
+export default Marketplace;
