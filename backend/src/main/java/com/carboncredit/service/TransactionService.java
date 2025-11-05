@@ -211,6 +211,29 @@ public class TransactionService {
         return completedTransaction;
     }
 
+    @Transactional
+    public Transaction processWalletPayment(UUID transactionId, UUID buyerId) {
+        // 1. Lấy transaction
+        Transaction transaction = findTransactionById(transactionId);
+
+        // 2. Validate
+        if (!transaction.getBuyer().getId().equals(buyerId)) {
+            throw new UnauthorizedOperationException("Buyer does not match transaction");
+        }
+
+        if (transaction.getStatus() != TransactionStatus.PENDING) {
+            throw new BusinessOperationException("Transaction is not in pending status");
+        }
+
+        // 4. Đảm bảo payment method là WALLET
+        transaction.setPaymentMethod(Transaction.PaymentMethod.WALLET);
+        transactionRepository.save(transaction);
+
+        // 5. Gọi completeTransaction (đã có logic trừ tiền wallet)
+        return completeTransaction(transaction);
+    }
+
+
     // Fail a transaction with reason
     @Transactional
     public Transaction failTransaction(Transaction transaction, String reason) {

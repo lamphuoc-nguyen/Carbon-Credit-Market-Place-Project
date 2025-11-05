@@ -54,25 +54,54 @@ public class TransactionController {
             User buyer = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            Transaction transaction = transactionService.initiatePurchase(
-                    request.getListingId(),
-                    buyer,
-                    "VNPAY_PENDING"
-            );
+            // Lấy payment method từ request
+            String paymentMethod = request.getPaymentMethodId();
 
-            String ipAddress = getIpAddress(httpRequest);
-            String paymentUrl = vnPayService.createPaymentUrl(transaction, ipAddress);
+            if ("WALLET".equalsIgnoreCase(paymentMethod)) {
+                // Xử lý thanh toán bằng ví
+                Transaction transaction = transactionService.initiatePurchase(
+                        request.getListingId(),
+                        buyer,
+                        "WALLET_PENDING"
+                );
 
-            Map<String, Object> response = new HashMap<>();
-            response.put("transactionId", transaction.getId());
-            response.put("paymentUrl", paymentUrl);
+                // Xử lý thanh toán ví ngay lập tức
+                Transaction completedTransaction = transactionService.processWalletPayment(
+                        transaction.getId(),
+                        buyer.getId()
+                );
 
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+                Map<String, Object> response = new HashMap<>();
+                response.put("transactionId", completedTransaction.getId());
+                response.put("status", completedTransaction.getStatus());
+                response.put("paymentMethod", "WALLET");
+
+                return ResponseEntity.status(HttpStatus.CREATED).body(response);
+
+            } else {
+                // Xử lý thanh toán VNPAY
+                Transaction transaction = transactionService.initiatePurchase(
+                        request.getListingId(),
+                        buyer,
+                        "VNPAY_PENDING"
+                );
+
+                String ipAddress = getIpAddress(httpRequest);
+                String paymentUrl = vnPayService.createPaymentUrl(transaction, ipAddress);
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("transactionId", transaction.getId());
+                response.put("paymentUrl", paymentUrl);
+                response.put("paymentMethod", "VNPAY");
+
+                return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            }
         } catch (Exception e) {
             log.error("Error initiating purchase: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
         }
     }
+
 
     private String getIpAddress(HttpServletRequest request) {
         String ipAddress = request.getHeader("X-FORWARDED-FOR");
