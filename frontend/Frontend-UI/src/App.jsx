@@ -14,6 +14,7 @@ import ContactPage from './pages/ContactPage';
 import CvaPage from './pages/CvaPage';
 import BuyerPage from './pages/BuyerPage';
 import MakerPlacePage from './pages/BuyerPage/MakerPlacePage';
+import Marketplace from './pages/Marketplace'; // Public marketplace for unauthenticated users
 import Detailpage from './pages/BuyerPage/DetailPage';
 import PaymentPage from './pages/BuyerPage/PaymentPage';
 import WalletPage from './pages/BuyerPage/WalletPage';
@@ -30,6 +31,12 @@ import Report from './Components/CvaComponents/Report';
 import DetailPage from './Components/CvaComponents/DetailPage';
 import ProtectedRoute from './Components/EVComponents/ProtectedRoute';
 import Wallet from './pages/EvPage/Wallet';
+import AdminPage from './pages/AdminPage';
+import AdminDashboard from './Components/AdminComponents/AdminDashboard';
+import UserManagement from './Components/AdminComponents/UserManagement';
+import Transactions from './Components/AdminComponents/Transactions';
+import WalletManagement from './Components/AdminComponents/WalletManagement';
+import PlatformReport from './Components/AdminComponents/PlatformReport';
 
 
 function App() {
@@ -39,7 +46,7 @@ function App() {
   const hideLayout  = location.pathname === '/cva' || 
                       location.pathname.startsWith('/admin') ||
                       location.pathname === '/buyer' ||
-                      location.pathname.startsWith('/marketplace') ||
+                      location.pathname === '/marketplace' ||
                       location.pathname === '/payment' ||
                       location.pathname === '/wallet' ||
                       location.pathname === '/certificate' ||
@@ -47,7 +54,8 @@ function App() {
                       location.pathname === '/ev-dashboard/journeys' ||
                       location.pathname === '/ev-dashboard/wallet' ||
                       location.pathname === '/ev-dashboard/Listing' ||
-                      location.pathname === '/ev-dashboard/profile';
+                      location.pathname === '/ev-dashboard/profile' ||
+                      location.pathname === '/ev-dashboard/marketplace';
 
   return (
     <>
@@ -67,12 +75,13 @@ function App() {
         <Route path="/cva" element={<CvaPage />} />
         <Route path="/buyer" element={<BuyerPage />} />
         <Route path="/marketplace/:listingId" element={<Detailpage />} />
-        <Route path="/marketplace" element={<MakerPlacePage />} />
+        <Route path="/marketplace-unauthed" element={<Marketplace />} /> {/* Public marketplace for unauthenticated users */}
         <Route path="/payment" element={<PaymentPage />} />
         <Route path="/wallet" element={<WalletPage />} />
         <Route path="/certificate" element={<CertificatePage />} />
         
         
+        {/* --- EV Owner Routes --- */}
 <Route path="/ev-dashboard"
 element={
   <ProtectedRoute requiredRole="EV_OWNER">
@@ -110,6 +119,7 @@ element={
   </ProtectedRoute>
 }/>
 
+<Route path="/marketplace" element={<ProtectedRoute requiredRole="BUYER"><MakerPlacePage /></ProtectedRoute>} />
 
         {/* --- CVA Routes --- */}
         <Route path="/cva" element={<CvaPage />}> {/* PARENT Route */}
