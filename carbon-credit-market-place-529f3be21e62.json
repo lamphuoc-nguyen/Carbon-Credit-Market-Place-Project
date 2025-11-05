@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "carbon-credit-market-place",
+  "private_key_id": "529f3be21e620742f5a0a5d8cd34a8b12e5a2fdc",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC/f16bXjmaZsdg\nX57rGmgwpBEQBIVK0hyjcq9lbpoD5f4uy0qVc6XPJn17ajeUV0JqrnwqDYYjvJ0N\nKz4qOuupBVtdXvEDXbZSDYlbFArwbGQ4Mq/EG4fzEKbmupRlbA2bjF1eSFDRzT3W\nPeeeZNAfHFdZM9WxhjXEzMpNIWWeYsH0vfRrTkrI65lqftLLbUYKTEO5Ux0Owuio\nT1jOXgkeTTch5W28dcu/GHo2+QRwa7ytMk9rGDyFS/QS/osXY4lIn/RP60wEadKu\nIuH29FTzrc6UTfTr+sdBJp/ERhATLdJzsKCzOggRPNazWRjRBFYU/amJp9PfeIRS\njXdoNOedAgMBAAECggEAEmFU9lAD8rhHY2OqKuIHpWuJ9mHzXUFviEH7aHPw38uV\nKxlOGQGBpQa1EpcZAJROMVPQDRqWiRrobsQmHQLiGFYFn/T7PcR35HDyLHDEYAaM\nqVbhcfmRLJj+PAp6hdrqL3I4iqfMQhGTYYXi6Qa/ccz+6/aYCIhbjtPNMxFajJS+\nnf5l8MNk1D01Ti3TGgH6sYS2jSkGjaNTkdU8iJCdn3I9gb+J01USdcyLDFWJU1Cm\n+UXLZHyj8vvg0Q0Fall3sE9+WELlSsMzDnf1MN+zFDuAI2ozDSGfdsMT8aCmu9Md\npgJmP1qztG+g11m5nAe4pZpl3j7undCNAHo/NgLbzQKBgQD3nwxwCGq1EQztjzVp\n8yKhLJ232JByjWLYA0vfr32EwsaZCjfKpgA+3mSqi5HRn04KuWVqUYhwFI34WW6U\n8W6N3fHvMxY7+JWQADWY6hZANKevTq+bY5Igvn6N87rhljzvZZoE6WQjRTMH60VZ\nhCHoGhYTAUuLil9SyWRZxdZSAwKBgQDF+ioXsMwbAOSXSeWbsj/z6DgumtGgj9Bs\nB+OQptq6+Iq3YS0GCrciwgC8RoSHLMtkr0aDJLYhnyhf1Gbu45kPCri11KAXx3AE\nQ132jMwfMdI3yezuUpDcwgOKx3iYZ2eU9xsdkZt9mLEac89/2Xr9c8Ykik766MFV\n2anXNCh93wKBgQC83y/ZdFIP8gVuXcFcIvvS+/kA9cqX1YgDQ+Bnqa+PyBE7QjPz\n+lJNocwe2X5L6brZKzhTtAThmIwBVhWmvdCZnSSgUtMuwxkxUTeQf1yhdIhCiz4e\nw//9wc897x4oWzP3VgP4oxyiWnHmJGotMT+7jcowjNhWgyDaQIquftxOiQKBgHkU\nG0Qr41gsfqEsF5nWNRilkB6onsX0zoITfRCNiz5IHQY0D0YfrYs7XRnIgurs8WOd\ncqFoBV+gqB+blmxJk+VIKFlENbj1R0PEM6ZCy9/UJ33pJ9dFdcUdfu8UOWPz8byA\nN/wofhEdHktQQrotNvPlJ2xXjiAT05H+scmk45K/AoGALgnUdgrK2Zlh+4URuKoc\nzXToRpVsaJc8u5eC5Lw32j7iGlXR061WZ3hbYzO7yz7BdiN5fx8EJ+qg8UF4vdIQ\nxt5ZD4+5lkYLrYZsdvBuUeC8NgcOLuHdBYXWwVSxdlF5rJOkOEoOQVwMPNIpHQy4\nnH3bLllq5fHaN7b30FAzA94=\n-----END PRIVATE KEY-----\n",
+  "client_email": "carbon-credit-market-place@carbon-credit-market-place.iam.gserviceaccount.com",
+  "client_id": "103160658837584420383",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/carbon-credit-market-place%40carbon-credit-market-place.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
