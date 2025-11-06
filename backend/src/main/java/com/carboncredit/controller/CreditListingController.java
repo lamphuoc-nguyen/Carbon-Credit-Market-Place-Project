@@ -1,5 +1,6 @@
 package com.carboncredit.controller;
 
+import com.carboncredit.dto.PagedResponseDTO;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -56,13 +57,14 @@ public class CreditListingController {
 
     // Get all active listings (marketplace)
     @GetMapping
-    public ResponseEntity<Page<CreditListingDTO>> getActiveListings(
+    public ResponseEntity<PagedResponseDTO<CreditListingDTO>> getActiveListings(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "newest") String sortBy) {
         Page<CreditListing> listings = creditListingService.getActiveListings(page, size, sortBy);
-        Page<CreditListingDTO> dtos = listings.map(CreditListingDTO::new);
-        return ResponseEntity.ok(dtos);
+        Page<CreditListingDTO> dtoPage = listings.map(CreditListingDTO::new);
+        PagedResponseDTO<CreditListingDTO> response = new PagedResponseDTO<>(dtoPage);
+        return ResponseEntity.ok(response);
     }
 
     // search by price range

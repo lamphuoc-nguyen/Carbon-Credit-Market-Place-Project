@@ -18,5 +18,6 @@ public class WalletResponse {
     private String fullName;
     private BigDecimal creditBalance;
     private BigDecimal cashBalance;
+    private BigDecimal co2ReducedKg;
     private LocalDateTime lastUpdated;
 }

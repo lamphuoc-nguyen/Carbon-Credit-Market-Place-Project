@@ -96,6 +96,7 @@ export const walletApi = {
      * @param {object} balanceData - Dữ liệu cập nhật (gửi qua Query Params)
      * @param {number | string} balanceData.creditAmount - Số credit (có thể âm/dương)
      * @param {number | string} balanceData.cashAmount - Số tiền (có thể âm/dương)
+     * @param {number | string} [balanceData.co2Amount] - Số CO2 reduction (có thể âm/dương)
      * @param {string} [balanceData.reason] - Lý do điều chỉnh
      * @returns {Promise<WalletResponse>} Dữ liệu ví đã cập nhật
      */
@@ -106,16 +107,21 @@ export const walletApi = {
         }
 
         // Lưu ý: Dữ liệu được gửi qua Query Params, không phải Request Body
+        const params = {
+            creditAmount: balanceData.creditAmount,
+            cashAmount: balanceData.cashAmount,
+            reason: balanceData.reason
+        };
+
+        // Add CO2 amount if provided
+        if (balanceData.co2Amount !== undefined) {
+            params.co2Amount = balanceData.co2Amount;
+        }
+
         const response = await axiosInstance.put(
             `/api/wallets/admin/user/${userId}/balance`,
             null, // Body là null
-            {
-                params: { // Gửi data trong params
-                    creditAmount: balanceData.creditAmount,
-                    cashAmount: balanceData.cashAmount,
-                    reason: balanceData.reason
-                }
-            }
+            { params } // Gửi data trong params
         );
         return response.data; // Trả về WalletResponse
     }

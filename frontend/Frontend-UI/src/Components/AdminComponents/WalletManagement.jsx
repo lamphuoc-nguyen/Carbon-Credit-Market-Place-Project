@@ -12,7 +12,8 @@ import {
     Loader2,
     UserCheck,
     Briefcase,
-    Shield
+    Shield,
+    Zap
 } from 'lucide-react';
 
 // --- Helper Components ---
@@ -70,7 +71,7 @@ const WalletBalanceCell = ({ userId, onAdjust }) => {
 
     if (isLoading) {
         return (
-            <td colSpan="3" className="px-6 py-4 text-center">
+            <td colSpan="4" className="px-6 py-4 text-center">
                 <div className="flex justify-center items-center">
                     <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
                 </div>
@@ -80,7 +81,7 @@ const WalletBalanceCell = ({ userId, onAdjust }) => {
 
     if (!wallet) {
         return (
-            <td colSpan="3" className="px-6 py-4 text-sm text-red-500 text-center">
+            <td colSpan="4" className="px-6 py-4 text-sm text-red-500 text-center">
                 Error loading wallet
             </td>
         );
@@ -101,6 +102,14 @@ const WalletBalanceCell = ({ userId, onAdjust }) => {
                 </div>
                 <div className="text-xs text-gray-500">Credit Balance</div>
             </td>
+            <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-sm font-semibold text-orange-700">
+                    {(wallet.co2ReducedKg || 0).toFixed(1)}
+                </div>
+                <div className="text-xs text-gray-500">kg CO2 Reduced</div>
+            </td>
+                <div className="text-xs text-gray-500">Credit Balance</div>
+
             <td className="px-6 py-4 whitespace-nowrap text-right">
                 <button
                     onClick={() => onAdjust(wallet)} // Gửi toàn bộ thông tin ví
@@ -121,6 +130,7 @@ const WalletBalanceCell = ({ userId, onAdjust }) => {
 const AdjustBalanceModal = ({ wallet, isOpen, onClose, onSave }) => {
     const [cashAmount, setCashAmount] = useState(0);
     const [creditAmount, setCreditAmount] = useState(0);
+    const [co2Amount, setCo2Amount] = useState(0);
     const [reason, setReason] = useState('');
     const [isSaving, setIsSaving] = useState(false);
 
@@ -131,7 +141,7 @@ const AdjustBalanceModal = ({ wallet, isOpen, onClose, onSave }) => {
             alert('A reason is required for balance adjustments.');
             return;
         }
-        if (cashAmount === 0 && creditAmount === 0) {
+        if (cashAmount === 0 && creditAmount === 0 && co2Amount === 0) {
             alert('Please enter an amount to adjust.');
             return;
         }
@@ -141,12 +151,14 @@ const AdjustBalanceModal = ({ wallet, isOpen, onClose, onSave }) => {
             await onSave(wallet.userId, {
                 cashAmount: Number(cashAmount),
                 creditAmount: Number(creditAmount),
+                co2Amount: Number(co2Amount),
                 reason: reason
             });
             // Reset form và đóng modal
             onClose();
             setCashAmount(0);
             setCreditAmount(0);
+            setCo2Amount(0);
             setReason('');
         } catch (err) {
             console.error("Failed to save adjustment:", err);
@@ -213,6 +225,30 @@ const AdjustBalanceModal = ({ wallet, isOpen, onClose, onSave }) => {
                         </div>
                     </div>
 
+                    {/* CO2 Reduction Adjustment */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                            CO2 Reduction Adjustment (Current: {(wallet.co2ReducedKg || 0).toFixed(1)} kg)
+                        </label>
+                        <div className="mt-1 relative rounded-md shadow-sm">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <Zap className="h-4 w-4 text-gray-400" />
+                            </div>
+                            <input
+                                type="number"
+                                step="0.1"
+                                value={co2Amount}
+                                onChange={(e) => setCo2Amount(e.target.value)}
+                                className="block w-full pl-10 pr-12 py-2 border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="e.g., -100.5 or 250.0"
+                            />
+                            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                                <span className="text-gray-500 text-sm">kg</span>
+                            </div>
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500">Adjust CO2 reduction balance (in kg)</p>
+                    </div>
+
                     {/* Reason */}
                     <div>
                         <label htmlFor="reason" className="block text-sm font-medium text-gray-700">
@@ -234,7 +270,7 @@ const AdjustBalanceModal = ({ wallet, isOpen, onClose, onSave }) => {
                     </button>
                     <button
                         onClick={handleSave}
-                        disabled={isSaving || !reason || (cashAmount == 0 && creditAmount == 0)}
+                        disabled={isSaving || !reason || (cashAmount == 0 && creditAmount == 0 && co2Amount == 0)}
                         className="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400"
                     >
                         {isSaving ? 'Saving...' : 'Apply Adjustment'}
@@ -362,6 +398,7 @@ const WalletManagement = () => {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cash Balance</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Credit Balance</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">CO2 Reduced</th>
                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                             </tr>
                         </thead>

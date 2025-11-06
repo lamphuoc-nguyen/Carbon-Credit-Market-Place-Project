@@ -27,6 +27,10 @@ public class Wallet {
     @JoinColumn(name = "user_id")
     private User user;
 
+    // Make nullable to allow Hibernate to add the column, then handle defaults in code
+    @Column(name = "co2_reduced_kg", nullable = true, precision = 10, scale = 2)
+    private BigDecimal co2ReducedKg;
+
     @Column(name = "credit_balance", precision = 10, scale = 2)
     private BigDecimal creditBalance = BigDecimal.ZERO;
 
@@ -36,4 +40,23 @@ public class Wallet {
     @LastModifiedDate
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    // JPA lifecycle callback to ensure CO2 is never null
+    @PrePersist
+    @PreUpdate
+    void ensureCo2NotNull() {
+        if (this.co2ReducedKg == null) {
+            this.co2ReducedKg = BigDecimal.ZERO;
+        }
+    }
+
+    // Custom getter to ensure we never return null
+    public BigDecimal getCo2ReducedKg() {
+        return this.co2ReducedKg != null ? this.co2ReducedKg : BigDecimal.ZERO;
+    }
+
+    // Custom setter to ensure we never set null
+    public void setCo2ReducedKg(BigDecimal co2ReducedKg) {
+        this.co2ReducedKg = co2ReducedKg != null ? co2ReducedKg : BigDecimal.ZERO;
+    }
 }

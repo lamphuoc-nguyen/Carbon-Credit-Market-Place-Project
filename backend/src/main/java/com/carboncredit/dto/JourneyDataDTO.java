@@ -26,14 +26,13 @@ public class JourneyDataDTO {
     private boolean hasCarbonCredit;
     private UUID carbonCreditId;
 
-    // ⭐ ADD THESE CVA VERIFICATION FIELDS ⭐
+
     private String verificationStatus; // NEW!
     private UUID verifiedById; // NEW!
     private String verifiedByUsername; // NEW!
     private LocalDateTime verificationDate; // NEW!
     private String verificationNotes; // NEW!
     private String rejectionReason; // NEW!
-    // Constructor from JourneyData entity
 
     public JourneyDataDTO(JourneyData journey) {
         this.id = journey.getId();
@@ -45,9 +44,11 @@ public class JourneyDataDTO {
         this.endTime = journey.getEndTime();
         this.co2ReducedKg = journey.getCo2ReducedKg();
         this.createdAt = journey.getCreatedAt();
-        this.hasCarbonCredit = journey.getCarbonCredit() != null;
-        this.carbonCreditId = journey.getCarbonCredit() != null ? journey.getCarbonCredit().getId() : null;
-        // ⭐⭐⭐ MAP CVA VERIFICATION FIELDS (THIS WAS MISSING!) ⭐⭐⭐
+
+        // Carbon credits are no longer linked to individual journeys
+        this.hasCarbonCredit = false; // Credits are created from accumulated CO2 conversion
+        this.carbonCreditId = null; // No direct journey-to-credit relationship
+
         this.verificationStatus = journey.getVerificationStatus() != null
                 ? journey.getVerificationStatus().name()
                 : null;

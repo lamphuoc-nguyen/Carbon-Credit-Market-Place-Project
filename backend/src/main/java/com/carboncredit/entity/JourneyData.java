@@ -68,8 +68,7 @@ public class JourneyData {
     @Column(name = "rejection_reason", length = 500)
     private String rejectionReason;
 
-    @OneToOne(mappedBy = "journey", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private CarbonCredit carbonCredit;
+    // CarbonCredit relationship removed - credits are only created during CO2 conversion, not per journey
 
     // ⭐ ADD VERIFICATION STATUS ENUM
     public enum VerificationStatus {

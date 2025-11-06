@@ -227,6 +227,7 @@ public class WalletController {
     @PutMapping("/admin/user/{userId}/balance")
     public ResponseEntity<WalletResponse> updateUserBalance(@PathVariable UUID userId,
             @RequestParam BigDecimal creditAmount, @RequestParam BigDecimal cashAmount,
+            @RequestParam(required = false) BigDecimal co2Amount,
             @RequestParam(required = false) String reason, Authentication authentication) {
         try {
             User currentUser = userService.findByUsername(authentication.getName())
@@ -244,10 +245,15 @@ public class WalletController {
             walletService.updateCreditBalance(userId, creditAmount);
             Wallet updatedWallet = walletService.updateCashBalance(userId, cashAmount);
 
+            // Update CO2 reduction if provided
+            if (co2Amount != null) {
+                updatedWallet = walletService.updateCo2ReducedKg(userId, co2Amount);
+            }
+
             WalletResponse response = mapToWalletResponse(updatedWallet);
 
-            log.info("Admin {} updated wallet for user {}: credit={}, cash={}, reason='{}'", currentUser.getUsername(),
-                    targetUser.getUsername(), creditAmount, cashAmount, reason);
+            log.info("Admin {} updated wallet for user {}: credit={}, cash={}, co2={}, reason='{}'",
+                    currentUser.getUsername(), targetUser.getUsername(), creditAmount, cashAmount, co2Amount, reason);
 
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -265,6 +271,7 @@ public class WalletController {
                 wallet.getUser().getFullName(),
                 wallet.getCreditBalance(),
                 wallet.getCashBalance(),
+                wallet.getCo2ReducedKg(),
                 wallet.getUpdatedAt());
     }
 }
