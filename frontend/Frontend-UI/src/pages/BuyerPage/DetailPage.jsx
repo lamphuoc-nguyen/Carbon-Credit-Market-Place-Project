@@ -66,14 +66,15 @@ const Detailpage = () => {
 
   const handlePurchase = () => {
     const creditAmount = listing.credit?.creditAmount || 0;
-    const totalPrice = (listing.price * creditAmount).toFixed(2);
+    // listing.price is already the total price (not per tonne)
+    const totalPrice = listing.price;
     
     // Navigate to payment page with listing data (buy all credits)
     navigate('/payment', {
       state: {
         listing,
         quantity: creditAmount, // Buy entire credit amount
-        totalPrice: parseFloat(totalPrice)
+        totalPrice: totalPrice
       }
     });
   };
@@ -229,12 +230,12 @@ const Detailpage = () => {
                 <p className="text-sm text-gray-500 uppercase tracking-wide mb-2">Total Price</p>
                 <div className="flex items-baseline">
                   <span className="text-4xl font-bold text-green-600">
-                    ${formatPrice((listing.price || 0) * (listing.credit?.creditAmount || 0))}
+                    ${formatPrice(listing.price || 0)}
                   </span>
                   <span className="text-lg text-gray-500 ml-2">USD</span>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
-                  ${formatPrice(listing.price)}/tonne × {listing.credit?.creditAmount || 0} tonnes
+                  For {listing.credit?.creditAmount || 0} tonnes
                 </p>
               </div>
 
@@ -246,14 +247,14 @@ const Detailpage = () => {
                     <span className="font-bold text-green-600">{listing.credit.creditAmount} tonnes</span>
                   </div>
                   <div className="flex justify-between mb-2">
-                    <span className="text-gray-700 font-medium">Price per tonne:</span>
+                    <span className="text-gray-700 font-medium">Total Price:</span>
                     <span className="font-semibold">${formatPrice(listing.price)}</span>
                   </div>
                   <div className="border-t border-green-300 my-2"></div>
                   <div className="flex justify-between">
                     <span className="font-bold text-gray-900">You will pay:</span>
                     <span className="font-bold text-green-600 text-2xl">
-                      ${formatPrice((listing.price || 0) * (listing.credit?.creditAmount || 0))}
+                      ${formatPrice(listing.price || 0)}
                     </span>
                   </div>
                   <p className="text-xs text-center text-green-700 mt-3 font-semibold">

@@ -549,11 +549,11 @@ const MakerPlacePage = () => {
                         <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Total Price</p>
                         <div className="flex items-baseline gap-2">
                           <p className="text-2xl font-bold text-green-600">
-                            ${formatPrice((listing.price || 0) * (listing.credit?.creditAmount || 0))}
+                            ${formatPrice(listing.price || 0)}
                           </p>
                         </div>
                         <p className="text-xs text-gray-500 mt-1">
-                          ${formatPrice(listing.price)}/tonne × {listing.credit?.creditAmount || 0} tonnes
+                          For {listing.credit?.creditAmount || 0} tonnes
                         </p>
                       </div>
                     </div>
@@ -563,14 +563,14 @@ const MakerPlacePage = () => {
                       <button
                         onClick={() => handleViewDetails(listing.id)}
                         disabled={listing.status !== 'ACTIVE'}
-                        className="flex-1 bg-green-600 text-white py-3 px-4 rounded-xl font-semibold hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all"
+                        className="flex-1 bg-green-600 text-white py-3 px-4 rounded-xl font-semibold hover:bg-green-700 disabled:bg-gray-300 transition-all cursor-pointer"
                       >
                         Buy Now
                       </button>
                       {listing.id && (
                         <button
                           onClick={() => handleViewDetails(listing.id)}
-                          className="px-4 py-3 border-2 border-gray-200 rounded-xl hover:border-green-600 hover:bg-green-50 transition-all"
+                          className="px-4 py-3 border-2 border-gray-200 rounded-xl hover:border-green-600 hover:bg-green-50 transition-all cursor-pointer"
                         >
                           <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -689,10 +689,10 @@ const MakerPlacePage = () => {
                             <div className="text-center mb-4">
                               <p className="text-sm text-gray-600 uppercase tracking-wide mb-2">Total Price</p>
                               <p className="text-3xl font-bold text-green-600 mb-1">
-                                ${formatPrice((listing.price || 0) * (listing.credit?.creditAmount || 0))}
+                                ${formatPrice(listing.price || 0)}
                               </p>
                               <p className="text-xs text-gray-500 mt-1">
-                                ${formatPrice(listing.price)}/tonne × {listing.credit?.creditAmount || 0} tonnes
+                                For {listing.credit?.creditAmount || 0} tonnes
                               </p>
                             </div>
 

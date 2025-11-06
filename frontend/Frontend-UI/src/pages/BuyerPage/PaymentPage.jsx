@@ -67,76 +67,126 @@ const PaymentPage = () => {
       console.log('Total Price:', totalPrice);
       console.log('Quantity:', quantity);
 
+      // WALLET PAYMENT - Thanh toán trực tiếp qua ví
       if (paymentMethod === 'wallet') {
-        // Check wallet balance
-        console.log('Checking wallet balance...');
-        const hasSufficientBalance = await buyerApi.checkSufficientBalance(totalPrice, 'CASH');
-        console.log('Has sufficient balance:', hasSufficientBalance);
+        console.log('💳 ========== WALLET PAYMENT FLOW ==========');
         
-        if (!hasSufficientBalance) {
-          setError('Insufficient balance in your wallet. Please top up or use online banking.');
-          setLoading(false);
-          return;
+        // ✅ SỬ DỤNG API MỚI: purchaseWithWallet()
+        // API này sẽ:
+        // 1. Tạo transaction với paymentMethod = WALLET
+        // 2. Kiểm tra số dư wallet
+        // 3. Complete transaction → Backend tự động:
+        //    - Trừ tiền từ wallet buyer
+        //    - Cộng tiền vào wallet seller
+        //    - Cộng carbon credit vào wallet buyer
+        //    - Đóng listing
+        //    - Chuyển ownership
+        
+        console.log('🔄 Calling purchaseWithWallet API...');
+        const completedTransaction = await buyerApi.purchaseWithWallet(listing.id);
+        console.log('✅ Purchase completed with wallet:', completedTransaction);
+        
+        // 3. TỰ ĐỘNG RETIRE để tạo certificate
+        console.log('🌿 Auto-retiring credits to generate certificate...');
+        try {
+          const retirementData = {
+            userId: completedTransaction.buyerId,
+            amountToRetireKg: listing.credit?.co2ReducedKg || quantity,
+            projectInfo: `Purchase from ${listing.credit?.owner?.username || 'Seller'}`,
+            retirementPurpose: 'Carbon Credit Purchase - Auto Certificate Generation'
+          };
+          
+          console.log('Retirement data:', retirementData);
+          const retirementResult = await buyerApi.initiateRetirement(retirementData);
+          console.log('✅ Retirement initiated:', retirementResult);
+          
+          const retirement = retirementResult.retirementTransaction || retirementResult;
+          
+          // 4. Navigate to certificate page với retirement ID
+          navigate('/certificate', { 
+            state: { 
+              retirementId: retirement.id,
+              transactionData: {
+                transactionId: completedTransaction.id,
+                retirementId: retirement.id,
+                co2ReducedKg: listing.credit?.co2ReducedKg || 0,
+                amount: quantity,
+                issueDate: completedTransaction.completedAt || new Date().toISOString(),
+                buyerId: completedTransaction.buyerId,
+                sellerId: completedTransaction.sellerId,
+                buyerUsername: completedTransaction.buyerUsername || wallet?.username,
+                sellerUsername: completedTransaction.sellerUsername || listing.credit?.owner?.username,
+                 totalPrice: totalPrice || (listing.price * quantity),
+                status: 'CERTIFICATE_GENERATING',
+                creditId: listing.credit?.id,
+                listingId: listing.id
+              }
+            },
+            replace: true
+          });
+          
+          console.log('✅ Payment & retirement successful! Navigating to certificate...');
+          
+        } catch (retirementError) {
+          console.error('❌ Retirement failed:', retirementError);
+          // Vẫn navigate nhưng không có retirement
+          navigate('/certificate', { 
+            state: { 
+              transactionData: {
+                transactionId: completedTransaction.id,
+                co2ReducedKg: listing.credit?.co2ReducedKg || 0,
+                amount: quantity,
+                issueDate: completedTransaction.completedAt || new Date().toISOString(),
+                buyerId: completedTransaction.buyerId,
+                totalPrice: totalPrice || (listing.price * quantity),
+                status: 'COMPLETED',
+                error: 'Certificate generation failed. Credits are in your wallet.'
+              }
+            },
+            replace: true
+          });
         }
+        return;
       }
 
-      // Step 1: Create transaction and process payment
-      // Note: Backend automatically handles all payment methods including VNPAY
-      // - WALLET: Deducts from buyer's wallet, adds to seller's wallet
-      // - VNPAY: Does NOT deduct wallet (external payment already done), just completes transaction
-      // - BANKING: Similar to VNPAY
-      console.log('🔄 Calling API to create transaction...');
-      console.log('API endpoint: POST /transactions/purchase');
-      console.log('Request body:', { 
-        listingId: listing.id, 
-        paymentMethodId: paymentMethod.toUpperCase() 
-      });
-      
-      // Call API to create transaction (backend will handle payment processing)
-      const completedTransaction = await buyerApi.initiatePurchaseTransaction(
-        listing.id, 
-        paymentMethod.toUpperCase()
-      );
-      
-      console.log('✅ Transaction API Response:', completedTransaction);
-      console.log('Transaction ID:', completedTransaction.id);
-      console.log('Transaction Status:', completedTransaction.status);
-      console.log('Transaction Amount:', completedTransaction.amount);
-      
-      // Validate response
-      if (!completedTransaction || !completedTransaction.id) {
-        throw new Error('Invalid transaction response from server');
+      // VNPAY PAYMENT - Thanh toán qua cổng VNPay
+      if (paymentMethod === 'vnpay') {
+        console.log('🏦 VNPAY PAYMENT FLOW');
+        
+        // 1. Khởi tạo giao dịch và lấy VNPay payment URL
+        console.log('🔄 Creating VNPay transaction...');
+        const result = await buyerApi.initiatePurchaseTransaction(listing.id);
+        
+        console.log('✅ VNPay transaction created:', result);
+        console.log('Transaction ID:', result.transactionId);
+        console.log('Payment URL:', result.paymentUrl);
+        
+        // Validate response
+        if (!result.transactionId || !result.paymentUrl) {
+          throw new Error('Invalid VNPay response - missing transaction ID or payment URL');
+        }
+        
+        // 2. Lưu transaction ID vào localStorage để check sau
+        localStorage.setItem('pendingTransactionId', result.transactionId);
+        localStorage.setItem('pendingListing', JSON.stringify(listing));
+        
+        // 3. Redirect đến VNPay payment gateway
+        console.log('🔄 Redirecting to VNPay gateway...');
+        window.location.href = result.paymentUrl;
+        
+        // Note: Sau khi thanh toán trên VNPay, user sẽ được redirect về:
+        // - Success: /payment/success?transactionId=xxx
+        // - Failed: /payment/failed?transactionId=xxx&code=xxx
+        // - Error: /payment/error?reason=xxx
+        return;
       }
-      
-      console.log('✅ Transaction created successfully!');
-      
-      // Prepare transaction data for certificate
-      const transactionData = {
-        transactionId: completedTransaction.id,
-        certificateCode: completedTransaction.certificateCode || `CERT-${completedTransaction.id}`,
-        co2ReducedKg: listing.credit?.co2ReducedKg || 0,
-        amount: quantity,
-        issueDate: completedTransaction.completedAt || new Date().toISOString(),
-        buyerId: completedTransaction.buyer?.id || wallet?.userId,
-        sellerId: completedTransaction.seller?.id || listing.credit?.owner?.id,
-        buyerUsername: completedTransaction.buyer?.username || wallet?.username,
-        sellerUsername: completedTransaction.seller?.username || listing.credit?.owner?.username,
-        totalPrice: completedTransaction.amount || totalPrice,
-        status: completedTransaction.status,
-        creditId: listing.credit?.id,
-        listingId: listing.id
-      };
-      
-      console.log('📄 Transaction data for certificate:', transactionData);
-      
-      // Navigate to certificate page with transaction data
-      console.log('🔄 Navigating to certificate page...');
-      navigate('/certificate', { 
-        state: { transactionData },
-        replace: true // Prevent going back to payment page
-      });
-      
-      console.log('✅ Navigation successful!');
+
+      // BANKING PAYMENT - Thanh toán chuyển khoản (Coming soon)
+      if (paymentMethod === 'banking') {
+        setError('Online Banking payment is coming soon. Please use Wallet or VNPay.');
+        setLoading(false);
+        return;
+      }
       
     } catch (err) {
       console.error('=== PAYMENT ERROR ===');
@@ -300,43 +350,6 @@ const PaymentPage = () => {
                   </div>
                 </div>
               </div>
-
-              {/* Online Banking */}
-              <div
-                onClick={() => setPaymentMethod('banking')}
-                className={`p-4 rounded-xl border-2 cursor-pointer transition ${
-                  paymentMethod === 'banking'
-                    ? 'border-blue-600 bg-blue-50'
-                    : 'border-gray-200 hover:border-blue-300'
-                }`}
-              >
-                <div className="flex items-start">
-                  <div className={`w-6 h-6 rounded-full border-2 mt-1 mr-3 flex items-center justify-center ${
-                    paymentMethod === 'banking' ? 'border-blue-600' : 'border-gray-300'
-                  }`}>
-                    {paymentMethod === 'banking' && (
-                      <div className="w-3 h-3 rounded-full bg-blue-600"></div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900">Online Banking</h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Pay securely via bank transfer or credit card
-                    </p>
-                    <div className="mt-3 flex gap-2">
-                      <div className="px-3 py-1 bg-white rounded border border-gray-200 text-xs font-semibold">
-                        VISA
-                      </div>
-                      <div className="px-3 py-1 bg-white rounded border border-gray-200 text-xs font-semibold">
-                        Mastercard
-                      </div>
-                      <div className="px-3 py-1 bg-white rounded border border-gray-200 text-xs font-semibold">
-                        Bank Transfer
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Error Message */}
@@ -432,7 +445,7 @@ const PaymentPage = () => {
 
       {/* Loading Overlay */}
       {loading && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md mx-4">
             <div className="flex flex-col items-center">
               <svg className="animate-spin h-16 w-16 text-green-600 mb-4" viewBox="0 0 24 24">
@@ -453,7 +466,7 @@ const PaymentPage = () => {
 
       {/* Confirmation Modal */}
       {showConfirmModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-fade-in">
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
