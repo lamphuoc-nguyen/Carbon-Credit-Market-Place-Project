@@ -22,6 +22,16 @@ const WalletPage = () => {
   }, []);
 
   const fetchWalletData = async () => {
+    // Check if user is logged in
+    const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    
+    if (!token) {
+      console.warn('⚠️ No token found - user not logged in');
+      setLoading(false);
+      setError('NOT_LOGGED_IN');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     
@@ -29,8 +39,6 @@ const WalletPage = () => {
       // Fetch wallet info
       const walletData = await buyerApi.getMyWallet();
       console.log('✅ Raw Wallet Response:', JSON.stringify(walletData, null, 2));
-      console.log('✅ Full Name:', walletData.fullName);
-      console.log('✅ Username:', walletData.username);
       console.log('✅ User ID:', walletData.userId);
       console.log('✅ Cash Balance:', walletData.cashBalance);
       console.log('✅ Credit Balance:', walletData.creditBalance);
@@ -44,7 +52,6 @@ const WalletPage = () => {
         console.log('✅ Transactions:', transactionsData);
       } catch (txError) {
         console.warn('⚠️ Could not fetch transactions:', txError);
-        // Don't fail the whole page if transactions fail
       }
       
     } catch (err) {
@@ -74,7 +81,6 @@ const WalletPage = () => {
     
     try {
       await buyerApi.depositFunds(amount, depositMethod);
-      alert(`Successfully deposited $${amount.toFixed(2)} to your wallet!`);
       
       // Reset form and close modal
       setDepositAmount('');
@@ -106,6 +112,106 @@ const WalletPage = () => {
     );
   }
 
+  // Show login prompt if user is not logged in
+  if (error === 'NOT_LOGGED_IN') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
+        <Navbar_Buyer />
+        <div className="max-w-2xl mx-auto px-4 py-20">
+          <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden">
+            {/* Icon Header */}
+            <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-8 text-center">
+              <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h2 className="text-3xl font-bold text-white mb-2">Login Required</h2>
+              <p className="text-green-100 text-lg">Please login to view your wallet</p>
+            </div>
+
+            {/* Content */}
+            <div className="p-8 text-center">
+              <p className="text-gray-600 mb-8 text-lg">
+                You need to be logged in to access your wallet and manage your carbon credits.
+              </p>
+
+              {/* Features List */}
+              <div className="bg-gray-50 rounded-xl p-6 mb-8">
+                <h3 className="font-semibold text-gray-900 mb-4">With your wallet you can:</h3>
+                <div className="space-y-3 text-left">
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 mr-3 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                    </svg>
+                    <span className="text-gray-700">View your cash and credit balances</span>
+                  </div>
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 mr-3 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                    </svg>
+                    <span className="text-gray-700">Deposit funds to buy carbon credits</span>
+                  </div>
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 mr-3 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                    </svg>
+                    <span className="text-gray-700">Track all your transactions</span>
+                  </div>
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 mr-3 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                    </svg>
+                    <span className="text-gray-700">Manage your carbon credit portfolio</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={() => navigate('/login')}
+                  className="flex-1 px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 cursor-pointer"
+                >
+                  <div className="flex items-center justify-center">
+                    <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                    </svg>
+                    Login
+                  </div>
+                </button>
+                
+                <button
+                  onClick={() => navigate('/register')}
+                  className="flex-1 px-8 py-4 bg-white border-2 border-green-600 text-green-600 rounded-xl font-bold text-lg hover:bg-green-50 transition-all cursor-pointer"
+                >
+                  <div className="flex items-center justify-center">
+                    <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                    </svg>
+                    Create Account
+                  </div>
+                </button>
+              </div>
+
+              {/* Browse Marketplace Link */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <p className="text-gray-600 mb-3">or</p>
+                <button
+                  onClick={() => navigate('/marketplace')}
+                  className="text-green-600 hover:text-green-700 font-semibold hover:underline cursor-pointer"
+                >
+                  Browse Marketplace without logging in →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error for other types of errors
   if (error || !wallet) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -116,7 +222,7 @@ const WalletPage = () => {
             <p className="text-red-700">{error || 'Wallet not found'}</p>
             <button
               onClick={() => navigate('/marketplace')}
-              className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 cursor-pointer"
             >
               Back to Marketplace
             </button>
@@ -178,22 +284,22 @@ const WalletPage = () => {
               <div className="grid grid-cols-2 gap-4">
                 <button
                   onClick={() => setShowDepositModal(true)}
-                  className="flex items-center justify-center p-4 bg-green-50 hover:bg-green-100 rounded-xl transition border-2 border-green-200 hover:border-green-400 cursor-pointer"
+                  className="flex flex-col items-center justify-center p-4 bg-green-50 hover:bg-green-100 rounded-xl transition border-2 border-green-200 hover:border-green-400 cursor-pointer"
                 >
-                  <svg className="w-6 h-6 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6 mb-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
-                  <span className="font-semibold text-gray-900">Deposit Funds</span>
+                  <span className="font-semibold text-gray-900 text-sm">Deposit Funds</span>
                 </button>
 
                 <button
                   onClick={() => navigate('/marketplace')}
-                  className="flex items-center justify-center p-4 bg-blue-50 hover:bg-blue-100 rounded-xl transition border-2 border-blue-200 hover:border-blue-400 cursor-pointer"
+                  className="flex flex-col items-center justify-center p-4 bg-blue-50 hover:bg-blue-100 rounded-xl transition border-2 border-blue-200 hover:border-blue-400 cursor-pointer"
                 >
-                  <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6 mb-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
-                  <span className="font-semibold text-gray-900">Buy Credits</span>
+                  <span className="font-semibold text-gray-900 text-sm">Buy Credits</span>
                 </button>
               </div>
             </div>
@@ -264,16 +370,6 @@ const WalletPage = () => {
                   </p>
                 </div>
 
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-1">Total Value</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    ${(wallet.cashBalance + (wallet.creditBalance * 10) || 0).toLocaleString()}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Cash + Credits (est. $10/tonne)
-                  </p>
-                </div>
-
                 <div className="p-4 bg-green-50 rounded-lg">
                   <p className="text-sm text-gray-600 mb-1">Account Status</p>
                   <span className="inline-block px-3 py-1 bg-green-500 text-white rounded-full text-sm font-semibold">
@@ -316,13 +412,13 @@ const WalletPage = () => {
 
       {/* Deposit Modal */}
       {showDepositModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-gray-900">Deposit Funds</h2>
               <button
                 onClick={() => setShowDepositModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition"
+                className="text-gray-400 hover:text-gray-600 transition cursor-pointer"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -404,7 +500,7 @@ const WalletPage = () => {
                 <button
                   type="button"
                   onClick={() => setShowDepositModal(false)}
-                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition"
+                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition cursor-pointer"
                   disabled={depositing}
                 >
                   Cancel
@@ -412,7 +508,7 @@ const WalletPage = () => {
                 <button
                   type="submit"
                   disabled={depositing || !depositAmount || parseFloat(depositAmount) < 10}
-                  className="flex-1 px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
+                  className="flex-1 px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 disabled:bg-gray-300 transition cursor-pointer"
                 >
                   {depositing ? (
                     <span className="flex items-center justify-center">

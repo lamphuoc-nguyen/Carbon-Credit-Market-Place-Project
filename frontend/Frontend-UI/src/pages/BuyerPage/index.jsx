@@ -6,7 +6,7 @@ const BuyerPage = () => {
   return (
     <>
     <div>
-         <Navbar_Buyer/>
+        <Navbar_Buyer/>
     </div>
     <div>
         <DashboardPage/>

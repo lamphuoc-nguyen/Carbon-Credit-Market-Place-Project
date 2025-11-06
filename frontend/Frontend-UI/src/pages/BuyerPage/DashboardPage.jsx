@@ -24,7 +24,6 @@ const DashboardPage = () => {
   const [availableListings, setAvailableListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedRegion, setSelectedRegion] = useState('All Regions');
 
   useEffect(() => {
     fetchDashboardData();
@@ -175,16 +174,7 @@ const DashboardPage = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </div>
-                <select
-                  value={selectedRegion}
-                  onChange={(e) => setSelectedRegion(e.target.value)}
-                  className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                >
-                  <option>All Regions</option>
-                  <option>North America</option>
-                  <option>Europe</option>
-                  <option>Asia</option>
-                </select>
+                
               </div>
 
               {/* Listings */}
@@ -220,9 +210,8 @@ const DashboardPage = () => {
                         </div>
                         <div className="flex items-center gap-4 text-sm text-gray-600">
                           <span className="font-semibold text-green-600">
-                            {listing.credit?.creditAmount || 0} credits available
+                            {listing.credit?.creditAmount || 0} tonnes available
                           </span>
-                          <span>Total: ${formatPrice((listing.price || 0) * (listing.credit?.creditAmount || 0))}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
@@ -230,7 +219,7 @@ const DashboardPage = () => {
                           <p className="text-2xl font-bold text-gray-900">
                             ${formatPrice(listing.price)}
                           </p>
-                          <p className="text-xs text-gray-500">per credit</p>
+                          <p className="text-xs text-gray-500">total price</p>
                         </div>
                         <button
                           onClick={(e) => {

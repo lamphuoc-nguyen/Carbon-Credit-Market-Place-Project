@@ -48,28 +48,49 @@ public class TransactionController {
 
     @PostMapping("/purchase")
     public ResponseEntity<Map<String, Object>> initiateTransaction(@RequestBody PurchaseRequest request,
-                                                                   Authentication authentication,
-                                                                   HttpServletRequest httpRequest) {
+            Authentication authentication,
+            HttpServletRequest httpRequest) {
         try {
             User buyer = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
+            // ✅ FIX: Sử dụng paymentMethodId từ request thay vì hardcode
+            String paymentMethodId = request.getPaymentMethodId();
+            if (paymentMethodId == null || paymentMethodId.isEmpty()) {
+                paymentMethodId = "VNPAY_PENDING"; // Default to VNPAY if not specified
+            }
+
+            log.info("💳 Creating transaction with payment method ID: {}", paymentMethodId);
+
             Transaction transaction = transactionService.initiatePurchase(
                     request.getListingId(),
                     buyer,
-                    "VNPAY_PENDING"
+                    paymentMethodId // ✅ Sử dụng từ request
             );
 
-            String ipAddress = getIpAddress(httpRequest);
-            String paymentUrl = vnPayService.createPaymentUrl(transaction, ipAddress);
+            log.info("✅ Transaction created with payment method: {}", transaction.getPaymentMethod());
 
             Map<String, Object> response = new HashMap<>();
             response.put("transactionId", transaction.getId());
-            response.put("paymentUrl", paymentUrl);
+            response.put("paymentMethod", transaction.getPaymentMethod());
+
+            // ✅ Chỉ tạo VNPay URL nếu payment method là VNPAY
+            if (transaction.getPaymentMethod() == Transaction.PaymentMethod.VNPAY) {
+                String ipAddress = getIpAddress(httpRequest);
+                String paymentUrl = vnPayService.createPaymentUrl(transaction, ipAddress);
+                response.put("paymentUrl", paymentUrl);
+                log.info("🏦 VNPay payment URL created");
+            } else if (transaction.getPaymentMethod() == Transaction.PaymentMethod.WALLET) {
+                response.put("message", "Transaction created. Complete payment via /transactions/{id}/complete");
+                log.info("💰 WALLET transaction created. Ready for completion.");
+            } else {
+                response.put("message", "Transaction created with payment method: " + transaction.getPaymentMethod());
+                log.info("✅ Transaction created with payment method: {}", transaction.getPaymentMethod());
+            }
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (Exception e) {
-            log.error("Error initiating purchase: {}", e.getMessage());
+            log.error("❌ Error initiating purchase: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
         }
     }
@@ -82,12 +103,10 @@ public class TransactionController {
         return ipAddress;
     }
 
-
-
     // Complete a transaction (process payment and finalize
     @PostMapping("/{transactionId}/complete")
     public ResponseEntity<TransactionDTO> completeTransaction(@PathVariable UUID transactionId,
-                                                              Authentication authentication) {
+            Authentication authentication) {
         try {
             User user = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("user not found"));
@@ -103,12 +122,24 @@ public class TransactionController {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
 
-            // Process payment and complete
-            transactionService.processPayment(transaction);
-            Transaction completedTransaction = transactionService.completeTransaction(transaction);
+            Transaction completedTransaction;
+
+            // ✅ FIX: Xử lý khác nhau cho WALLET và payment method khác
+            if (transaction.getPaymentMethod() == Transaction.PaymentMethod.WALLET) {
+                // WALLET PAYMENT - Bỏ qua processPayment (mock payment service)
+                // Trực tiếp complete transaction → Backend tự động xử lý wallet
+                log.info("💰 WALLET payment - Directly completing transaction without external payment processing");
+                completedTransaction = transactionService.completeTransaction(transaction);
+            } else {
+                // VNPAY/OTHER PAYMENT - Process qua payment service
+                log.info("💳 {} payment - Processing through payment service", transaction.getPaymentMethod());
+                transactionService.processPayment(transaction);
+                completedTransaction = transactionService.completeTransaction(transaction);
+            }
+
             TransactionDTO transactionDTO = DTOMapper.toTransactionDTO(completedTransaction);
 
-            log.info("Transaction {} completed successfully", transactionId);
+            log.info("✅ Transaction {} completed successfully", transactionId);
 
             return ResponseEntity.ok(transactionDTO);
         } catch (Exception e) {
@@ -120,7 +151,7 @@ public class TransactionController {
     // cancel a transaction (before completion
     @PostMapping("/{transactionId}/cancel")
     public ResponseEntity<TransactionDTO> cancelTransaction(@PathVariable UUID transactionId,
-                                                            Authentication authentication) {
+            Authentication authentication) {
         try {
             User user = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
@@ -139,7 +170,8 @@ public class TransactionController {
 
     // get specific transaction by Id
     @GetMapping("/{transactionId}")
-    public ResponseEntity<TransactionDTO> getTransaction(@PathVariable UUID transactionId, Authentication authentication) {
+    public ResponseEntity<TransactionDTO> getTransaction(@PathVariable UUID transactionId,
+            Authentication authentication) {
         try {
             User user = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
@@ -169,8 +201,8 @@ public class TransactionController {
     // get user's transaction history (both purchases and sales)
     @GetMapping("/my-transactions")
     public ResponseEntity<Page<TransactionDTO>> getMyTransactions(@RequestParam(defaultValue = "0") int page,
-                                                                  @RequestParam(defaultValue = "10") int size,
-                                                                  Authentication authentication) {
+            @RequestParam(defaultValue = "10") int size,
+            Authentication authentication) {
 
         try {
             User user = userService.findByUsername(authentication.getName())
@@ -189,7 +221,7 @@ public class TransactionController {
     // get user's purchase history
     @GetMapping("/purchases")
     public ResponseEntity<Page<TransactionDTO>> getPurchaseHistory(@RequestParam(defaultValue = "0") int page,
-                                                                   @RequestParam(defaultValue = "10") int size, Authentication authentication) {
+            @RequestParam(defaultValue = "10") int size, Authentication authentication) {
         try {
             User buyer = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
@@ -207,7 +239,7 @@ public class TransactionController {
     // get user's sales history
     @GetMapping("/sales")
     public ResponseEntity<Page<TransactionDTO>> getSalesHistory(@RequestParam(defaultValue = "0") int page,
-                                                                @RequestParam(defaultValue = "10") int size, Authentication authentication) {
+            @RequestParam(defaultValue = "10") int size, Authentication authentication) {
         try {
             User seller = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
@@ -224,8 +256,9 @@ public class TransactionController {
 
     // create a dispute for transaction
     @PostMapping("/{transactionId}/dispute")
-    public ResponseEntity<DisputeDTO> createDispute(@PathVariable UUID transactionId, @RequestBody DisputeRequest request,
-                                                    Authentication authentication) {
+    public ResponseEntity<DisputeDTO> createDispute(@PathVariable UUID transactionId,
+            @RequestBody DisputeRequest request,
+            Authentication authentication) {
         try {
             User user = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
@@ -245,7 +278,7 @@ public class TransactionController {
     // Admin: Get all disputed transactions
     @GetMapping("/admin/disputed")
     public ResponseEntity<Page<TransactionDTO>> getDisputedTransactions(@RequestParam(defaultValue = "0") int page,
-                                                                        @RequestParam(defaultValue = "10") int size, Authentication authentication) {
+            @RequestParam(defaultValue = "10") int size, Authentication authentication) {
         try {
             User user = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
@@ -266,17 +299,21 @@ public class TransactionController {
 
     // Admin: get transaction status
     @GetMapping("/admin/statistics")
-    public ResponseEntity<Map<String, Object>> getTransactionStatistics(@RequestParam(required = false) String startDate, @RequestParam(required = false) String endDate, Authentication authentication) {
+    public ResponseEntity<Map<String, Object>> getTransactionStatistics(
+            @RequestParam(required = false) String startDate, @RequestParam(required = false) String endDate,
+            Authentication authentication) {
 
         try {
-            User user = userService.findByUsername(authentication.getName()).orElseThrow(() -> new RuntimeException("User not found"));
+            User user = userService.findByUsername(authentication.getName())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
 
-            //Check admin role
-            if(user.getRole() != User.UserRole.ADMIN) {
+            // Check admin role
+            if (user.getRole() != User.UserRole.ADMIN) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
 
-            LocalDateTime start = startDate != null ? LocalDateTime.parse(startDate) : LocalDateTime.now().minusDays(30);
+            LocalDateTime start = startDate != null ? LocalDateTime.parse(startDate)
+                    : LocalDateTime.now().minusDays(30);
             LocalDateTime end = endDate != null ? LocalDateTime.parse(endDate) : LocalDateTime.now();
 
             Map<String, Object> statistics = transactionService.getTransactionStatistics(start, end);
@@ -287,9 +324,10 @@ public class TransactionController {
             return ResponseEntity.badRequest().build();
         }
     }
+
     @GetMapping("/{transactionId}/status")
     public ResponseEntity<Map<String, Object>> getTransactionStatus(@PathVariable UUID transactionId,
-                                                                    Authentication authentication) {
+            Authentication authentication) {
         try {
             User user = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
@@ -324,5 +362,3 @@ public class TransactionController {
     }
 
 }
-
-

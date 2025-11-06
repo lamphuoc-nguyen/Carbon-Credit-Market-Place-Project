@@ -17,6 +17,7 @@ import MakerPlacePage from './pages/BuyerPage/MakerPlacePage';
 import Marketplace from './pages/Marketplace'; // Public marketplace for unauthenticated users
 import Detailpage from './pages/BuyerPage/DetailPage';
 import PaymentPage from './pages/BuyerPage/PaymentPage';
+import PaymentSuccessPage from './pages/BuyerPage/PaymentSuccessPage';
 import WalletPage from './pages/BuyerPage/WalletPage';
 import CertificatePage from './pages/BuyerPage/CertificatePage';
 import ProfilePage from './pages/EvPage/Profile';
@@ -48,6 +49,8 @@ function App() {
                       location.pathname === '/buyer' ||
                       location.pathname === '/marketplace' ||
                       location.pathname === '/payment' ||
+                      location.pathname === '/payment/callback' ||
+                      location.pathname === '/payment/success' ||
                       location.pathname === '/wallet' ||
                       location.pathname === '/certificate' ||
                       location.pathname === '/ev-dashboard' ||
@@ -77,6 +80,7 @@ function App() {
         <Route path="/marketplace/:listingId" element={<Detailpage />} />
         <Route path="/marketplace-unauthed" element={<Marketplace />} /> {/* Public marketplace for unauthenticated users */}
         <Route path="/payment" element={<PaymentPage />} />
+        <Route path="/payment/success" element={<PaymentSuccessPage />} />
         <Route path="/wallet" element={<WalletPage />} />
         <Route path="/certificate" element={<CertificatePage />} />
         
