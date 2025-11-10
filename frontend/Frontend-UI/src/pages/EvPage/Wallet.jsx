@@ -229,7 +229,7 @@ const WalletPage = () => {
               </button>
               <button
                 onClick={() => setShowWithdrawModal(true)}
-                className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-white bg-opacity-20 text-white rounded-lg text-sm font-semibold hover:bg-opacity-30 transition-colors"
+                className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-white bg-opacity-20 text-white rounded-lg text-sm font-semibold hover:bg-opacity-30 transition-colors text-blue-500"
               >
                 <ArrowUpRight size={16} />
                 Withdraw
@@ -260,8 +260,8 @@ const WalletPage = () => {
                   Convert to Credits
                 </button>
               ) : (
-                <div className="w-full p-2 bg-white bg-opacity-20 rounded-lg text-center">
-                  <p className="text-xs text-orange-100">
+                <div className="w-full p-2 bg-white bg-opacity-20 rounded-lg text-center font-bold text-orange-400">
+                  <p className="text-xs text-orange-500">
                     Need {(1000 - walletData.co2ReducedKg).toFixed(1)}kg more to convert
                   </p>
                 </div>
@@ -284,7 +284,7 @@ const WalletPage = () => {
             
             <div className="flex items-center gap-2 mt-4 p-2 bg-white bg-opacity-20 rounded-lg">
               <TrendingUp size={16} />
-              <span className="text-xs font-medium">Tradeable Credits</span>
+              <span className="text-s font-medium text-green-500 font-bold">Tradeable Credits</span>
             </div>
           </div>
         </div>
