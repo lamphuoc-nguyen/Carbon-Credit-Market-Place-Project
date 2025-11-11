@@ -62,19 +62,10 @@ public class JourneyDataService {
 
         JourneyData savedJourney = journeyDataRepository.save(journeyData);
 
-        CarbonCredit credit = new CarbonCredit();
-        credit.setJourney(savedJourney);
-        credit.setUser(journeyData.getUser());
-        credit.setCo2ReducedKg(co2Reduced);
-        credit.setCreditAmount(co2Reduced);
-        credit.setStatus(CarbonCredit.CreditStatus.PENDING); // ⭐ PENDING
+        // Carbon credits are NO LONGER created here
+        // They will only be created during CO2 to credit conversion (1000kg CO2 = 1 credit)
 
-        carbonCreditRepository.save(credit);
-
-        // Log audit
-        auditService.logSubmission(credit, journeyData.getUser());
-
-        log.info("Journey created with PENDING verification status");
+        log.info("Journey created with PENDING verification status - no carbon credit created yet");
 
         return savedJourney;
 
@@ -128,8 +119,12 @@ public class JourneyDataService {
 
     // Find journeys without carbon credits
     @Transactional(readOnly = true)
+    @Deprecated
     public List<JourneyData> findJourneyWithoutCredits() {
-        return journeyDataRepository.findJourneysWithoutCredits();
+        // This method is deprecated since carbon credits are no longer linked to individual journeys
+        // Instead, credits are created from accumulated CO2 during conversion
+        // Return all verified journeys since they all contribute to CO2 accumulation
+        return journeyDataRepository.findByVerificationStatus(JourneyData.VerificationStatus.VERIFIED);
     }
 
     // get all jourenys (admin function )
@@ -144,17 +139,14 @@ public class JourneyDataService {
 
         JourneyData existing = findById(journeyId);
 
-        // check onwner ship
+        // check ownership
         if (!existing.getUser().getId().equals(requestingUser.getId())) {
             throw new UnauthorizedOperationException(
                     requestingUser.getId().toString(), "journeyData", journeyId.toString(), "update");
         }
 
-        // chekc if journey can be updated (no carbon credit yet)
-        if (existing.getCarbonCredit() != null) {
-            throw new BusinessOperationException("journeyData", "update",
-                    "cannot update journey that already has carbon credits");
-        }
+        // Journey can be updated since carbon credits are only created during conversion
+        // No need to check for carbon credit existence
 
         // validate updated data
         validateJourneyData(updatedData);
@@ -191,11 +183,8 @@ public class JourneyDataService {
                     "delete");
         }
 
-        // Check if journey can be deleted
-        if (journey.getCarbonCredit() != null) {
-            throw new BusinessOperationException("journeyData", "delete",
-                    "cannot delete journey that has carbon credits");
-        }
+        // Journey can be deleted since carbon credits are only created during conversion
+        // No need to check for carbon credit existence
 
         journeyDataRepository.delete(journey);
         log.info("Journey {} deleted successfully", journeyId);
@@ -227,29 +216,24 @@ public class JourneyDataService {
 
     @Transactional(readOnly = true)
     public List<JourneyData> findEligibleForCarbonCredits(User user) {
+        // Since carbon credits are now only created during CO2 conversion,
+        // this method is no longer needed but kept for compatibility
         return journeyDataRepository.findByUser(user).stream()
-                .filter(journey -> journey.getCarbonCredit() == null)
                 .filter(journey -> journey.getCo2ReducedKg() != null)
                 .filter(journey -> journey.getCo2ReducedKg().compareTo(BigDecimal.ZERO) > 0)
+                .filter(journey -> journey.getVerificationStatus() == JourneyData.VerificationStatus.VERIFIED)
                 .toList();
     }
 
-    // Bulk create carbon credit for multiple journeys
+    // Bulk create carbon credit for multiple journeys - DEPRECATED
+    // Carbon credits are now only created during CO2 conversion, not per journey
     @Transactional
+    @Deprecated
     public List<CarbonCredit> createCarbonCreditsForUser(User user) {
-        List<JourneyData> eligibleJourneys = findEligibleForCarbonCredits(user);
-        List<CarbonCredit> createdCredits = new ArrayList<>();
-
-        for (JourneyData journey : eligibleJourneys) {
-            try {
-                CarbonCredit credit = carbonCreditService.createCarbonCredit(journey);
-                createdCredits.add(credit);
-                log.info("Created carbon credit for journey {}", journey.getId());
-            } catch (Exception e) {
-                log.error("Failed to create carbon credit for journey {}: {}", journey.getId(), e.getMessage());
-            }
-        }
-        return createdCredits;
+        // This method is deprecated and returns empty list
+        // Carbon credits are now created during CO2 to credit conversion in WalletService
+        log.warn("createCarbonCreditsForUser called but method is deprecated - use CO2 conversion instead");
+        return new ArrayList<>();
     }
 
     // Get journey statistics including carbon credit information
@@ -276,19 +260,13 @@ public class JourneyDataService {
 
         BigDecimal averageDistance = totalDistance.divide(BigDecimal.valueOf(journeys.size()), 2, RoundingMode.HALF_UP);
 
-        // Carbon credit statistics
-        List<JourneyData> journeysWithCredits = journeys.stream().filter(j -> j.getCarbonCredit() != null).toList();
+        // Carbon credit statistics - now based on CO2 conversion, not per journey
+        // Since credits are created from accumulated CO2, we calculate differently
+        int journeysWithCreditCount = 0; // No longer journey-specific
+        int journeysWithoutCreditCount = journeys.size(); // All journeys contribute to CO2 pool
 
-        int journeysWithCreditCount = journeysWithCredits.size();
-        int journeysWithoutCreditCount = journeys.size() - journeysWithCreditCount;
-
-        BigDecimal totalCreditAmount = journeysWithCredits.stream().map(j -> j.getCarbonCredit().getCreditAmount())
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        BigDecimal potentialCreditAmount = journeys.stream()
-                .filter(j -> j.getCarbonCredit() == null)
-                .map(j -> carbonCreditService.calculateCO2Reduction(j.getDistanceKm(), j.getEnergyConsumedKwh()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal totalCreditAmount = BigDecimal.ZERO; // Would need to query user's actual credits
+        BigDecimal potentialCreditAmount = totalCo2Reduced.divide(new BigDecimal("1000"), 2, RoundingMode.DOWN);
 
         return new JourneyStatisticsWithCredits(journeys.size(), totalDistance, totalEnergy, averageDistance,
                 totalCo2Reduced,
@@ -298,16 +276,13 @@ public class JourneyDataService {
     public void deleteJourney(UUID journeyId) {
         JourneyData journey = findById(journeyId);
 
-        // check if journey can be deleted (onlu pending / rejected journeys)
+        // check if journey can be deleted (only pending / rejected journeys)
         if (journey.getVerificationStatus() == JourneyData.VerificationStatus.VERIFIED) {
             throw new BusinessOperationException("journeyData", "delete",
-                    "Cannot delete verified journey. Credit have been issued");
+                    "Cannot delete verified journey. CO2 has been added to wallet");
         }
 
-        // delete associated carbon credit if exists
-        if (journey.getCarbonCredit() != null) {
-            carbonCreditRepository.delete(journey.getCarbonCredit());
-        }
+        // No associated carbon credit to delete since credits are only created during conversion
 
         journeyDataRepository.delete(journey);
         log.info("Journey {} deleted successfully", journeyId);

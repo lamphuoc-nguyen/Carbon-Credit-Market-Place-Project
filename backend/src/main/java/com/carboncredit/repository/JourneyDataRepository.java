@@ -24,15 +24,10 @@ public interface JourneyDataRepository extends JpaRepository<JourneyData, UUID> 
     @Query("SELECT SUM(j.co2ReducedKg) FROM JourneyData j WHERE j.user = :user")
     BigDecimal getTotalCo2ReductionByUser(User user);
 
-    @Query("SELECT j FROM JourneyData j WHERE j.carbonCredit IS NULL ORDER BY j.createdAt DESC")
-    List<JourneyData> findJourneysWithoutCredits();
 
     List<JourneyData> findByVerificationStatus(JourneyData.VerificationStatus verificationStatus);
 
-    // ⭐
 
-    // ADD THESE
-    // FOR CVA STATISTICS
 
     /**
      * Count journeys by verification status

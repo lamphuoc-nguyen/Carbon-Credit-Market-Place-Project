@@ -36,7 +36,7 @@ public class CarbonCreditService {
     public BigDecimal calculateCO2Reduction(BigDecimal distanceKm, BigDecimal energyConsumeKwh) {
         // avergage gasoline car emission
         BigDecimal avgCarEmissionPerKm = new BigDecimal("0.21");
-        BigDecimal gidEmissionPerKwh = new BigDecimal("0.5");
+        BigDecimal gidEmissionPerKwh = new BigDecimal("0.6766");
 
         // voided emission from not drive a gasoline car
         BigDecimal avoidedCarEmission = distanceKm.multiply(avgCarEmissionPerKm);

@@ -1,5 +1,58 @@
 # Carbon Credit Market Place - Postman Testing Guide
 
+## 🚨 Common Issues & Troubleshooting
+
+### Registration Errors
+
+#### **Duplicate Key Constraint Violations**
+If you see errors like:
+```
+Cannot insert duplicate key row in object 'dbo.users' with unique index 'UKdu5v5sr43g5bfnji4vb8hg5s3'. The duplicate key value is (0246813579).
+```
+
+**Problem:** Trying to register with a phone number that already exists in the database.
+
+**Solutions:**
+1. **Use unique phone numbers** for each test user
+2. **Check existing data** before registration
+3. **Clear test data** if needed
+
+**Quick Fix - Use Different Phone Numbers:**
+```json
+// User 1
+{"phone": "0111111111", "username": "test1", "email": "test1@example.com"}
+// User 2  
+{"phone": "0222222222", "username": "test2", "email": "test2@example.com"}
+// User 3
+{"phone": "0333333333", "username": "test3", "email": "test3@example.com"}
+```
+
+#### **Common Duplicate Errors:**
+- **Username exists:** Change the `username` field
+- **Email exists:** Change the `email` field  
+- **Phone exists:** Change the `phone` field
+
+### Authentication Issues
+
+#### **Token Expired/Invalid**
+```json
+{"success": false, "message": "JWT token is expired"}
+```
+**Solution:** Login again to get a new token
+
+#### **Forbidden Access**
+```json
+{"success": false, "message": "Access denied"}
+```
+**Solution:** Check if your user role has permission for the endpoint
+
+### Database Connection Issues
+- Ensure SQL Server is running
+- Check connection string in `application.properties`
+- Verify database exists and is accessible
+
+---
+
 ## Quick Reference - API Endpoints List
 
 ### 🔐 Authentication APIs
@@ -63,6 +116,7 @@
 | GET | `/carbon-credits/user/{userId}` | Get credits by user | No | Any |
 | POST | `/carbon-credits/{creditId}/verify` | Verify credit | Yes | CVA |
 | POST | `/carbon-credits/{creditId}/reject` | Reject credit | Yes | CVA |
+| POST | `/carbon-credits/convert-co2-to-credits` | Convert CO2 to credits | Yes | Any |
 
 ### 🏪 Marketplace (Listings) APIs
 | Method | Endpoint | Description | Auth Required | Role Required |
@@ -94,11 +148,12 @@
 ### 💰 Wallet APIs
 | Method | Endpoint | Description | Auth Required | Role Required |
 |--------|----------|-------------|---------------|---------------|
-| GET | `/api/wallets/my-wallet` | Get my wallet | Yes | Any |
+| GET | `/api/wallets/my-wallet` | Get my wallet (includes CO2 balance) | Yes | Any |
 | GET | `/api/wallets/balance-check` | Check balance | Yes | Any |
 | POST | `/api/wallets/deposit` | Deposit funds | Yes | Any |
 | POST | `/api/wallets/withdraw` | Withdraw funds | Yes | Any |
 | GET | `/api/wallets/transactions` | Get wallet transactions | Yes | Any |
+| PUT | `/api/wallets/admin/user/{userId}/balance` | Update user balance (Admin) | Yes | Admin |
 | GET | `/api/wallets/admin/user/{userId}` | Get user wallet | Yes | Admin/CVA |
 | PUT | `/api/wallets/admin/user/{userId}/balance` | Update user balance | Yes | Admin |
 
@@ -154,6 +209,60 @@ Create these environment variables in Postman:
 ```
 
 **Valid Roles:** `EV_OWNER`, `BUYER`, `CVA`, `ADMIN`
+
+**Expected Response (Success):** `201 Created`
+```json
+{
+  "success": true,
+  "message": "User registered successfully",
+  "data": {
+    "id": "user-uuid-123",
+    "username": "evowner1",
+    "email": "evowner1@example.com",
+    "fullName": "John Doe",
+    "phone": "0123456789",
+    "role": "EV_OWNER"
+  }
+}
+```
+
+#### **1.1.1 Error Scenarios - Duplicate Data**
+
+**Duplicate Username:**
+```json
+{
+  "success": false,
+  "message": "Username already exists: evowner1"
+}
+```
+
+**Duplicate Email:**
+```json
+{
+  "success": false,
+  "message": "Email already exists: evowner1@example.com"
+}
+```
+
+**Duplicate Phone Number:**
+```json
+{
+  "success": false,
+  "message": "Phone number already exists: 0123456789"
+}
+```
+
+**💡 Tip:** If you encounter duplicate phone number errors, change the phone number in your test data. Each phone number must be unique across all users.
+
+**Example Test Data Set:**
+```json
+// First user
+{"phone": "0123456789", "username": "user1", "email": "user1@test.com"}
+// Second user (different phone)
+{"phone": "0987654321", "username": "user2", "email": "user2@test.com"}
+// Third user (different phone)
+{"phone": "0246813579", "username": "user3", "email": "user3@test.com"}
+```
 
 ### 1.2 User Login
 **POST** `{{BASE_URL}}/api/auth/login`
@@ -465,6 +574,52 @@ Create these environment variables in Postman:
   "comments": "Insufficient verification"
 }
 ```
+
+### 6.7 Convert CO2 to Credits
+**POST** `{{BASE_URL}}/carbon-credits/convert-co2-to-credits`
+
+**Headers:**
+- `Authorization`: `Bearer {{JWT_TOKEN}}`
+
+**Query Parameters:**
+- `co2Amount`: Amount of CO2 to convert (minimum 1000kg)
+
+**Example:** `{{BASE_URL}}/carbon-credits/convert-co2-to-credits?co2Amount=1000`
+
+**Expected Response (Success):**
+```json
+{
+  "success": true,
+  "message": "Successfully converted 1000kg CO2 to 1 credits",
+  "data": {
+    "convertedCo2Kg": 1000,
+    "creditsReceived": 1,
+    "remainingCo2Kg": 500.5,
+    "totalCreditBalance": 1.0
+  }
+}
+```
+
+**Error Responses:**
+```json
+// Insufficient CO2 balance
+{
+  "success": false,
+  "message": "Insufficient CO2 reduction balance. Current balance: 500.0kg"
+}
+
+// Below minimum requirement
+{
+  "success": false,
+  "message": "Minimum 1000kg CO2 required for conversion to credits"
+}
+```
+
+**Testing Notes:**
+- User must have accumulated CO2 reduction from verified journeys
+- Conversion rate: 1000kg CO2 = 1 carbon credit
+- Remaining CO2 balance is preserved if less than 1000kg
+- Check wallet before and after conversion to verify balance changes
 
 ---
 

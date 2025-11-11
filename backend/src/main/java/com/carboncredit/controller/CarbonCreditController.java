@@ -2,17 +2,22 @@ package com.carboncredit.controller;
 
 import com.carboncredit.dto.CarbonCreditDTO;
 import com.carboncredit.dto.VerifyRequest;
+import com.carboncredit.dto.ApiResponse;
 import com.carboncredit.entity.CarbonCredit;
 import com.carboncredit.entity.User;
+import com.carboncredit.entity.Wallet;
 import com.carboncredit.service.CarbonCreditService;
 import com.carboncredit.service.UserService;
+import com.carboncredit.service.WalletService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -24,6 +29,7 @@ public class CarbonCreditController {
 
     private final CarbonCreditService carbonCreditService;
     private final UserService userService;
+    private final WalletService walletService;
 
     @GetMapping
     public ResponseEntity<List<CarbonCreditDTO>> getAllCarbonCredits() {
@@ -98,6 +104,56 @@ public class CarbonCreditController {
             return ResponseEntity.ok(new CarbonCreditDTO(rejected)); // Convert to DTO
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
+     * Convert CO2 reduction to carbon credits (1000kg CO2 = 1 credit)
+     * User must have at least 1000kg CO2 reduction to convert
+     */
+    @PostMapping("/convert-co2-to-credits")
+    public ResponseEntity<ApiResponse<Object>> convertCo2ToCredits(
+            @RequestParam BigDecimal co2Amount,
+            Authentication authentication) {
+        try {
+            User user = userService.findByUsername(authentication.getName())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            // Validate minimum amount
+            if (co2Amount.compareTo(new BigDecimal("1000")) < 0) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Minimum 1000kg CO2 required for conversion to credits"));
+            }
+
+            // Check if user has sufficient CO2 reduction balance
+            BigDecimal currentCo2Balance = walletService.getCo2ReducedKg(user.getId());
+            if (currentCo2Balance.compareTo(co2Amount) < 0) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Insufficient CO2 reduction balance. Current balance: " + currentCo2Balance + "kg"));
+            }
+
+            // Perform conversion
+            Wallet updatedWallet = walletService.convertCo2ToCredits(user.getId(), co2Amount);
+
+            // Calculate converted credits
+            BigDecimal creditsConverted = co2Amount.divide(new BigDecimal("1000"), 6, java.math.RoundingMode.DOWN);
+
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Successfully converted " + co2Amount + "kg CO2 to " + creditsConverted + " credits",
+                    Map.of(
+                        "convertedCo2Kg", co2Amount,
+                        "creditsReceived", creditsConverted,
+                        "remainingCo2Kg", updatedWallet.getCo2ReducedKg(),
+                        "totalCreditBalance", updatedWallet.getCreditBalance()
+                    )
+            ));
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Conversion failed: " + e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error: " + e.getMessage()));
         }
     }
 }

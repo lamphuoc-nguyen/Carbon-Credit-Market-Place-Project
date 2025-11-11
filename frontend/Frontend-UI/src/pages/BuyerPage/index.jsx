@@ -1,6 +1,6 @@
 import React from 'react'
 import Navbar_Buyer from '../../Components/BuyerComponents/Navbar-Buyer'
-import DashboardPage from './DashboardPage'
+import MakerPlacePage from './MakerPlacePage'
 
 const BuyerPage = () => {
   return (
@@ -9,7 +9,7 @@ const BuyerPage = () => {
         <Navbar_Buyer/>
     </div>
     <div>
-        <DashboardPage/>
+        <MakerPlacePage/>
     </div>
     </>
   )

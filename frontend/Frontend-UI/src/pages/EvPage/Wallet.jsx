@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Wallet, DollarSign, Leaf, TrendingUp, ArrowUpRight, ArrowDownRight, Calendar, CreditCard, RefreshCw } from 'lucide-react';
+import { Wallet, DollarSign, Leaf, TrendingUp, ArrowUpRight, ArrowDownRight, Calendar, CreditCard, RefreshCw, Zap, ArrowRightLeft } from 'lucide-react';
 import EvOwnerAPI from '../../api/EvOwnerAPI';
+import { carbonCreditApi } from '../../api/carbonCreditApi';
 import Navbar from '../../Components/EVComponents/Navbar';
 
 const WalletPage = () => {
@@ -11,6 +12,7 @@ const WalletPage = () => {
   const [walletData, setWalletData] = useState({
     cashBalance: 0,
     creditBalance: 0,
+    co2ReducedKg: 0,
     userId: '',
     createdAt: '',
     updatedAt: ''
@@ -18,8 +20,10 @@ const WalletPage = () => {
   const [transactions, setTransactions] = useState([]);
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [showConversionModal, setShowConversionModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [conversionAmount, setConversionAmount] = useState('');
 
   useEffect(() => {
     fetchWalletData();
@@ -47,6 +51,7 @@ const WalletPage = () => {
       setWalletData({
         cashBalance: wallet.cashBalance || wallet.cash_balance || 0,
         creditBalance: wallet.creditBalance || wallet.credit_balance || 0,
+        co2ReducedKg: wallet.co2ReducedKg || wallet.co2_reduced_kg || 0,
         userId: wallet.userId || wallet.user_id || '',
         createdAt: wallet.createdAt || wallet.created_at || '',
         updatedAt: wallet.updatedAt || wallet.updated_at || ''
@@ -137,6 +142,34 @@ const WalletPage = () => {
     }
   };
 
+  const handleConvertCo2 = async () => {
+    if (!conversionAmount || parseFloat(conversionAmount) < 1000) {
+      alert('Minimum 1000kg CO2 required for conversion');
+      return;
+    }
+
+    if (parseFloat(conversionAmount) > walletData.co2ReducedKg) {
+      alert('Insufficient CO2 reduction balance');
+      return;
+    }
+
+    try {
+      console.log('🔄 Converting CO2 to credits...', conversionAmount);
+      const response = await carbonCreditApi.convertCo2ToCredits(parseFloat(conversionAmount));
+
+      const result = response.data || response;
+      const creditsReceived = result.creditsReceived || (parseFloat(conversionAmount) / 1000);
+
+      alert(`Successfully converted ${conversionAmount}kg CO2 to ${creditsReceived} credits!`);
+      setConversionAmount('');
+      setShowConversionModal(false);
+      await handleRefresh();
+    } catch (error) {
+      console.error('❌ CO2 conversion failed:', error);
+      alert(`Failed to convert CO2: ${error.response?.data?.message || error.message}`);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center">
@@ -173,53 +206,85 @@ const WalletPage = () => {
         </div>
 
         {/* Balance Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {/* Cash Balance Card */}
-          <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl shadow-xl p-8 text-white">
-            <div className="flex items-start justify-between mb-6">
+          <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl shadow-xl p-6 text-white">
+            <div className="flex items-start justify-between mb-4">
               <div>
                 <p className="text-blue-100 text-sm font-medium mb-2">Cash Balance</p>
-                <h2 className="text-4xl font-bold">${walletData.cashBalance.toFixed(2)}</h2>
+                <h2 className="text-3xl font-bold">${walletData.cashBalance.toFixed(2)}</h2>
               </div>
               <div className="p-3 bg-white bg-opacity-20 rounded-full">
-                <DollarSign size={28} />
+                <DollarSign size={24} />
               </div>
             </div>
             
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-2 mt-4">
               <button
                 onClick={() => setShowDepositModal(true)}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white text-blue-700 rounded-lg font-semibold hover:bg-blue-50 transition-colors"
+                className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-white text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors"
               >
-                <ArrowDownRight size={18} />
+                <ArrowDownRight size={16} />
                 Deposit
               </button>
               <button
                 onClick={() => setShowWithdrawModal(true)}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-white bg-opacity-20 text-white rounded-lg font-semibold hover:bg-opacity-30 transition-colors"
+                className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-white bg-opacity-20 text-white rounded-lg text-sm font-semibold hover:bg-opacity-30 transition-colors text-blue-500"
               >
-                <ArrowUpRight size={18} />
+                <ArrowUpRight size={16} />
                 Withdraw
               </button>
             </div>
           </div>
 
-          {/* Carbon Credit Balance Card */}
-          <div className="bg-gradient-to-br from-green-500 to-green-700 rounded-2xl shadow-xl p-8 text-white">
-            <div className="flex items-start justify-between mb-6">
+          {/* CO2 Reduction Balance Card */}
+          <div className="bg-gradient-to-br from-orange-500 to-orange-700 rounded-2xl shadow-xl p-6 text-white">
+            <div className="flex items-start justify-between mb-4">
               <div>
-                <p className="text-green-100 text-sm font-medium mb-2">Carbon Credit Balance</p>
-                <h2 className="text-4xl font-bold">{walletData.creditBalance.toFixed(2)}</h2>
+                <p className="text-orange-100 text-sm font-medium mb-2">CO2 Reduced</p>
+                <h2 className="text-3xl font-bold">{walletData.co2ReducedKg.toFixed(1)}</h2>
+                <p className="text-orange-100 text-sm mt-1">kg CO2</p>
+              </div>
+              <div className="p-3 bg-white bg-opacity-20 rounded-full">
+                <Zap size={24} />
+              </div>
+            </div>
+
+            <div className="mt-4">
+              {walletData.co2ReducedKg >= 1000 ? (
+                <button
+                  onClick={() => setShowConversionModal(true)}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-white text-orange-700 rounded-lg text-sm font-semibold hover:bg-orange-50 transition-colors"
+                >
+                  <ArrowRightLeft size={16} />
+                  Convert to Credits
+                </button>
+              ) : (
+                <div className="w-full p-2 bg-white bg-opacity-20 rounded-lg text-center font-bold text-orange-400">
+                  <p className="text-xs text-orange-500">
+                    Need {(1000 - walletData.co2ReducedKg).toFixed(1)}kg more to convert
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Carbon Credit Balance Card */}
+          <div className="bg-gradient-to-br from-green-500 to-green-700 rounded-2xl shadow-xl p-6 text-white">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <p className="text-green-100 text-sm font-medium mb-2">Carbon Credits</p>
+                <h2 className="text-3xl font-bold">{walletData.creditBalance.toFixed(2)}</h2>
                 <p className="text-green-100 text-sm mt-1">Credits</p>
               </div>
               <div className="p-3 bg-white bg-opacity-20 rounded-full">
-                <Leaf size={28} />
+                <Leaf size={24} />
               </div>
             </div>
             
-            <div className="flex items-center gap-2 mt-6 p-3 bg-white bg-opacity-20 rounded-lg">
-              <TrendingUp size={18} />
-              <span className="text-sm font-medium">Earned from verified journeys</span>
+            <div className="flex items-center gap-2 mt-4 p-2 bg-white bg-opacity-20 rounded-lg">
+              <TrendingUp size={16} />
+              <span className="text-s font-medium text-green-500 font-bold">Tradeable Credits</span>
             </div>
           </div>
         </div>
@@ -243,12 +308,12 @@ const WalletPage = () => {
               <div className="p-2 bg-orange-100 rounded-lg">
                 <CreditCard className="text-orange-600" size={20} />
               </div>
-              <h3 className="font-semibold text-gray-700">Total Balance</h3>
+              <h3 className="font-semibold text-gray-700">Total Value</h3>
             </div>
             <p className="text-2xl font-bold text-gray-900">
-              ${(walletData.cashBalance + walletData.creditBalance * 10).toFixed(2)}
+              ${(walletData.cashBalance + walletData.creditBalance * 10 + (walletData.co2ReducedKg / 1000) * 10).toFixed(2)}
             </p>
-            <p className="text-xs text-gray-500 mt-1">Estimated value</p>
+            <p className="text-xs text-gray-500 mt-1">Cash + Credits + CO2 potential</p>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
@@ -393,6 +458,69 @@ const WalletPage = () => {
                 className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
               >
                 Withdraw
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CO2 Conversion Modal */}
+      {showConversionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Convert CO2 to Credits</h3>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                CO2 Amount (kg)
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">kg</span>
+                <input
+                  type="number"
+                  min="1000"
+                  step="100"
+                  max={walletData.co2ReducedKg}
+                  value={conversionAmount}
+                  onChange={(e) => setConversionAmount(e.target.value)}
+                  placeholder="1000"
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Available: {walletData.co2ReducedKg.toFixed(1)}kg CO2 | Minimum: 1000kg
+              </p>
+              {conversionAmount && conversionAmount >= 1000 && (
+                <p className="text-sm text-green-600 mt-2">
+                  Will receive: {Math.floor(conversionAmount / 1000)} credit(s)
+                </p>
+              )}
+            </div>
+
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
+              <div className="flex items-center gap-2 text-orange-700 mb-1">
+                <ArrowRightLeft size={16} />
+                <span className="text-sm font-medium">Conversion Rate</span>
+              </div>
+              <p className="text-xs text-orange-600">1000kg CO2 = 1 Carbon Credit</p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowConversionModal(false);
+                  setConversionAmount('');
+                }}
+                className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConvertCo2}
+                disabled={!conversionAmount || conversionAmount < 1000 || conversionAmount > walletData.co2ReducedKg}
+                className="flex-1 px-4 py-3 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                Convert
               </button>
             </div>
           </div>

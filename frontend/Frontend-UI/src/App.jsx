@@ -58,6 +58,14 @@ function App() {
                       location.pathname === '/ev-dashboard/wallet' ||
                       location.pathname === '/ev-dashboard/Listing' ||
                       location.pathname === '/ev-dashboard/profile' ||
+                      location.pathname === '/cva/pending' ||
+                      location.pathname === '/cva/review' ||
+                      location.pathname === '/cva/detail' ||
+                      location.pathname === '/cva/verified' ||
+                      location.pathname === '/cva/reports' ||
+                      location.pathname === '/cva/dashboard' ||
+                      location.pathname === '/cva/review/{journeyId}' ||
+                      location.pathname === '/cva/verified-credits' ||
                       location.pathname === '/ev-dashboard/marketplace';
 
   return (

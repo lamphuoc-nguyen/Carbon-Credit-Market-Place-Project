@@ -91,5 +91,27 @@ export const carbonCreditApi = {
             console.error(`Error fetching credit ${creditId}:`, error);
             throw error;
         }
+    },
+
+    /**
+     * Chuyển đổi CO2 reduction thành carbon credits
+     * Tương ứng: @PostMapping("/convert-co2-to-credits")
+     * @param {number} co2Amount - Số kg CO2 muốn chuyển đổi (tối thiểu 1000kg)
+     * @returns {Promise<Object>} Kết quả chuyển đổi với thông tin chi tiết
+     */
+    convertCo2ToCredits: async (co2Amount) => {
+        if (!co2Amount || co2Amount < 1000) {
+            throw new Error('CO2 amount must be at least 1000kg for conversion');
+        }
+
+        try {
+            const response = await axiosInstance.post('/carbon-credits/convert-co2-to-credits', null, {
+                params: { co2Amount }
+            });
+            return validateResponse(response);
+        } catch (error) {
+            console.error('Error converting CO2 to credits:', error);
+            throw error;
+        }
     }
 };

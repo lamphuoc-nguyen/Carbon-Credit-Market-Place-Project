@@ -22,7 +22,7 @@ const navItems = [
     { name: 'Pending Verifications', key: 'pending', icon: 'PendingVerifications' },
     { name: 'Verified Credits', key: 'verified-credits', icon: 'VerifiedCredits' },
     { name: 'Reports', key: 'reports', icon: 'Reports' },
-    { name: 'Audit Tools', key: 'audit-tools', icon: 'AuditTools' },
+   
 ];
 
 const Sidebar = ({ isOpen, setIsOpen }) => {

@@ -54,60 +54,49 @@ public class CVAService {
     }
 
     /**
-     * CVA approve a journey and issues carbon credits
+     * CVA approve a journey and adds CO2 reduction to wallet
      *
      * Workflow:
-     * 1. Update journey status for Verified
-     * 2. Update carbon credit status to Verified
-     * 3. Add credit to owner's wallet
-     * 4. Log verification in audit trail
+     * 1. Update journey status to Verified
+     * 2. Add CO2 reduction to owner's wallet
+     * 3. Log verification in audit trail
      *
+     * Note: Carbon credits are NOT created here - only during CO2 conversion
      */
     public JourneyData approveJourneyByCVA(UUID journeyId, User cva, String notes) {
         // validate CVA role
         if (cva.getRole() != User.UserRole.CVA) {
-            throw new BusinessOperationException("Onlu CVA users can verify journeys");
+            throw new BusinessOperationException("Only CVA users can verify journeys");
         }
 
-        // Featch journey
+        // Fetch journey
         JourneyData journey = journeyDataRepository.findById(journeyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Journey not foudnd"));
+                .orElseThrow(() -> new ResourceNotFoundException("Journey not found"));
 
         // validate journey status
         if (journey.getVerificationStatus() != JourneyData.VerificationStatus.PENDING_VERIFICATION) {
-            throw new BusinessOperationException("Journey must be in PENDING_VERIFICATION status. Current satus: "
+            throw new BusinessOperationException("Journey must be in PENDING_VERIFICATION status. Current status: "
                     + journey.getVerificationStatus());
         }
 
-        // Get owner's current wallet balance for audit
-        BigDecimal walletBefore = walletService.getCreditBalance(journey.getUser().getId());
+        // Get owner's current CO2 balance for audit
+        BigDecimal co2Before = walletService.getCo2ReducedKg(journey.getUser().getId());
 
-        // Update journey verification satus
+        // Update journey verification status
         journey.setVerificationStatus(JourneyData.VerificationStatus.VERIFIED);
         journey.setVerifiedBy(cva);
         journey.setVerificationDate(LocalDateTime.now());
         journey.setVerificationNotes(notes);
         journeyDataRepository.save(journey);
 
-        // update carbon credit satus and issue credits
-        CarbonCredit credit = journey.getCarbonCredit();
-        if (credit == null) {
-            throw new BusinessOperationException("No carbon credit found for journey");
-        }
+        // Add CO2 reduction to owner's wallet (NOT creating carbon credits yet)
+        walletService.updateCo2ReducedKg(journey.getUser().getId(), journey.getCo2ReducedKg());
+        BigDecimal co2After = walletService.getCo2ReducedKg(journey.getUser().getId());
 
-        credit.setStatus(CarbonCredit.CreditStatus.VERIFIED);
-        credit.setVerifiedBy(cva);
-        credit.setVerifiedAt(LocalDateTime.now());
-        carbonCreditRepository.save(credit);
+        // Log verification in audit trail (using a simplified audit for CO2 addition)
+        log.info("CVA {} approved journey {} - {} kg CO2 reduction added to {}",
+                cva.getUsername(), journeyId, journey.getCo2ReducedKg(), journey.getUser().getUsername());
 
-        // add credit tow owner's wallet
-        walletService.updateCreditBalance(journey.getUser().getId(), credit.getCreditAmount());
-        BigDecimal walletAfter = walletService.getCreditBalance(journey.getUser().getId());
-        // Log verification in audit trail
-        auditService.logVerification(credit, cva, walletBefore, walletAfter, notes);
-
-        log.info("CVA {} approved journey {} - {}  credits issued to {}", cva.getUsername(), journeyId,
-                credit.getCreditAmount(), journey.getUser().getUsername());
 
         return journey;
     }
@@ -120,7 +109,7 @@ public class CVAService {
 
         // validate CVA role
         if (cva.getRole() != User.UserRole.CVA) {
-            throw new BusinessOperationException("Onlu CVA users can reject journeys");
+            throw new BusinessOperationException("Only CVA users can reject journeys");
         }
 
         // Fetch journey
@@ -141,15 +130,8 @@ public class CVAService {
         journey.setRejectionReason(reason);
         journeyDataRepository.save(journey);
 
-        // Update carbon credit status (no credits issued)
-        CarbonCredit credit = journey.getCarbonCredit();
-        if (credit != null) {
-            credit.setStatus(CarbonCredit.CreditStatus.REJECTED);
-            carbonCreditRepository.save(credit);
-
-            // Log rejection in audit trail
-            auditService.logRejection(credit, cva, reason);
-        }
+        // No carbon credits to handle since they're only created during conversion
+        // No CO2 is added to wallet for rejected journeys
 
         log.warn("CVA {} rejected journey {}. Reason: {}", cva.getUsername(), journeyId, reason);
 

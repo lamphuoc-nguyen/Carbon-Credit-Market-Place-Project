@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../../Components/EVComponents/Navbar'
 import EvOwnerAPI from '../../api/EvOwnerAPI'
-import { Clock, Battery, Route, Calendar, Filter, Search, Upload, FileText, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { Clock, Battery, Route, Calendar, Filter, Search, Upload, FileText, CheckCircle, XCircle, AlertCircle, Zap } from 'lucide-react'
 
 function JourneyList() {
   const navigate = useNavigate()

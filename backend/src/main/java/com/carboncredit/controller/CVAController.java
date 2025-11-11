@@ -108,7 +108,7 @@ public class CVAController {
             log.info("CVA {} approved journey {}", cva.getUsername(), id);
 
             return ResponseEntity.ok(ApiResponse.success(
-                    "Journey verified successfully. Credits added to owner's wallet.",
+                    "Journey verified successfully. CO2 reduction added to owner's wallet.",
                     new JourneyDataDTO(approvedJourney)));
 
         } catch (ResourceNotFoundException e) {

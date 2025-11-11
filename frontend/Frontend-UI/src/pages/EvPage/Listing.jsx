@@ -294,20 +294,7 @@ const CreateListingPage = () => {
         )}
 
         {/* Warning if credits exist but none are listable */}
-        {walletData.creditBalance > 0 && carbonCredits.length === 0 && (
-          <div className="bg-orange-50 border-l-4 border-orange-400 p-4 mb-6 rounded-r-lg">
-            <div className="flex items-start">
-              <AlertCircle className="text-orange-400 mt-0.5 mr-3" size={20} />
-              <div>
-                <h3 className="text-orange-800 font-semibold">No Verified Credits Available</h3>
-                <p className="text-orange-700 text-sm mt-1">
-                  Your credits may still be pending verification or already listed. 
-                  Wait for CVA verification or check your existing listings.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+       
 
         {/* Create Listing Form */}
         <form onSubmit={handleCreateListing} className="bg-white rounded-2xl shadow-xl p-8 space-y-6">

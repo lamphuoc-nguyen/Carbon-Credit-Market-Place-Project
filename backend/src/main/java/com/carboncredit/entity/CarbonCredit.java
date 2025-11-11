@@ -28,15 +28,16 @@ public class CarbonCredit {
     @JoinColumn(name = "user_id")
     private User user;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    // Journey is now optional - credits from CO2 conversion won't have a specific journey
+    @OneToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "journey_id")
     private JourneyData journey;
 
-    @Column(name = "co2_reduced_kg", nullable = false, precision = 10, scale = 2)
-    private BigDecimal co2ReducedKg;
-
     @Column(name = "credit_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal creditAmount;
+
+    @Column(name = "co2_reduced_kg", nullable = false, precision = 10, scale = 2)
+    private BigDecimal co2ReducedKg;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status",nullable = false, length = 20)

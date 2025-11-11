@@ -35,6 +35,12 @@ public class UserService {
             throw new IllegalArgumentException("Email already exists: " + user.getEmail());
         }
 
+        // Check for duplicate phone number
+        if (user.getPhone() != null && !user.getPhone().trim().isEmpty() &&
+            userRepository.existsByPhone(user.getPhone())) {
+            throw new IllegalArgumentException("Phone number already exists: " + user.getPhone());
+        }
+
         // Validate required fields
         if (user.getFullName() == null || user.getFullName().trim().isEmpty()) {
             throw new IllegalArgumentException("Full name is required");
