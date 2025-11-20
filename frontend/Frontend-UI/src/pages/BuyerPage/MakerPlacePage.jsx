@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { buyerApi } from '../../api';
+import Navbar_Buyer from '../../Components/BuyerComponents/Navbar-Buyer';
 
-const MakerPlacePage = () => {
+const MakerPlacePage = ({ showNavbar = true }) => {
   const navigate = useNavigate();
   
   // Helper function to format price (hide .00 for whole numbers)
@@ -303,8 +304,8 @@ const MakerPlacePage = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-
-      <div className=" mx-auto px- sm:px-6 lg:px-8 py-6">       
+      {showNavbar && <Navbar_Buyer />}
+      <div className=" mx-auto px- sm:px-6 lg:px-8 py-6">
 
         {/* Main Layout: Sidebar + Listings */}
         <div className="flex flex-col lg:flex-row gap-4">

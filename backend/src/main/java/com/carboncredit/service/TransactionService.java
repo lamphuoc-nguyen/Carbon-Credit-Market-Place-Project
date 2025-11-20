@@ -276,9 +276,22 @@ public class TransactionService {
                 completedTransaction.getBuyer().getId().toString(),
                 completedTransaction.getSeller().getId().toString());
 
-        // Send notification
-        notificationService.notifyTransactionCompleted(completedTransaction.getBuyer(),
-                completedTransaction.getSeller(), completedTransaction.getId().toString());
+        // Send notifications to both buyer and seller
+        String creditName = completedTransaction.getCredit() != null ?
+            completedTransaction.getCredit().getId().toString() : "credit";
+        String quantity = purchasedAmount != null ? purchasedAmount.toString() : originalCreditAmount.toString();
+
+        notificationService.notifyPurchaseSuccess(
+            completedTransaction.getBuyer(),
+            creditName,
+            quantity,
+            completedTransaction.getId().toString());
+
+        notificationService.notifyCreditSold(
+            completedTransaction.getSeller(),
+            creditName,
+            quantity,
+            completedTransaction.getId().toString());
 
         log.info("Transaction {} completed successfully", completedTransaction.getId());
         return completedTransaction;

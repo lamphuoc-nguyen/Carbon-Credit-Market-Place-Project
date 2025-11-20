@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Leaf } from 'lucide-react';
 import { Link, NavLink } from 'react-router-dom';
 import { getValidToken } from '../utils/tokenUtils';
-    
+import NotificationButton from './NotificationButton';
+
 
 const Navbar = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -125,6 +126,11 @@ const Navbar = () => {
                                         >
                                             Marketplace
                                         </NavLink>
+                                    </li>
+
+                                    {/* Notification Button */}
+                                    <li className='inline-flex items-center'>
+                                        <NotificationButton />
                                     </li>
 
                                     {/* Dashboard button based on role */}

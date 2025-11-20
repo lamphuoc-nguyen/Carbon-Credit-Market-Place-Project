@@ -34,6 +34,7 @@ public class Co2TransferService {
     private final WalletService walletService;
     private final CarbonCreditService carbonCreditService;
     private final AuditService auditService;
+    private final NotificationService notificationService;
 
     /**
      * Create a new transfer request from CO2 to credits
@@ -77,6 +78,9 @@ public class Co2TransferService {
 
         log.info("Transfer request created with ID {} for {} kg CO2 -> {} credits",
                 savedRequest.getId(), requestDTO.getCo2Amount(), creditsToGenerate);
+
+        // Send notification for credit conversion requested
+        notificationService.notifyCreditConversionRequested(user, savedRequest.getId().toString());
 
         return convertToDTO(savedRequest);
     }
@@ -129,6 +133,9 @@ public class Co2TransferService {
         log.info("CVA {} approved transfer request {} for user {}",
                 cva.getUsername(), requestId, request.getUser().getUsername());
 
+        // Send notification for approved transfer request
+        notificationService.notifyCreditConversionResult(request.getUser(), true, notes, requestId.toString());
+
         return convertToDTO(savedRequest);
     }
 
@@ -161,6 +168,9 @@ public class Co2TransferService {
 
         log.info("CVA {} rejected transfer request {} for user {}. Reason: {}",
                 cva.getUsername(), requestId, request.getUser().getUsername(), rejectionReason);
+
+        // Send notification for rejected transfer request
+        notificationService.notifyCreditConversionResult(request.getUser(), false, rejectionReason, requestId.toString());
 
         return convertToDTO(savedRequest);
     }

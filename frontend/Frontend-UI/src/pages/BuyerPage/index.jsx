@@ -9,7 +9,7 @@ const BuyerPage = () => {
         <Navbar_Buyer/>
     </div>
     <div>
-        <MakerPlacePage/>
+        <MakerPlacePage showNavbar={false} />
     </div>
     </>
   )

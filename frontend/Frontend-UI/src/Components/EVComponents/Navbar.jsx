@@ -15,6 +15,7 @@ import {
   List
 } from 'lucide-react'
 import userDataFetcher from '../../api/userDataFetcher'
+import NotificationButton from '../NotificationButton' // Add notification button
 
 function Navbar() {
   const [user, setUser] = useState(null)
@@ -115,6 +116,9 @@ function Navbar() {
 
           {/* User Profile Dropdown */}
           <div className="hidden md:flex items-center gap-4">
+            {/* Notification Button */}
+            <NotificationButton />
+
             <div className="relative">
               <button
                 onClick={toggleProfileDropdown}

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { buyerApi } from '../api';
 import EvOwnerAPI from '../api/EvOwnerAPI';
+import Navbar_Buyer from '../Components/BuyerComponents/Navbar-Buyer';
 
 const Marketplace = () => {
   const navigate = useNavigate();
@@ -297,6 +298,7 @@ const Marketplace = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
+      <Navbar_Buyer />
       <div className="mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
         {/* Success Message Banner */}

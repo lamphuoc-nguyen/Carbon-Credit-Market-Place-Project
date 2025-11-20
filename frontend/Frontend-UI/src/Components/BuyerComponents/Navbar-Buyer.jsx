@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { clearAuthData } from '../../utils/tokenUtils';
 import userDataFetcher from '../../api/userDataFetcher';
+import NotificationButton from '../NotificationButton'; // Add notification button
 
 export default function Navbar_Buyer() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -106,6 +107,9 @@ export default function Navbar_Buyer() {
 
           {/* User Profile Dropdown - Desktop */}
           <div className="hidden md:flex items-center gap-4">
+            {/* Notification Button */}
+            <NotificationButton />
+
             <div className="relative">
               <button
                 onClick={toggleProfileDropdown}

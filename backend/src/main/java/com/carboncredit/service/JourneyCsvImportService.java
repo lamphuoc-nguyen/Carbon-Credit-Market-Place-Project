@@ -31,6 +31,7 @@ public class JourneyCsvImportService {
     private final VehicleService vehicleService; // make sure this service exists in your project
     private final WalletService walletService;
     private final JourneyDataRepository journeyDataRepository;
+    private final NotificationService notificationService;
 
     private static final DateTimeFormatter ISO_DT = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
@@ -127,6 +128,9 @@ public class JourneyCsvImportService {
                     walletService.updateCo2ReducedKg(user.getId(), totalValidCo2);
                     log.info("Added {} kg CO2 to user {}'s wallet from auto-validated journeys",
                             totalValidCo2, user.getUsername());
+
+                    // Send notification for journey upload
+                    notificationService.notifyJourneyUploaded(user, totalValidCo2.doubleValue());
                 }
             }
         } catch (Exception e) {
