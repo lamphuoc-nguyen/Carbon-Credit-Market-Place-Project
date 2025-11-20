@@ -13,9 +13,8 @@ const CvaPage = () => {
     // const renderContent = () => { ... };
 
     return (
-        <div className="flex h-screen bg-gray-50">
-
-            {/* 1. Sidebar (Đã cập nhật props) */}
+        <div className="flex h-screen bg-gray-50 overflow-hidden">
+            {/* 1. Sidebar (Đã cập nhật props) - Full height without navbar */}
             <Sidebar
                 // ❌ Bỏ 2 props này
                 // currentPage={currentPage}
@@ -26,12 +25,12 @@ const CvaPage = () => {
                 setIsOpen={setIsSidebarOpen}
             />
 
-            {/* 2. Main Content Area */}
+            {/* 2. Main Content Area - Full height to take up entire screen */}
             <div className="flex-1 flex flex-col overflow-hidden">
 
-                {/* Main Content (Vùng cuộn) */}
-                <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 lg:p-8">
-                    <div className="max-w-7xl mx-auto">
+                {/* Main Content (Vùng cuộn) - Takes full available height */}
+                <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 lg:p-8 bg-white">
+                    <div className="max-w-7xl mx-auto h-full">
 
                         {/* ✅ BƯỚC 4: Thay thế {renderContent()} bằng <Outlet /> */}
                         {/* React Router sẽ tự động render component con vào đây */}

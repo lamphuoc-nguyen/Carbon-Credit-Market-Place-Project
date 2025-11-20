@@ -74,7 +74,8 @@ public class JourneyData {
     public enum VerificationStatus {
         PENDING_VERIFICATION,
         UNDER_REVIEW,
-        VERIFIED,
+        VALID,              // Auto-approved based on validation rules
+        VERIFIED,           // CVA manually verified
         REJECTED,
         REQUIRES_MORE_INFO
     }

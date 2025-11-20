@@ -4,6 +4,7 @@ import com.carboncredit.dto.ImportCSVResponse;
 import com.carboncredit.entity.JourneyData;
 import com.carboncredit.entity.User;
 import com.carboncredit.entity.Vehicle;
+import com.carboncredit.repository.JourneyDataRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
@@ -28,6 +29,8 @@ public class JourneyCsvImportService {
 
     private final JourneyDataService journeyDataService;
     private final VehicleService vehicleService; // make sure this service exists in your project
+    private final WalletService walletService;
+    private final JourneyDataRepository journeyDataRepository;
 
     private static final DateTimeFormatter ISO_DT = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
@@ -36,66 +39,94 @@ public class JourneyCsvImportService {
         List<String> createdIds = new ArrayList<>();
         List<String> errors = new ArrayList<>();
 
-        try (InputStreamReader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
-             CSVParser parser = CSVFormat.DEFAULT
-                     .withFirstRecordAsHeader()
-                     .withIgnoreEmptyLines(true)
-                     .withTrim()
-                     .parse(reader)) {
+        try {
+            try (InputStreamReader reader = new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8);
+                 CSVParser parser = CSVFormat.DEFAULT
+                         .withFirstRecordAsHeader()
+                         .withIgnoreEmptyLines(true)
+                         .withTrim()
+                         .parse(reader)) {
 
-            for (CSVRecord r : parser) {
-                processed++;
-                try {
-                    JourneyData jd = new JourneyData();
-                    jd.setUser(user);
+                BigDecimal totalValidCo2 = BigDecimal.ZERO;
 
-                    // vehicleId is required for each row
-                    String vehicleIdStr = r.isMapped("vehicleId") ? r.get("vehicleId") : null;
-                    if (vehicleIdStr == null || vehicleIdStr.isBlank()) {
-                        throw new IllegalArgumentException("Missing vehicleId");
-                    }
-                    Vehicle vehicle = resolveVehicleForUser(vehicleIdStr, user);
-                    jd.setVehicle(vehicle);
+                for (CSVRecord r : parser) {
+                    processed++;
+                    try {
+                        JourneyData jd = new JourneyData();
+                        jd.setUser(user);
 
-                    // required journey fields
-                    String distance = r.get("distanceKm");
-                    String energy = r.get("energyConsumedKwh");
-                    if (distance == null || distance.isEmpty()) {
-                        throw new IllegalArgumentException("Missing distanceKm");
-                    }
-                    if (energy == null || energy.isEmpty()) {
-                        throw new IllegalArgumentException("Missing energyConsumedKwh");
-                    }
-                    jd.setDistanceKm(new BigDecimal(distance));
-                    jd.setEnergyConsumedKwh(new BigDecimal(energy));
+                        // vehicleId is optional - use user's first vehicle if not provided
+                        String vehicleIdStr = r.isMapped("vehicleId") ? r.get("vehicleId") : null;
+                        Vehicle vehicle;
 
-                    // optional fields
-                    String co2 = r.isMapped("co2ReducedKg") ? r.get("co2ReducedKg") : null;
-                    if (co2 != null && !co2.isEmpty()) {
-                        jd.setCo2ReducedKg(new BigDecimal(co2));
-                    }
-                    if (r.isMapped("startTime")) {
-                        String start = r.get("startTime");
-                        if (start != null && !start.isBlank()) {
-                            jd.setStartTime(LocalDateTime.parse(start.trim(), ISO_DT));
+                        if (vehicleIdStr == null || vehicleIdStr.isBlank()) {
+                            // Auto-select user's first vehicle
+                            vehicle = vehicleService.getUsersFirstVehicle(user);
+                            if (vehicle == null) {
+                                throw new IllegalArgumentException("No vehicles found for user. Please create a vehicle first.");
+                            }
+                        } else {
+                            vehicle = resolveVehicleForUser(vehicleIdStr, user);
                         }
-                    }
-                    if (r.isMapped("endTime")) {
-                        String end = r.get("endTime");
-                        if (end != null && !end.isBlank()) {
-                            jd.setEndTime(LocalDateTime.parse(end.trim(), ISO_DT));
+                        jd.setVehicle(vehicle);
+
+                        // required journey fields
+                        String distance = r.get("distanceKm");
+                        String energy = r.get("energyConsumedKwh");
+                        if (distance == null || distance.isEmpty()) {
+                            throw new IllegalArgumentException("Missing distanceKm");
                         }
+                        if (energy == null || energy.isEmpty()) {
+                            throw new IllegalArgumentException("Missing energyConsumedKwh");
+                        }
+                        jd.setDistanceKm(new BigDecimal(distance));
+                        jd.setEnergyConsumedKwh(new BigDecimal(energy));
+
+                        // optional fields
+                        String co2 = r.isMapped("co2ReducedKg") ? r.get("co2ReducedKg") : null;
+                        if (co2 != null && !co2.isEmpty()) {
+                            jd.setCo2ReducedKg(new BigDecimal(co2));
+                        }
+                        if (r.isMapped("startTime")) {
+                            String start = r.get("startTime");
+                            if (start != null && !start.isBlank()) {
+                                jd.setStartTime(LocalDateTime.parse(start.trim(), ISO_DT));
+                            }
+                        }
+                        if (r.isMapped("endTime")) {
+                            String end = r.get("endTime");
+                            if (end != null && !end.isBlank()) {
+                                jd.setEndTime(LocalDateTime.parse(end.trim(), ISO_DT));
+                            }
+                        }
+
+                        // Check for duplicate journeys before creation
+                        if (isDuplicateJourney(jd)) {
+                            throw new IllegalArgumentException("Duplicate journey detected - same date and characteristics as existing journey");
+                        }
+
+                        // Create journey with auto-validation
+                        JourneyData saved = journeyDataService.createJourneyWithAutoValidation(jd);
+                        createdIds.add(saved.getId().toString());
+                        success++;
+
+                        // If journey is auto-approved (VALID status), accumulate CO2 for wallet
+                        if (saved.getVerificationStatus() == JourneyData.VerificationStatus.VALID) {
+                            totalValidCo2 = totalValidCo2.add(saved.getCo2ReducedKg());
+                        }
+
+                    } catch (Exception ex) {
+                        failed++;
+                        errors.add("Row " + processed + ": " + ex.getMessage());
+                        log.warn("CSV import failed at row {}: {}", processed, ex.getMessage());
                     }
+                }
 
-                    // create journey -> stays PENDING_VERIFICATION for CVA
-                    JourneyData saved = journeyDataService.createJourney(jd);
-                    createdIds.add(saved.getId().toString());
-                    success++;
-
-                } catch (Exception ex) {
-                    failed++;
-                    errors.add("Row " + processed + ": " + ex.getMessage());
-                    log.warn("CSV import failed at row {}: {}", processed, ex.getMessage());
+                // Add accumulated valid CO2 to user's wallet
+                if (totalValidCo2.compareTo(BigDecimal.ZERO) > 0) {
+                    walletService.updateCo2ReducedKg(user.getId(), totalValidCo2);
+                    log.info("Added {} kg CO2 to user {}'s wallet from auto-validated journeys",
+                            totalValidCo2, user.getUsername());
                 }
             }
         } catch (Exception e) {
@@ -114,5 +145,52 @@ public class JourneyCsvImportService {
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Invalid vehicleId format: " + vehicleIdStr);
         }
+    }
+
+    /**
+     * Check if the journey is a duplicate of existing journeys
+     */
+    private boolean isDuplicateJourney(JourneyData journeyData) {
+        // Check for exact duplicates (same user, vehicle, date, distance, energy)
+        List<JourneyData> exactDuplicates = journeyDataRepository.findPotentialDuplicates(
+                journeyData.getUser(),
+                journeyData.getVehicle(),
+                journeyData.getStartTime(),
+                journeyData.getDistanceKm(),
+                journeyData.getEnergyConsumedKwh()
+        );
+
+        if (!exactDuplicates.isEmpty()) {
+            log.warn("Exact duplicate journey found for user {} on date {}",
+                    journeyData.getUser().getUsername(),
+                    journeyData.getStartTime().toLocalDate());
+            return true;
+        }
+
+        // Check for potential duplicates (same user, vehicle, and date with overlapping times)
+        List<JourneyData> sameDayJourneys = journeyDataRepository.findJourneysByUserVehicleAndDate(
+                journeyData.getUser(),
+                journeyData.getVehicle(),
+                journeyData.getStartTime()
+        );
+
+        if (journeyData.getStartTime() != null && journeyData.getEndTime() != null) {
+            for (JourneyData existing : sameDayJourneys) {
+                if (existing.getStartTime() != null && existing.getEndTime() != null) {
+                    // Check for time overlap
+                    boolean startTimeOverlap = !journeyData.getStartTime().isAfter(existing.getEndTime());
+                    boolean endTimeOverlap = !journeyData.getEndTime().isBefore(existing.getStartTime());
+
+                    if (startTimeOverlap && endTimeOverlap) {
+                        log.warn("Overlapping journey found for user {} on date {}",
+                                journeyData.getUser().getUsername(),
+                                journeyData.getStartTime().toLocalDate());
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 }

@@ -71,6 +71,42 @@ public class JourneyDataService {
 
     }
 
+    // Create and save new journey with auto-validation based on rules
+    public JourneyData createJourneyWithAutoValidation(JourneyData journeyData) {
+        log.info("Creating new journey with auto-validation for user {}", journeyData.getUser().getId());
+
+        // Input validation
+        validateJourneyData(journeyData);
+
+        // Calculate CO2 reduction
+        BigDecimal co2Reduced = carbonCreditService.calculateCO2Reduction(journeyData.getDistanceKm(),
+                journeyData.getEnergyConsumedKwh());
+
+        journeyData.setCo2ReducedKg(co2Reduced);
+
+        // Auto-validation logic
+        if (isJourneyValidForAutoApproval(journeyData)) {
+            journeyData.setVerificationStatus(JourneyData.VerificationStatus.VALID);
+            journeyData.setVerificationDate(LocalDateTime.now());
+            journeyData.setVerificationNotes("Auto-validated based on system rules");
+            log.info("Journey auto-validated for user {}", journeyData.getUser().getId());
+        } else {
+            journeyData.setVerificationStatus(JourneyData.VerificationStatus.PENDING_VERIFICATION);
+            log.info("Journey requires manual CVA review for user {}", journeyData.getUser().getId());
+        }
+
+        // Set creation time if not already set
+        if (journeyData.getCreatedAt() == null) {
+            journeyData.setCreatedAt(LocalDateTime.now());
+        }
+
+        JourneyData savedJourney = journeyDataRepository.save(journeyData);
+
+        log.info("Journey created with {} status", savedJourney.getVerificationStatus());
+
+        return savedJourney;
+    }
+
     // Find journey by ID with exception handling
     @Transactional(readOnly = true)
     public JourneyData findById(UUID journeyId) {
@@ -300,4 +336,49 @@ public class JourneyDataService {
         return journeyDataRepository.findByVerificationStatus(status);
     }
 
+    /**
+     * Auto-validation logic for journeys
+     * Determines if a journey can be auto-approved based on system rules
+     */
+    private boolean isJourneyValidForAutoApproval(JourneyData journeyData) {
+        // Rule 1: Distance should be reasonable (between 1km and 500km per journey)
+        BigDecimal distance = journeyData.getDistanceKm();
+        if (distance.compareTo(new BigDecimal("1")) < 0 || distance.compareTo(new BigDecimal("500")) > 0) {
+            log.warn("Journey distance outside auto-approval range: {} km", distance);
+            return false;
+        }
+
+        // Rule 2: Energy consumption should be reasonable (0.1 to 50 kWh per km)
+        BigDecimal energyPerKm = journeyData.getEnergyConsumedKwh().divide(distance, 4, RoundingMode.HALF_UP);
+        if (energyPerKm.compareTo(new BigDecimal("0.1")) < 0 || energyPerKm.compareTo(new BigDecimal("50")) > 0) {
+            log.warn("Journey energy consumption outside auto-approval range: {} kWh/km", energyPerKm);
+            return false;
+        }
+
+        // Rule 3: CO2 reduction should be reasonable (not exceeding 1kg per km)
+        BigDecimal co2PerKm = journeyData.getCo2ReducedKg().divide(distance, 4, RoundingMode.HALF_UP);
+        if (co2PerKm.compareTo(new BigDecimal("1.0")) > 0) {
+            log.warn("Journey CO2 reduction outside auto-approval range: {} kg/km", co2PerKm);
+            return false;
+        }
+
+        // Rule 4: Journey should have realistic time data if provided
+        if (journeyData.getStartTime() != null && journeyData.getEndTime() != null) {
+            if (journeyData.getStartTime().isAfter(journeyData.getEndTime())) {
+                log.warn("Journey start time after end time");
+                return false;
+            }
+
+            // Journey should not be longer than 24 hours
+            long hours = java.time.Duration.between(journeyData.getStartTime(), journeyData.getEndTime()).toHours();
+            if (hours > 24) {
+                log.warn("Journey duration too long: {} hours", hours);
+                return false;
+            }
+        }
+
+        // All validation rules passed - auto-approve
+        log.info("Journey passed all auto-validation rules");
+        return true;
+    }
 }

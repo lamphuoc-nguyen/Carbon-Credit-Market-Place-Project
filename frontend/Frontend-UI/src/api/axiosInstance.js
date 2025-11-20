@@ -4,36 +4,103 @@ import { getValidToken } from "../utils/tokenUtils";
 const _env = import.meta;
 const BASE_URL = _env.env?.VITE_API_URL || 'http://localhost:8080';
 
+// Request deduplication map to prevent simultaneous identical requests
+const pendingRequests = new Map();
+
+// Create axios instance
 const axiosInstance = axios.create({
     baseURL: BASE_URL,
-    withCredentials: true, // ✅ Bật để gửi cookies
+    withCredentials: true,
     headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
     },
-    timeout: 10000, // ✅ Tăng lên 10s
+    timeout: 10000,
 });
 
-// ✅ REQUEST INTERCEPTOR - Automatically check token validity and add headers
+// Helper function to create request key for deduplication
+const createRequestKey = (config) => {
+    const { method, url, params } = config;
+    // Don't include data in key for deduplication as it might vary
+    return `${method?.toUpperCase()}_${url}_${JSON.stringify(params || {})}`;
+};
+
+// Create a wrapper around axios that handles deduplication
+const axiosWrapper = {
+    get: (url, config = {}) => makeDeduplicatedRequest('GET', url, null, config),
+    post: (url, data = null, config = {}) => makeDeduplicatedRequest('POST', url, data, config),
+    put: (url, data = null, config = {}) => makeDeduplicatedRequest('PUT', url, data, config),
+    delete: (url, config = {}) => makeDeduplicatedRequest('DELETE', url, null, config),
+    patch: (url, data = null, config = {}) => makeDeduplicatedRequest('PATCH', url, data, config),
+};
+
+// Enhanced request function with deduplication
+async function makeDeduplicatedRequest(method, url, data, config = {}) {
+    // Create request configuration
+    const requestConfig = {
+        method: method.toLowerCase(),
+        url,
+        data,
+        ...config
+    };
+
+    // Create request key for deduplication
+    const requestKey = createRequestKey(requestConfig);
+
+    // Check if identical request is already pending
+    if (pendingRequests.has(requestKey)) {
+        console.log('🔄 Deduplicating identical request:', requestKey);
+        return pendingRequests.get(requestKey);
+    }
+
+    console.log('🔵 Making new request:', {
+        method,
+        url,
+        requestKey: requestKey.substring(0, 60) + '...'
+    });
+
+    // Create the request promise
+    const requestPromise = axiosInstance(requestConfig)
+        .then(response => {
+            // Clean up on success
+            pendingRequests.delete(requestKey);
+            return response;
+        })
+        .catch(error => {
+            // Clean up on error
+            pendingRequests.delete(requestKey);
+            throw error;
+        });
+
+    // Store the promise to deduplicate future identical requests
+    pendingRequests.set(requestKey, requestPromise);
+
+    // Also clean up after a timeout as safety measure
+    setTimeout(() => {
+        pendingRequests.delete(requestKey);
+    }, 5000);
+
+    return requestPromise;
+}
+
+// Copy other axios properties/methods
+Object.setPrototypeOf(axiosWrapper, axiosInstance);
+axiosWrapper.defaults = axiosInstance.defaults;
+axiosWrapper.interceptors = axiosInstance.interceptors;
+
+// ✅ REQUEST INTERCEPTOR - Simplified to focus on token handling
 axiosInstance.interceptors.request.use(
     (config) => {
-        // Use utility function to get valid token (auto-clears expired ones)
         const token = getValidToken();
 
-        // 🔵 Enhanced debugging
-        console.log('🔵 Axios Interceptor - Request Config:', {
+        console.log('🔵 Axios Request:', {
             url: config.url,
             method: config.method,
-            hasToken: !!token,
-            tokenPreview: token ? token.substring(0, 20) + '...' : 'NONE',
-            fullUrl: config.baseURL + config.url
+            hasToken: !!token
         });
 
         if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
-            console.log('✅ Authorization header set with valid token');
-        } else {
-            console.error('⚠️ No valid token available for request to:', config.url);
         }
 
         return config;
@@ -44,68 +111,62 @@ axiosInstance.interceptors.request.use(
     }
 );
 
-// ✅ RESPONSE INTERCEPTOR - Xử lý lỗi tự động và logging
+// ✅ RESPONSE INTERCEPTOR - Enhanced error handling
 axiosInstance.interceptors.response.use(
     (response) => {
-        // ✅ Log response (dev only)
         if (import.meta.env.DEV) {
-            console.log(`📥 ${response.config.url}`, response.data);
+            console.log(`📥 ${response.config.method?.toUpperCase()} ${response.config.url}`, response.status);
         }
-
         return response;
     },
     (error) => {
-        // ✅ Xử lý các loại lỗi
         if (error.response) {
             const status = error.response.status;
 
-            // ✅ 401 - Unauthorized: Đăng xuất tự động và clear expired tokens
             if (status === 401) {
-                console.warn('🔐 Unauthorized - Token may be expired, clearing storage and redirecting to login');
+                console.warn('🔐 401 Unauthorized received');
 
-                // Clear all authentication data
-                localStorage.removeItem('authToken');
-                sessionStorage.removeItem('authToken');
-                localStorage.removeItem('user');
-                sessionStorage.removeItem('user');
+                const isAuthEndpoint = error.config.url?.includes('/auth/') ||
+                                     error.config.url?.includes('/login');
 
-                // Also clear axios default headers
-                delete axiosInstance.defaults.headers.common['Authorization'];
+                if (!isAuthEndpoint) {
+                    const currentToken = getValidToken();
+                    if (!currentToken) {
+                        console.warn('🧹 Clearing expired auth data');
 
-                // Chỉ redirect nếu không phải đang ở trang login
-                if (!window.location.pathname.includes('/login')) {
-                    console.log('🔄 Redirecting to login page due to expired token');
-                    window.location.href = '/login';
+                        localStorage.removeItem('authToken');
+                        sessionStorage.removeItem('authToken');
+                        localStorage.removeItem('user');
+                        sessionStorage.removeItem('user');
+
+                        if (!window.location.pathname.includes('/login') &&
+                            !window.location.pathname.includes('/register')) {
+
+                            console.log('🔄 Redirecting to login');
+                            setTimeout(() => {
+                                window.location.href = '/login';
+                            }, 100);
+                        }
+                    }
                 }
+            } else if (status === 403) {
+                console.error('🚫 Forbidden - Insufficient permissions');
+            } else if (status >= 500) {
+                console.error('💥 Server Error:', error.response.status);
             }
 
-            // ✅ 403 - Forbidden
-            else if (status === 403) {
-                console.error('🚫 Forbidden - You do not have permission');
-            }
-
-            // ✅ 500 - Server Error
-            else if (status >= 500) {
-                console.error('💥 Server Error:', error.response.data);
-            }
-
-            // ✅ Log error details (dev only)
             if (import.meta.env.DEV) {
-                console.error(`❌ ${status} ${error.config?.url}`, error.response.data);
+                console.error(`❌ ${status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`);
             }
-        }
-        // ✅ Network Error
-        else if (error.request) {
-            console.error('🌐 Network Error - No response received');
-        }
-        // ✅ Other Errors
-        else {
-            console.error('⚠️ Error:', error.message);
+        } else if (error.request) {
+            console.error('🌐 Network Error - No response');
+        } else {
+            console.error('⚠️ Request Setup Error:', error.message);
         }
 
         return Promise.reject(error);
     }
 );
 
-export default axiosInstance;
+export default axiosWrapper;
 export { BASE_URL };

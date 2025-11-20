@@ -88,4 +88,54 @@ export const cvaApi = {
         // SỬA LỖI: Dùng axiosInstance
         return handleRequest(axiosInstance.get('/api/cva/my-verifications'));
     },
+
+    // ==================== CO2 TRANSFER REQUEST MANAGEMENT ====================
+
+    /**
+     * Lấy tất cả các yêu cầu chuyển đổi CO2 thành credit đang chờ duyệt
+     * GET /api/cva/pending-transfer-requests
+     * @returns {Promise<Co2TransferRequestDTO[]>}
+     */
+    getPendingTransferRequests: () => {
+        return handleRequest(axiosInstance.get('/api/cva/pending-transfer-requests'));
+    },
+
+    /**
+     * Duyệt một yêu cầu chuyển đổi CO2 thành credit
+     * POST /api/cva/transfer-request/{requestId}/approve
+     * @param {string} requestId - ID của yêu cầu chuyển đổi
+     * @param {string} [notes] - Ghi chú từ CVA
+     * @returns {Promise<Co2TransferRequestDTO>}
+     */
+    approveTransferRequest: (requestId, notes) => {
+        return handleRequest(axiosInstance.post(
+            `/api/cva/transfer-request/${requestId}/approve`,
+            null,
+            { params: { notes } }
+        ));
+    },
+
+    /**
+     * Từ chối một yêu cầu chuyển đổi CO2 thành credit (với hoàn trả CO2)
+     * POST /api/cva/transfer-request/{requestId}/reject
+     * @param {string} requestId - ID của yêu cầu chuyển đổi
+     * @param {string} reason - Lý do từ chối
+     * @returns {Promise<Co2TransferRequestDTO>}
+     */
+    rejectTransferRequest: (requestId, reason) => {
+        return handleRequest(axiosInstance.post(
+            `/api/cva/transfer-request/${requestId}/reject`,
+            null,
+            { params: { reason } }
+        ));
+    },
+
+    /**
+     * Lấy thống kê về các yêu cầu chuyển đổi CO2
+     * GET /api/cva/transfer-statistics
+     * @returns {Promise<object>}
+     */
+    getTransferRequestStatistics: () => {
+        return handleRequest(axiosInstance.get('/api/cva/transfer-statistics'));
+    },
 };

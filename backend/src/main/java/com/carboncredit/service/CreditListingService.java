@@ -2,6 +2,8 @@ package com.carboncredit.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,6 +21,8 @@ import com.carboncredit.entity.CreditListing.ListingStatus;
 import com.carboncredit.entity.CreditListing.ListingType;
 import com.carboncredit.entity.User;
 import com.carboncredit.exception.BusinessOperationException;
+import com.carboncredit.exception.ResourceNotFoundException;
+import com.carboncredit.exception.ValidationException;
 import com.carboncredit.repository.CarbonCreditRepository;
 import com.carboncredit.repository.CreditListingRepository;
 
@@ -76,6 +80,86 @@ public class CreditListingService {
 
         log.info("Fixed-price listing created successfully: {} for credit {} at price {}",
                 savedListing.getId(), creditId, price);
+
+        return savedListing;
+    }
+
+    // Create a combined listing from multiple credits
+    @Transactional
+    public CreditListing createCombinedListing(List<UUID> creditIds, BigDecimal pricePerCredit, User owner) {
+        log.info("Creating combined listing for {} credits by user {} at {} per credit",
+                 creditIds.size(), owner.getUsername(), pricePerCredit);
+
+        if (creditIds == null || creditIds.isEmpty()) {
+            throw new ValidationException("At least one credit ID is required");
+        }
+
+        // Validate price
+        validationService.validatePrice(pricePerCredit);
+
+        // Fetch all credits and validate ownership
+        List<CarbonCredit> credits = new ArrayList<>();
+        BigDecimal totalCreditAmount = BigDecimal.ZERO;
+        BigDecimal totalCo2 = BigDecimal.ZERO;
+
+        for (UUID creditId : creditIds) {
+            CarbonCredit credit = carbonCreditRepository.findById(creditId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Credit not found: " + creditId));
+
+            // Validate ownership and status
+            validationService.validateListingCreation(credit, owner, pricePerCredit);
+
+            // Check if already listed
+            Optional<CreditListing> existingListing = creditListingRepository.findByCredit(credit);
+            if (existingListing.isPresent() && existingListing.get().getStatus() == ListingStatus.ACTIVE) {
+                throw new BusinessOperationException("Credit " + creditId + " is already actively listed");
+            }
+
+            credits.add(credit);
+            totalCreditAmount = totalCreditAmount.add(credit.getCreditAmount());
+            totalCo2 = totalCo2.add(credit.getCo2ReducedKg());
+        }
+
+        // Create a new combined credit that represents all selected credits
+        CarbonCredit combinedCredit = new CarbonCredit();
+        combinedCredit.setUser(owner);
+        combinedCredit.setCreditAmount(totalCreditAmount);
+        combinedCredit.setCo2ReducedKg(totalCo2);
+        combinedCredit.setStatus(CarbonCredit.CreditStatus.LISTED);
+        combinedCredit.setCreatedAt(LocalDateTime.now());
+        combinedCredit.setListedAt(LocalDateTime.now());
+
+        // Set verification info from first credit (all should be verified)
+        if (!credits.isEmpty()) {
+            combinedCredit.setVerifiedAt(credits.get(0).getVerifiedAt());
+            combinedCredit.setVerifiedBy(credits.get(0).getVerifiedBy());
+        }
+
+        CarbonCredit savedCombinedCredit = carbonCreditRepository.save(combinedCredit);
+
+        // Calculate total price
+        BigDecimal totalPrice = totalCreditAmount.multiply(pricePerCredit);
+
+        // Create the listing for the combined credit
+        CreditListing listing = new CreditListing();
+        listing.setCredit(savedCombinedCredit);
+        listing.setListingType(CreditListing.ListingType.FIXED);
+        listing.setPrice(totalPrice);
+        listing.setStatus(CreditListing.ListingStatus.ACTIVE);
+
+        CreditListing savedListing = creditListingRepository.save(listing);
+
+        // Remove the original credits from owner's wallet and mark as sold/consumed
+        for (CarbonCredit originalCredit : credits) {
+            originalCredit.setStatus(CarbonCredit.CreditStatus.SOLD);
+            carbonCreditRepository.save(originalCredit);
+        }
+
+        // Update wallet (remove individual credits, but combined credit is now listed so not in wallet)
+        walletService.updateCreditBalance(owner.getId(), totalCreditAmount.negate());
+
+        log.info("Combined listing created successfully: {} for {} total credits at ${}",
+                 savedListing.getId(), totalCreditAmount, totalPrice);
 
         return savedListing;
     }

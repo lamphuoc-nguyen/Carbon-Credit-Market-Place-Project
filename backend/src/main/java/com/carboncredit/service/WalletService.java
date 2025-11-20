@@ -31,6 +31,7 @@ public class WalletService {
         wallet.setCreditBalance(BigDecimal.ZERO);
         wallet.setCashBalance(BigDecimal.ZERO);
         wallet.setCo2ReducedKg(BigDecimal.ZERO);
+        wallet.setCo2PendingTransfer(BigDecimal.ZERO);
         return walletRepository.save(wallet);
     }
 
@@ -151,5 +152,79 @@ public class WalletService {
         wallet.setCreditBalance(wallet.getCreditBalance().add(creditsToAdd));
 
         return walletRepository.save(wallet);
+    }
+
+    /** Lock CO2 for transfer request */
+    public void lockCo2ForTransfer(UUID userId, BigDecimal co2Amount) {
+        Wallet wallet = findByUserId(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Wallet not found for user: " + userId));
+
+        BigDecimal availableCo2 = wallet.getAvailableCo2();
+        if (availableCo2.compareTo(co2Amount) < 0) {
+            throw new IllegalArgumentException("Insufficient available CO2 for transfer. Available: " +
+                availableCo2 + "kg, Requested: " + co2Amount + "kg");
+        }
+
+        wallet.setCo2PendingTransfer(wallet.getCo2PendingTransfer().add(co2Amount));
+        walletRepository.save(wallet);
+    }
+
+    /** Process approved transfer request */
+    public void processApprovedTransfer(UUID userId, BigDecimal co2Amount, BigDecimal creditsToGenerate) {
+        Wallet wallet = findByUserId(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Wallet not found for user: " + userId));
+
+        // Remove CO2 from both total and pending
+        wallet.setCo2ReducedKg(wallet.getCo2ReducedKg().subtract(co2Amount));
+        wallet.setCo2PendingTransfer(wallet.getCo2PendingTransfer().subtract(co2Amount));
+
+        // Create individual CarbonCredit entities for marketplace
+        for (int i = 0; i < creditsToGenerate.intValue(); i++) {
+            CarbonCredit credit = new CarbonCredit();
+            credit.setUser(wallet.getUser());
+            credit.setCo2ReducedKg(new BigDecimal("1000")); // Each credit represents 1000kg CO2
+            credit.setCreditAmount(BigDecimal.ONE); // Each entity is 1 credit
+            credit.setStatus(CarbonCredit.CreditStatus.VERIFIED); // Ready for marketplace
+            credit.setCreatedAt(LocalDateTime.now());
+            credit.setVerifiedAt(LocalDateTime.now());
+
+            carbonCreditRepository.save(credit);
+        }
+
+        // Add credits to wallet balance
+        wallet.setCreditBalance(wallet.getCreditBalance().add(creditsToGenerate));
+        walletRepository.save(wallet);
+    }
+
+    /** Refund rejected transfer request */
+    public void refundRejectedTransfer(UUID userId, BigDecimal co2Amount) {
+        Wallet wallet = findByUserId(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Wallet not found for user: " + userId));
+
+        // Simply remove from pending transfer (CO2 stays in total balance)
+        BigDecimal currentPending = wallet.getCo2PendingTransfer();
+        if (currentPending.compareTo(co2Amount) < 0) {
+            throw new IllegalArgumentException("Cannot refund more CO2 than pending: " +
+                currentPending + "kg pending, trying to refund: " + co2Amount + "kg");
+        }
+
+        wallet.setCo2PendingTransfer(currentPending.subtract(co2Amount));
+        walletRepository.save(wallet);
+    }
+
+    /** Get available CO2 for transfer (not locked in pending transfers) */
+    @Transactional(readOnly = true)
+    public BigDecimal getAvailableCo2(UUID userId) {
+        Wallet wallet = findByUserId(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Wallet not found for user: " + userId));
+        return wallet.getAvailableCo2();
+    }
+
+    /** Get pending transfer CO2 amount */
+    @Transactional(readOnly = true)
+    public BigDecimal getPendingTransferCo2(UUID userId) {
+        Wallet wallet = findByUserId(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Wallet not found for user: " + userId));
+        return wallet.getCo2PendingTransfer();
     }
 }

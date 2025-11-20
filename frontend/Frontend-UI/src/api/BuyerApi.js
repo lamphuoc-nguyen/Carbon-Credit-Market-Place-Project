@@ -406,14 +406,22 @@ export const buyerApi = {
      * @param {string} paymentMethodId - Phương thức thanh toán (hiện tại backend ignore field này)
      * @returns {Promise<Object>} Response: { transactionId, paymentUrl }
      */
-    initiatePurchaseTransaction: async (listingId, paymentMethodId = 'VNPAY') => {
+    initiatePurchaseTransaction: async (listingId, paymentMethodId = 'VNPAY', quantity = null) => {
         try {
-            console.log('💳 Initiating VNPAY transaction...');
-            const response = await axiosInstance.post('/transactions/purchase', {
+            console.log('💳 Initiating purchase transaction...');
+            const requestBody = {
                 listingId,
-                paymentMethodId // Backend currently ignores this and always uses "VNPAY_PENDING"
-            });
-            
+                paymentMethodId
+            };
+
+            // Add quantity if specified for partial purchase
+            if (quantity !== null && quantity !== undefined) {
+                requestBody.quantity = quantity;
+                console.log(`🔢 Partial purchase: ${quantity} credits`);
+            }
+
+            const response = await axiosInstance.post('/transactions/purchase', requestBody);
+
             console.log('✅ Transaction created:', response.data);
             return response.data;
         } catch (error) {
@@ -500,12 +508,36 @@ export const buyerApi = {
      * @param {string} transactionId - UUID của transaction
      * @returns {Promise} Chi tiết transaction
      */
+    /**
+     * 📋 Lấy chi tiết transaction (dùng cho payment success và certificate)
+     * GET /transactions/{transactionId}
+     * @param {string} transactionId - UUID của transaction
+     * @returns {Promise<Transaction>} Chi tiết giao dịch
+     */
     getTransactionDetails: async (transactionId) => {
         try {
+            console.log('🔄 Fetching transaction details for ID:', transactionId);
             const response = await axiosInstance.get(`/transactions/${transactionId}`);
+            console.log('✅ Transaction details received:', response.data);
             return response.data;
         } catch (error) {
             console.error(`❌ Lỗi khi lấy chi tiết giao dịch ${transactionId}:`, error);
+            console.error('Error details:', {
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+                data: error.response?.data,
+                headers: error.response?.headers,
+                url: error.config?.url
+            });
+
+            if (error.response?.status === 404) {
+                throw new Error(`Transaction ${transactionId} not found. It may still be processing.`);
+            } else if (error.response?.status === 403) {
+                throw new Error('Access denied. You can only view your own transactions.');
+            } else if (error.response?.status >= 500) {
+                throw new Error('Server error. Please try again in a moment.');
+            }
+
             throw error;
         }
     },
@@ -852,6 +884,77 @@ export const buyerApi = {
         } catch (error) {
             console.error('❌ Lỗi khi lấy lịch sử bán:', error);
             throw error;
+        }
+    },
+
+    /**
+     * 💰 Mua listing với WALLET payment và số lượng cụ thể
+     * POST /transactions/purchase + POST /transactions/{id}/complete
+     *
+     * @param {string} listingId - UUID của listing cần mua
+     * @param {number} quantity - Số lượng tonnes cần mua
+     * @param {number} totalAmount - Tổng số tiền phải trả
+     * @returns {Promise<Transaction>} Transaction đã hoàn thành
+     */
+    purchaseWithWalletAmount: async (listingId, quantity, totalAmount) => {
+        try {
+            console.log('💰 ========== PARTIAL WALLET PURCHASE FLOW ==========');
+            console.log('Listing ID:', listingId);
+            console.log('Quantity:', quantity, 'tonnes');
+            console.log('Total Amount:', totalAmount, 'USD');
+
+            // Step 1: Tạo transaction với WALLET payment method và custom amount
+            console.log('📝 Step 1: Creating transaction with custom amount...');
+            const transactionResponse = await axiosInstance.post('/transactions/purchase', {
+                listingId,
+                paymentMethodId: 'WALLET_PAYMENT', // Không chứa VNPAY hoặc BANK → sẽ thành WALLET
+                customAmount: totalAmount, // Pass custom amount for partial purchase
+                quantity: quantity // Pass quantity for partial purchase
+            });
+
+            const transactionId = transactionResponse.data.transactionId;
+            console.log('✅ Transaction created:', transactionId);
+
+            // Step 2: Check wallet balance
+            console.log('💳 Step 2: Checking wallet balance...');
+            const hasBalance = await axiosInstance.get('/api/wallets/balance-check', {
+                params: {
+                    amount: totalAmount,
+                    balanceType: 'CASH'
+                }
+            });
+
+            if (!hasBalance.data) {
+                // Cancel transaction nếu không đủ tiền
+                await axiosInstance.post(`/transactions/${transactionId}/cancel`);
+                throw new Error('Insufficient wallet balance. Transaction cancelled.');
+            }
+            console.log('✅ Balance check passed');
+
+            // Step 3: Complete transaction (backend xử lý wallet)
+            console.log('💰 Step 3: Completing transaction with wallet payment...');
+            const completedTransaction = await axiosInstance.post(`/transactions/${transactionId}/complete`);
+
+            console.log('✅ ========== PARTIAL PURCHASE COMPLETED ==========');
+            console.log('Completed transaction:', completedTransaction.data);
+
+            return completedTransaction.data;
+
+        } catch (error) {
+            console.error('❌ ========== PARTIAL PURCHASE FAILED ==========');
+            console.error('Error:', error);
+            console.error('Error details:', error.response?.data);
+
+            // Provide helpful error messages
+            if (error.message?.includes('Insufficient')) {
+                throw error; // Re-throw với message đã format
+            } else if (error.response?.status === 404) {
+                throw new Error('Listing not found or no longer available.');
+            } else if (error.response?.status === 400) {
+                throw new Error(error.response.data?.message || 'Invalid purchase request.');
+            } else {
+                throw new Error(error.message || 'Failed to complete purchase. Please try again.');
+            }
         }
     },
 };

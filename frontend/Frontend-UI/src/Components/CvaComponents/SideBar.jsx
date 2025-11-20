@@ -1,8 +1,8 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-    LayoutDashboard, Clock, CheckCircle, FileText, Hammer, X, Leaf, Menu,
-    Shield // ✅ 1. IMPORT SHIELD INSTEAD OF SETTINGS
+    LayoutDashboard, CheckCircle, FileText, Hammer, X, Leaf, Menu,
+    Shield, ArrowRightLeft // ✅ Add ArrowRightLeft for transfer requests
 } from 'lucide-react';
 import LogoutButton from '../LogoutButton'; // Adjust path if needed
 
@@ -10,8 +10,8 @@ const PUBLIC_LOGO_PATH = "/organic.png"; // Make sure path is correct
 
 const iconMap = {
     Dashboard: LayoutDashboard,
-    PendingVerifications: Clock,
     VerifiedCredits: CheckCircle,
+    TransferRequests: ArrowRightLeft,
     Reports: FileText,
     AuditTools: Hammer,
     // Settings removed as it's not used by navItems anymore
@@ -19,10 +19,9 @@ const iconMap = {
 
 const navItems = [
     { name: 'Dashboard', key: 'dashboard', icon: 'Dashboard' },
-    { name: 'Pending Verifications', key: 'pending', icon: 'PendingVerifications' },
+    { name: 'CO2 Transfer Requests', key: 'transfer-requests', icon: 'TransferRequests' },
     { name: 'Verified Credits', key: 'verified-credits', icon: 'VerifiedCredits' },
     { name: 'Reports', key: 'reports', icon: 'Reports' },
-   
 ];
 
 const Sidebar = ({ isOpen, setIsOpen }) => {

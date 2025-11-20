@@ -2,6 +2,7 @@ package com.carboncredit.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +11,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.carboncredit.dto.Co2TransferRequestDTO;
 import com.carboncredit.entity.CarbonCredit;
 import com.carboncredit.entity.JourneyData;
 import com.carboncredit.entity.User;
@@ -31,6 +33,7 @@ public class CVAService {
     private final CarbonCreditRepository carbonCreditRepository;
     private final AuditService auditService;
     private final WalletService walletService;
+    private final Co2TransferService co2TransferService;
 
     /**
      * Get all journeys pending CVA verification
@@ -189,6 +192,29 @@ public class CVAService {
     }
 
     /**
+     * Get journeys verified by a specific CVA with pagination
+     *
+     * @param cva CVA user
+     * @param page page number
+     * @param size page size
+     * @return List of journeys verified by this CVA
+     */
+    @Transactional(readOnly = true)
+    public List<JourneyData> getJourneysVerifiedByCVA(User cva, int page, int size) {
+        List<JourneyData> allVerifications = journeyDataRepository.findByVerifiedBy(cva);
+
+        // Simple pagination since repository doesn't have pageable method
+        int start = page * size;
+        int end = Math.min(start + size, allVerifications.size());
+
+        if (start >= allVerifications.size()) {
+            return new ArrayList<>();
+        }
+
+        return allVerifications.subList(start, end);
+    }
+
+    /**
      * Calculate approval rate percentage
      */
     private double calculateApprovalRate(long verified, long rejected) {
@@ -196,6 +222,62 @@ public class CVAService {
         if (total == 0)
             return 0.0;
         return (double) verified / total * 100.0;
+    }
+
+    // ================== CO2 TRANSFER REQUEST MANAGEMENT ==================
+
+    /**
+     * Get all pending transfer requests for CVA review
+     */
+    @Transactional(readOnly = true)
+    public List<Co2TransferRequestDTO> getPendingTransferRequests() {
+        return co2TransferService.getPendingTransferRequests();
+    }
+
+    /**
+     * CVA approves a CO2 to credit transfer request
+     */
+    public Co2TransferRequestDTO approveTransferRequest(UUID requestId, User cva, String notes) {
+        return co2TransferService.approveTransferRequest(requestId, cva, notes);
+    }
+
+    /**
+     * CVA rejects a CO2 to credit transfer request with refund
+     */
+    public Co2TransferRequestDTO rejectTransferRequest(UUID requestId, User cva, String rejectionReason) {
+        return co2TransferService.rejectTransferRequest(requestId, cva, rejectionReason);
+    }
+
+    /**
+     * Get transfer request statistics for CVA dashboard
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> getTransferRequestStats() {
+        Map<String, Object> stats = new HashMap<>();
+
+        var transferStats = co2TransferService.getTransferRequestStats(null);
+        stats.put("pendingTransfers", transferStats.pending());
+        stats.put("approvedTransfers", transferStats.approved());
+        stats.put("rejectedTransfers", transferStats.rejected());
+        stats.put("totalTransfers", transferStats.total());
+
+        return stats;
+    }
+
+    /**
+     * Get CVA's transfer processing statistics
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> getCVATransferStats(User cva) {
+        Map<String, Object> stats = new HashMap<>();
+
+        var cvaStats = co2TransferService.getCVAStats(cva);
+        stats.put("approvedTransfers", cvaStats.approved());
+        stats.put("rejectedTransfers", cvaStats.rejected());
+        stats.put("totalProcessedTransfers", cvaStats.totalProcessed());
+        stats.put("transferApprovalRate", cvaStats.approvalRate());
+
+        return stats;
     }
 
 }

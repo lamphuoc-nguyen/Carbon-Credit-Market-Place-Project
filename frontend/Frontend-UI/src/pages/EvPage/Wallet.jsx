@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Wallet, DollarSign, Leaf, TrendingUp, ArrowUpRight, ArrowDownRight, Calendar, CreditCard, RefreshCw, Zap, ArrowRightLeft } from 'lucide-react';
 import EvOwnerAPI from '../../api/EvOwnerAPI';
-import { carbonCreditApi } from '../../api/carbonCreditApi';
+import userDataFetcher from '../../api/userDataFetcher';
 import Navbar from '../../Components/EVComponents/Navbar';
+import Co2TransferComponent from '../../Components/EVComponents/Co2TransferComponent';
 
 const WalletPage = () => {
   const navigate = useNavigate();
@@ -20,15 +21,13 @@ const WalletPage = () => {
   const [transactions, setTransactions] = useState([]);
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-  const [showConversionModal, setShowConversionModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [conversionAmount, setConversionAmount] = useState('');
 
   useEffect(() => {
     fetchWalletData();
     fetchTransactions();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchWalletData = async () => {
     try {
@@ -42,8 +41,8 @@ const WalletPage = () => {
         return;
       }
       
-      console.log('💰 Fetching wallet data...');
-      const response = await EvOwnerAPI.wallet.getMyWallet();
+      console.log('💰 Fetching wallet data via centralized fetcher...');
+      const response = await userDataFetcher.getWalletData();
       const wallet = response.data?.data || response.data || {};
       
       console.log('✅ Wallet data fetched:', wallet);
@@ -73,7 +72,7 @@ const WalletPage = () => {
   const fetchTransactions = async () => {
     try {
       console.log('📊 Fetching wallet transactions...');
-      const response = await EvOwnerAPI.wallet.getTransactions({ page: 0, size: 10 });
+      const response = await EvOwnerAPI.wallets.getTransactions({ page: 0, size: 10 });
       const txData = response.data?.data || response.data || [];
       
       console.log('✅ Transactions fetched:', txData);
@@ -86,6 +85,8 @@ const WalletPage = () => {
 
   const handleRefresh = async () => {
     setRefreshing(true);
+    // Force refresh by invalidating cache first
+    userDataFetcher.invalidateWalletData();
     await fetchWalletData();
     await fetchTransactions();
     setRefreshing(false);
@@ -99,7 +100,7 @@ const WalletPage = () => {
 
     try {
       console.log('💵 Depositing funds...', depositAmount);
-      await EvOwnerAPI.wallet.deposit({
+      await EvOwnerAPI.wallets.deposit({
         amount: parseFloat(depositAmount),
         paymentMethodId: 'default-payment-method'
       });
@@ -127,7 +128,7 @@ const WalletPage = () => {
 
     try {
       console.log('💸 Withdrawing funds...', withdrawAmount);
-      await EvOwnerAPI.wallet.withdraw({
+      await EvOwnerAPI.wallets.withdraw({
         amount: parseFloat(withdrawAmount),
         bankAccountInfo: 'User bank account'
       });
@@ -139,34 +140,6 @@ const WalletPage = () => {
     } catch (error) {
       console.error('❌ Withdrawal failed:', error);
       alert(`Failed to withdraw: ${error.response?.data?.message || error.message}`);
-    }
-  };
-
-  const handleConvertCo2 = async () => {
-    if (!conversionAmount || parseFloat(conversionAmount) < 1000) {
-      alert('Minimum 1000kg CO2 required for conversion');
-      return;
-    }
-
-    if (parseFloat(conversionAmount) > walletData.co2ReducedKg) {
-      alert('Insufficient CO2 reduction balance');
-      return;
-    }
-
-    try {
-      console.log('🔄 Converting CO2 to credits...', conversionAmount);
-      const response = await carbonCreditApi.convertCo2ToCredits(parseFloat(conversionAmount));
-
-      const result = response.data || response;
-      const creditsReceived = result.creditsReceived || (parseFloat(conversionAmount) / 1000);
-
-      alert(`Successfully converted ${conversionAmount}kg CO2 to ${creditsReceived} credits!`);
-      setConversionAmount('');
-      setShowConversionModal(false);
-      await handleRefresh();
-    } catch (error) {
-      console.error('❌ CO2 conversion failed:', error);
-      alert(`Failed to convert CO2: ${error.response?.data?.message || error.message}`);
     }
   };
 
@@ -251,21 +224,25 @@ const WalletPage = () => {
             </div>
 
             <div className="mt-4">
-              {walletData.co2ReducedKg >= 1000 ? (
-                <button
-                  onClick={() => setShowConversionModal(true)}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-white text-orange-700 rounded-lg text-sm font-semibold hover:bg-orange-50 transition-colors"
-                >
-                  <ArrowRightLeft size={16} />
-                  Convert to Credits
-                </button>
-              ) : (
-                <div className="w-full p-2 bg-white bg-opacity-20 rounded-lg text-center font-bold text-orange-400">
-                  <p className="text-xs text-orange-500">
-                    Need {(1000 - walletData.co2ReducedKg).toFixed(1)}kg more to convert
+              <div className="w-full p-3 bg-white bg-opacity-20 rounded-lg text-center">
+                <div className="flex items-center justify-center gap-2 mb-1">
+                  <ArrowRightLeft size={14} className="text-orange-300" />
+                  <p className="text-xs font-semibold text-orange-200">
+                    Transfer to Credits
                   </p>
                 </div>
-              )}
+                <p className="text-xs text-orange-300">
+                  {walletData.co2ReducedKg >= 1000
+                    ? '✓ Ready! See transfer section below ↓'
+                    : `Need ${(1000 - walletData.co2ReducedKg).toFixed(1)}kg more`
+                  }
+                </p>
+                {walletData.co2ReducedKg >= 1000 && (
+                  <div className="animate-pulse mt-1">
+                    <div className="h-1 bg-orange-300 rounded-full w-3/4 mx-auto"></div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -326,6 +303,13 @@ const WalletPage = () => {
             <p className="text-2xl font-bold text-gray-900">{transactions.length}</p>
             <p className="text-xs text-gray-500 mt-1">Recent activity</p>
           </div>
+        </div>
+
+        {/* CO2 Transfer Section */}
+        <div className="mb-8">
+          <Co2TransferComponent
+            onTransferComplete={handleRefresh}
+          />
         </div>
 
         {/* Recent Transactions */}
@@ -458,69 +442,6 @@ const WalletPage = () => {
                 className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
               >
                 Withdraw
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* CO2 Conversion Modal */}
-      {showConversionModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Convert CO2 to Credits</h3>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                CO2 Amount (kg)
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">kg</span>
-                <input
-                  type="number"
-                  min="1000"
-                  step="100"
-                  max={walletData.co2ReducedKg}
-                  value={conversionAmount}
-                  onChange={(e) => setConversionAmount(e.target.value)}
-                  placeholder="1000"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                />
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Available: {walletData.co2ReducedKg.toFixed(1)}kg CO2 | Minimum: 1000kg
-              </p>
-              {conversionAmount && conversionAmount >= 1000 && (
-                <p className="text-sm text-green-600 mt-2">
-                  Will receive: {Math.floor(conversionAmount / 1000)} credit(s)
-                </p>
-              )}
-            </div>
-
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
-              <div className="flex items-center gap-2 text-orange-700 mb-1">
-                <ArrowRightLeft size={16} />
-                <span className="text-sm font-medium">Conversion Rate</span>
-              </div>
-              <p className="text-xs text-orange-600">1000kg CO2 = 1 Carbon Credit</p>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowConversionModal(false);
-                  setConversionAmount('');
-                }}
-                className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConvertCo2}
-                disabled={!conversionAmount || conversionAmount < 1000 || conversionAmount > walletData.co2ReducedKg}
-                className="flex-1 px-4 py-3 bg-orange-600 text-white rounded-lg font-semibold hover:bg-orange-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                Convert
               </button>
             </div>
           </div>

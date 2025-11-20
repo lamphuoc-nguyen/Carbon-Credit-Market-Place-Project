@@ -14,7 +14,7 @@ import {
   ChevronDown,
   List
 } from 'lucide-react'
-import { userApi } from '../../api/userApi'
+import userDataFetcher from '../../api/userDataFetcher'
 
 function Navbar() {
   const [user, setUser] = useState(null)
@@ -37,8 +37,9 @@ function Navbar() {
           return
         }
         
-        console.log('🔍 Token found, fetching user data...')
-        const userData = await userApi.getCurrentUser()
+        console.log('🔍 Fetching user data via centralized fetcher...')
+        const response = await userDataFetcher.getUserProfile()
+        const userData = response.data?.data || response.data
         console.log('✅ User data fetched:', userData)
         setUser(userData)
       } catch (error) {

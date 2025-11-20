@@ -45,20 +45,25 @@ const Navbar = () => {
     // Get the appropriate dashboard link based on role
     const getDashboardLink = () => {
         if (userRole === 'EV_OWNER') {
-            return '/ev-dashboard';
+            return '/ev-dashboard'; // EV Owner primary dashboard
         } else if (userRole === 'BUYER') {
-            return '/marketplace';
+            return '/marketplace'; // Buyer primary dashboard is marketplace
         }
         return '/marketplace'; // Default fallback
     };
 
+    // Get marketplace link for cross-functional access
+    const getMarketplaceLink = () => {
+        return '/marketplace'; // Both roles can access marketplace
+    };
+
     const getDashboardText = () => {
         if (userRole === 'EV_OWNER') {
-            return 'Go to Marketplace';
+            return 'Dashboard';
         } else if (userRole === 'BUYER') {
-            return 'Go to Marketplace';
+            return 'Marketplace';
         }
-        return 'Go to Dashboard'; // Default fallback
+        return 'Dashboard'; // Default fallback
     };
 
     return (
@@ -109,10 +114,24 @@ const Navbar = () => {
 
                             {/* Authentication-aware menu items */}
                             {isAuthenticated ? (
-                                // When logged in: Show Go to Dashboard/Marketplace button based on role
-                                <li className='inline-block py-2.5 px-5 text-[16px] text-white bg-green-500 rounded-lg font-semibold transition hover:bg-green-600 shadow-sm border-green-700'>
-                                    <NavLink to={getDashboardLink()}>{getDashboardText()}</NavLink>
-                                </li>
+                                <>
+                                    {/* Marketplace link for all authenticated users */}
+                                    <li className='inline-block py-1 px-5 text-[16px] hover:text-green-500 font-semibold rounded-lg transition -all duration-300 hover:bg-gray-200'>
+                                        <NavLink
+                                            to={getMarketplaceLink()}
+                                            className={({ isActive }) =>
+                                                isActive ? 'text-green-500' : 'text-gray-500'
+                                            }
+                                        >
+                                            Marketplace
+                                        </NavLink>
+                                    </li>
+
+                                    {/* Dashboard button based on role */}
+                                    <li className='inline-block py-2.5 px-5 text-[16px] text-white bg-green-500 rounded-lg font-semibold transition hover:bg-green-600 shadow-sm border-green-700'>
+                                        <NavLink to={getDashboardLink()}>{getDashboardText()}</NavLink>
+                                    </li>
+                                </>
                             ) : (
                                 // When NOT logged in: Show Sign In and Register buttons
                                 <>

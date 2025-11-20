@@ -62,11 +62,24 @@ public class TransactionController {
 
             log.info("💳 Creating transaction with payment method ID: {}", paymentMethodId);
 
-            Transaction transaction = transactionService.initiatePurchase(
-                    request.getListingId(),
-                    buyer,
-                    paymentMethodId // ✅ Sử dụng từ request
-            );
+            // Check if quantity is specified for partial purchase
+            Transaction transaction;
+            if (request.getQuantity() != null) {
+                log.info("🔢 Partial purchase requested: {} credits", request.getQuantity());
+                transaction = transactionService.initiatePurchase(
+                        request.getListingId(),
+                        buyer,
+                        paymentMethodId,
+                        request.getQuantity() // Pass quantity for partial purchase
+                );
+            } else {
+                log.info("📦 Full purchase requested");
+                transaction = transactionService.initiatePurchase(
+                        request.getListingId(),
+                        buyer,
+                        paymentMethodId // Full purchase (existing method)
+                );
+            }
 
             log.info("✅ Transaction created with payment method: {}", transaction.getPaymentMethod());
 

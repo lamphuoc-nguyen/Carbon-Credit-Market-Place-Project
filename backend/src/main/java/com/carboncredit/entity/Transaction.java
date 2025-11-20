@@ -43,6 +43,9 @@ public class Transaction {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal amount;
 
+    @Column(name = "credit_amount", precision = 10, scale = 2)
+    private BigDecimal creditAmount; // Amount of credits being purchased (for partial purchases)
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private TransactionStatus status;

@@ -83,4 +83,10 @@ public class VehicleService {
     public Optional<Vehicle> findByIdAndUser(UUID id, User user) {
         return vehicleRepository.findByIdAndUser(id,user);
     }
+
+    @Transactional(readOnly = true)
+    public Vehicle getUsersFirstVehicle(User user) {
+        List<Vehicle> userVehicles = findByUser(user);
+        return userVehicles.isEmpty() ? null : userVehicles.get(0);
+    }
 }

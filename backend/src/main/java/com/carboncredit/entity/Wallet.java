@@ -31,6 +31,10 @@ public class Wallet {
     @Column(name = "co2_reduced_kg", nullable = true, precision = 10, scale = 2)
     private BigDecimal co2ReducedKg;
 
+    // Separate field to track CO2 pending transfer (locked for transfer requests)
+    @Column(name = "co2_pending_transfer", nullable = true, precision = 10, scale = 2)
+    private BigDecimal co2PendingTransfer;
+
     @Column(name = "credit_balance", precision = 10, scale = 2)
     private BigDecimal creditBalance = BigDecimal.ZERO;
 
@@ -48,6 +52,9 @@ public class Wallet {
         if (this.co2ReducedKg == null) {
             this.co2ReducedKg = BigDecimal.ZERO;
         }
+        if (this.co2PendingTransfer == null) {
+            this.co2PendingTransfer = BigDecimal.ZERO;
+        }
     }
 
     // Custom getter to ensure we never return null
@@ -58,5 +65,19 @@ public class Wallet {
     // Custom setter to ensure we never set null
     public void setCo2ReducedKg(BigDecimal co2ReducedKg) {
         this.co2ReducedKg = co2ReducedKg != null ? co2ReducedKg : BigDecimal.ZERO;
+    }
+
+    // Custom getter/setter for pending transfer CO2
+    public BigDecimal getCo2PendingTransfer() {
+        return this.co2PendingTransfer != null ? this.co2PendingTransfer : BigDecimal.ZERO;
+    }
+
+    public void setCo2PendingTransfer(BigDecimal co2PendingTransfer) {
+        this.co2PendingTransfer = co2PendingTransfer != null ? co2PendingTransfer : BigDecimal.ZERO;
+    }
+
+    // Get available CO2 for transfer (total - pending)
+    public BigDecimal getAvailableCo2() {
+        return getCo2ReducedKg().subtract(getCo2PendingTransfer());
     }
 }

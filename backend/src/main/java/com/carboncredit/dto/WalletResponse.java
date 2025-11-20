@@ -19,5 +19,6 @@ public class WalletResponse {
     private BigDecimal creditBalance;
     private BigDecimal cashBalance;
     private BigDecimal co2ReducedKg;
+    private BigDecimal co2PendingTransfer; // Add field for CO2 locked in transfer requests
     private LocalDateTime lastUpdated;
 }

@@ -34,12 +34,113 @@ const PaymentPage = () => {
 
   const fetchWalletInfo = async () => {
     try {
+      console.log('🔄 Fetching wallet information...');
+      console.log('🔍 API Base URL:', import.meta.env.VITE_API_URL || 'http://localhost:8080');
+
+      // Comprehensive authentication debugging
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      const user = localStorage.getItem('user') || sessionStorage.getItem('user');
+
+      console.log('🔍 Authentication Debug:', {
+        hasToken: !!token,
+        tokenLength: token?.length || 0,
+        tokenPrefix: token?.substring(0, 20) + '...' || 'none',
+        hasUser: !!user,
+        userInfo: user ? JSON.parse(user) : null,
+        localStorage: {
+          authToken: !!localStorage.getItem('authToken'),
+          user: !!localStorage.getItem('user')
+        },
+        sessionStorage: {
+          authToken: !!sessionStorage.getItem('authToken'),
+          user: !!sessionStorage.getItem('user')
+        }
+      });
+
+      // Check if token is expired
+      if (token) {
+        try {
+          const { decodeJWTPayload, isTokenExpired } = await import('../../utils/tokenUtils');
+          const payload = decodeJWTPayload(token);
+          const expired = isTokenExpired(token);
+
+          console.log('🔍 Token Analysis:', {
+            payload: payload,
+            isExpired: expired,
+            expiresAt: payload?.exp ? new Date(payload.exp * 1000).toISOString() : 'unknown',
+            currentTime: new Date().toISOString()
+          });
+
+          if (expired) {
+            setError('Your session has expired. Please login again.');
+            setTimeout(() => {
+              window.location.href = '/login';
+            }, 2000);
+            return;
+          }
+        } catch (tokenError) {
+          console.error('❌ Token analysis failed:', tokenError);
+        }
+      } else {
+        setError('You are not logged in. Redirecting to login page...');
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
+        return;
+      }
+
       const walletData = await buyerApi.getMyWallet();
       setWallet(walletData);
-      console.log('✅ Wallet:', walletData);
+      console.log('✅ Wallet loaded successfully:', walletData);
     } catch (err) {
-      console.error('❌ Error fetching wallet:', err);
-      setError('Unable to load wallet information');
+      console.error('❌ Detailed wallet error:', {
+        message: err.message,
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data,
+        url: err.config?.url,
+        method: err.config?.method,
+        headers: err.config?.headers,
+        requestData: err.config?.data,
+        code: err.code,
+        name: err.name
+      });
+
+      let errorMessage = 'Unable to load wallet information';
+
+      if (err.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please login again.';
+        // Clear invalid auth data
+        localStorage.removeItem('authToken');
+        sessionStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+        sessionStorage.removeItem('user');
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
+      } else if (err.response?.status === 404) {
+        errorMessage = 'Wallet not found. Please contact support.';
+      } else if (err.response?.status === 500) {
+        errorMessage = 'Server error. Please try again later.';
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (!err.response) {
+        errorMessage = 'Cannot connect to server. Please check if backend is running.';
+        console.error('Network Error Details:', {
+          message: err.message,
+          code: err.code,
+          errno: err.errno,
+          syscall: err.syscall,
+          address: err.address,
+          port: err.port
+        });
+      } else if (err.code === 'ECONNREFUSED') {
+        errorMessage = 'Backend server is not responding. Please ensure the Spring Boot application is running on port 8080.';
+      } else if (err.code === 'ERR_NETWORK') {
+        errorMessage = 'Network error. Please check your internet connection and backend server status.';
+      }
+
+      setError(errorMessage);
     }
   };
 
@@ -82,70 +183,38 @@ const PaymentPage = () => {
         //    - Đóng listing
         //    - Chuyển ownership
         
-        console.log('🔄 Calling purchaseWithWallet API...');
-        const completedTransaction = await buyerApi.purchaseWithWallet(listing.id);
+        console.log('🔄 Calling purchaseWithWalletAmount API...');
+        const completedTransaction = quantity === listing.credit?.creditAmount
+          ? await buyerApi.purchaseWithWallet(listing.id)  // Buy all credits
+          : await buyerApi.purchaseWithWalletAmount(listing.id, quantity, totalPrice); // Buy partial amount
         console.log('✅ Purchase completed with wallet:', completedTransaction);
         
-        // 3. TỰ ĐỘNG RETIRE để tạo certificate
-        console.log('🌿 Auto-retiring credits to generate certificate...');
-        try {
-          const retirementData = {
-            userId: completedTransaction.buyerId,
-            amountToRetireKg: listing.credit?.co2ReducedKg || quantity,
-            projectInfo: `Purchase from ${listing.credit?.owner?.username || 'Seller'}`,
-            retirementPurpose: 'Carbon Credit Purchase - Auto Certificate Generation'
-          };
-          
-          console.log('Retirement data:', retirementData);
-          const retirementResult = await buyerApi.initiateRetirement(retirementData);
-          console.log('✅ Retirement initiated:', retirementResult);
-          
-          const retirement = retirementResult.retirementTransaction || retirementResult;
-          
-          // 4. Navigate to certificate page với retirement ID
-          navigate('/certificate', { 
-            state: { 
-              retirementId: retirement.id,
-              transactionData: {
-                transactionId: completedTransaction.id,
-                retirementId: retirement.id,
-                co2ReducedKg: listing.credit?.co2ReducedKg || 0,
-                amount: quantity,
-                issueDate: completedTransaction.completedAt || new Date().toISOString(),
-                buyerId: completedTransaction.buyerId,
-                sellerId: completedTransaction.sellerId,
-                buyerUsername: completedTransaction.buyerUsername || wallet?.username,
-                sellerUsername: completedTransaction.sellerUsername || listing.credit?.owner?.username,
-                 totalPrice: totalPrice || (listing.price * quantity),
-                status: 'CERTIFICATE_GENERATING',
-                creditId: listing.credit?.id,
-                listingId: listing.id
-              }
-            },
-            replace: true
-          });
-          
-          console.log('✅ Payment & retirement successful! Navigating to certificate...');
-          
-        } catch (retirementError) {
-          console.error('❌ Retirement failed:', retirementError);
-          // Vẫn navigate nhưng không có retirement
-          navigate('/certificate', { 
-            state: { 
-              transactionData: {
-                transactionId: completedTransaction.id,
-                co2ReducedKg: listing.credit?.co2ReducedKg || 0,
-                amount: quantity,
-                issueDate: completedTransaction.completedAt || new Date().toISOString(),
-                buyerId: completedTransaction.buyerId,
-                totalPrice: totalPrice || (listing.price * quantity),
-                status: 'COMPLETED',
-                error: 'Certificate generation failed. Credits are in your wallet.'
-              }
-            },
-            replace: true
-          });
+        // Validate transaction response
+        if (!completedTransaction || !completedTransaction.id) {
+          throw new Error('Invalid transaction response from server');
         }
+
+        // 3. Navigate to success page - NO AUTO RETIREMENT
+        console.log('✅ Purchase completed! Navigating to success page...');
+        navigate('/transaction-success', {
+          state: {
+            transactionData: {
+              transactionId: completedTransaction.id,
+              co2ReducedKg: Math.round((listing.credit?.co2ReducedKg || 1000) * (quantity / listing.credit?.creditAmount || 1)),
+              amount: quantity,
+              completedAt: completedTransaction.completedAt || new Date().toISOString(),
+              buyerId: completedTransaction.buyerId,
+              buyerUsername: completedTransaction.buyerUsername || wallet?.username,
+              totalPrice: totalPrice,
+              status: 'COMPLETED',
+              paymentMethod: 'WALLET',
+              creditId: listing.credit?.id,
+              listingId: listing.id
+            }
+          },
+          replace: true
+        });
+
         return;
       }
 
@@ -389,18 +458,30 @@ const PaymentPage = () => {
               {/* Order Details */}
               <div className="space-y-3 mb-4">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Total Credits:</span>
+                  <span className="text-gray-600">Credits Selected:</span>
                   <span className="font-semibold text-green-600">{quantity} tonnes</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Price/tonne:</span>
-                  <span className="font-semibold">${formatPrice(listing.price)}</span>
+                  <span className="text-gray-600">Available:</span>
+                  <span className="font-semibold text-gray-600">{listing.credit?.creditAmount || 0} tonnes</span>
                 </div>
-                <div className="p-2 bg-green-50 rounded-lg border border-green-200">
-                  <p className="text-xs text-center text-green-700 font-semibold">
-                    ✓ Purchasing all available credits
-                  </p>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Price per tonne:</span>
+                  <span className="font-semibold">${formatPrice((listing.price || 0) / (listing.credit?.creditAmount || 1))}</span>
                 </div>
+                {quantity === listing.credit?.creditAmount ? (
+                  <div className="p-2 bg-green-50 rounded-lg border border-green-200">
+                    <p className="text-xs text-center text-green-700 font-semibold">
+                      ✓ Purchasing all available credits
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-2 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-xs text-center text-blue-700 font-semibold">
+                      📋 Purchasing {quantity} out of {listing.credit?.creditAmount || 0} credits
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="border-t border-gray-200 pt-4 mb-6">
@@ -488,18 +569,26 @@ const PaymentPage = () => {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Total Credits:</span>
+                  <span className="text-gray-600">Credits Selected:</span>
                   <span className="font-semibold text-green-600">{quantity} tonnes</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Price per tonne:</span>
-                  <span className="font-semibold text-gray-900">${formatPrice(listing.price)}</span>
+                  <span className="font-semibold text-gray-900">${formatPrice((listing.price || 0) / (listing.credit?.creditAmount || 1))}</span>
                 </div>
-                <div className="p-2 bg-green-50 rounded-lg border border-green-200">
-                  <p className="text-xs text-center text-green-700 font-semibold">
-                    ✓ Purchasing all available credits
-                  </p>
-                </div>
+                {quantity === listing.credit?.creditAmount ? (
+                  <div className="p-2 bg-green-50 rounded-lg border border-green-200">
+                    <p className="text-xs text-center text-green-700 font-semibold">
+                      ✓ Purchasing all available credits
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-2 bg-blue-50 rounded-lg border border-blue-200">
+                    <p className="text-xs text-center text-blue-700 font-semibold">
+                      📋 Purchasing {quantity} out of {listing.credit?.creditAmount || 0} credits
+                    </p>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-gray-600">Payment Method:</span>
                   <span className="font-semibold text-gray-900">

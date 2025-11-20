@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react'; // Added useState, useEffect
 import { Link } from 'react-router-dom'; // Import Link for navigation
 import {
-    Clock, CheckCircle, TrendingUp, XCircle, Shield,
+    Clock, CheckCircle, TrendingUp, XCircle, Shield, ArrowRightLeft,
     BarChart as ChartIcon // Renamed BarChart to avoid conflict
 } from 'lucide-react';
 import {
     ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend
 } from 'recharts';
 
-// Import API service
+// Import API services
 import { carbonCreditApi } from '../../api/carbonCreditApi'; // Adjust path if needed
+import { cvaApi } from '../../api/cvaApi';
 
 // --- HELPER COMPONENTS ---
 
@@ -19,6 +20,7 @@ const RenderIcon = ({ name, className }) => {
         case 'Clock': return <Clock className={className} />;
         case 'CheckCircle': return <CheckCircle className={className} />;
         case 'TrendingUp': return <TrendingUp className={className} />;
+        case 'ArrowRightLeft': return <ArrowRightLeft className={className} />;
         // Add ArrowUpRight and ArrowDownRight if needed by stats
         // case 'ArrowUpRight': return <ArrowUpRight className={className} />;
         // case 'ArrowDownRight': return <ArrowDownRight className={className} />;
@@ -55,11 +57,11 @@ const StatusBadge = ({ status }) => {
 
 
 // --- MOCK DATA (for Stats & Chart only) ---
-const stats = [
+const initialStats = [
     { name: 'Pending Reviews', value: '...', trend: 'Loading...', icon: 'Clock', iconColor: 'text-orange-500' }, // Value will be updated
+    { name: 'Transfer Requests', value: '...', trend: 'Loading...', icon: 'ArrowRightLeft', iconColor: 'text-blue-500' }, // New transfer requests stat
     { name: 'Verified Credits', value: '299', trend: 'This month: 55', icon: 'CheckCircle', iconColor: 'text-green-500' },
     { name: 'Accuracy Rate', value: '94.6%', trend: 'Industry leading', icon: 'TrendingUp', iconColor: 'text-purple-500', barWidth: 'w-[94.6%]' },
-    { name: 'Average Review Time', value: '2.4 days', trend: '-0.3 from last month', icon: 'Clock', iconColor: 'text-gray-500' },
 ];
 
 const chartData = [
@@ -75,29 +77,47 @@ const chartData = [
 const Dashboard = () => {
 
     const [pendingRequests, setPendingRequests] = useState([]);
-    const [statsData, setStatsData] = useState(stats); // Use state for stats too
+    const [statsData, setStatsData] = useState(initialStats); // Use initialStats
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        const fetchPendingData = async () => {
+        const fetchDashboardData = async () => {
             try {
                 setIsLoading(true);
                 setError(null);
-                // Call API to get pending credits list
-                const data = await carbonCreditApi.getPendingCredits();
-                console.log("Pending Credits Data:", JSON.stringify(data, null, 2)); // Log the data structure
-                setPendingRequests(data);
 
-                // Update the 'Pending Reviews' stat card count
-                setStatsData(prevStats => prevStats.map(stat =>
-                    stat.name === 'Pending Reviews'
-                        ? { ...stat, value: data.length.toString(), trend: `Fetched ${new Date().toLocaleTimeString()}` }
-                        : stat
-                ));
+                // Fetch both journey verifications and transfer requests in parallel
+                const [pendingCredits, transferStats] = await Promise.all([
+                    carbonCreditApi.getPendingCredits(),
+                    cvaApi.getTransferRequestStatistics().catch(() => ({ pendingTransfers: 0 })) // Graceful fallback
+                ]);
+
+                console.log("Pending Credits Data:", JSON.stringify(pendingCredits, null, 2));
+                console.log("Transfer Stats:", transferStats);
+
+                setPendingRequests(pendingCredits);
+
+                // Update stats with real data
+                setStatsData(prevStats => prevStats.map(stat => {
+                    if (stat.name === 'Pending Reviews') {
+                        return {
+                            ...stat,
+                            value: pendingCredits.length.toString(),
+                            trend: `Updated ${new Date().toLocaleTimeString()}`
+                        };
+                    } else if (stat.name === 'Transfer Requests') {
+                        return {
+                            ...stat,
+                            value: (transferStats.pendingTransfers || 0).toString(),
+                            trend: 'CO2 → Credit conversions'
+                        };
+                    }
+                    return stat;
+                }));
 
             } catch (err) {
-                console.error("Failed to load dashboard pending credits:", err);
+                console.error("Failed to load dashboard data:", err);
                 if (err.response?.status !== 401) {
                     setError('Cannot load pending list.');
                     // Update stat card to show error
@@ -112,7 +132,7 @@ const Dashboard = () => {
                 setIsLoading(false);
             }
         };
-        fetchPendingData();
+        fetchDashboardData();
     }, []); // Empty dependency array means run once on mount
 
 

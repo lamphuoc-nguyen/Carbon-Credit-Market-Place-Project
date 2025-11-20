@@ -97,6 +97,9 @@ function JourneyList() {
     if (normalizedStatus.includes('verified') && !normalizedStatus.includes('pending')) {
       return 'text-green-600 bg-green-100'
     }
+    if (normalizedStatus.includes('valid')) {
+      return 'text-blue-600 bg-blue-100' // New status for auto-approved journeys
+    }
     if (normalizedStatus.includes('pending')) {
       return 'text-yellow-600 bg-yellow-100'
     }
@@ -146,12 +149,6 @@ function JourneyList() {
   }
 
   const uploadCSV = async () => {
-    if (!selectedVehicleId) {
-      setUploadStatus('error')
-      setUploadMessage('You must select a vehicle before uploading.')
-      return
-    }
-
     if (!csvFile) {
       setUploadStatus('error')
       setUploadMessage('Please select a CSV file')
@@ -161,86 +158,57 @@ function JourneyList() {
     try {
       setUploadStatus('uploading')
       setUploadProgress(0)
-      setUploadMessage('Reading CSV file...')
+      setUploadMessage('Uploading CSV file...')
 
-      const reader = new FileReader()
-      reader.onload = async (e) => {
-        try {
-          const csvText = e.target.result
-          setUploadProgress(25)
-          setUploadMessage('Processing CSV data...')
+      // Use the new backend CSV import endpoint
+      const response = await EvOwnerAPI.journeys.importCsv(csvFile)
 
-          const rows = parseCSV(csvText)
-          console.log('📊 Parsed CSV rows:', rows)
-          setUploadProgress(50)
-          setUploadMessage(`Uploading ${rows.length} journey records...`)
+      setUploadProgress(100)
 
-          let successCount = 0
-          let errorCount = 0
-          const errors = []
+      // Handle the response from the new import endpoint
+      const importResult = response.data?.data || response.data
 
-          for (let i = 0; i < rows.length; i++) {
-            try {
-              const journeyData = {
-                vehicle: { id: selectedVehicleId },
-                distanceKm: parseFloat(rows[i].distanceKm || rows[i].distance_km),
-                energyConsumedKwh: parseFloat(rows[i].energyConsumedKwh || rows[i].energy_consumed_kwh),
-                startTime: rows[i].startTime || rows[i].start_time,
-                endTime: rows[i].endTime || rows[i].end_time
-              }
+      console.log('📊 CSV Import Result:', importResult)
 
-              if (!journeyData.distanceKm || journeyData.distanceKm <= 0) throw new Error('distanceKm must be positive')
-              if (!journeyData.energyConsumedKwh || journeyData.energyConsumedKwh <= 0) throw new Error('energyConsumedKwh must be positive')
-              if (!journeyData.startTime) throw new Error('startTime is required')
-              if (!journeyData.endTime) throw new Error('endTime is required')
+      if (importResult.failed > 0) {
+        setUploadStatus('warning')
+        setUploadMessage(
+          `✅ Processed ${importResult.processed} rows: ${importResult.success} successful, ${importResult.failed} failed. ` +
+          (importResult.errors && importResult.errors.length > 0 ?
+            `Errors: ${importResult.errors.slice(0, 3).join(' | ')}` : '')
+        )
+      } else {
+        setUploadStatus('success')
+        setUploadMessage(
+          `✅ Successfully processed ${importResult.success} journeys! ` +
+          `Auto-validated journeys will immediately add CO2 to your wallet.`
+        )
+      }
 
-              console.log(`📤 Uploading journey ${i + 1}:`, journeyData)
-              await EvOwnerAPI.journeys.createJourney(journeyData)
-              successCount++
-
-              setUploadProgress(50 + ((i + 1) / rows.length) * 40)
-              setUploadMessage(`Processed ${i + 1}/${rows.length} journeys...`)
-
-            } catch (error) {
-              console.error(`❌ Journey ${i + 1} failed:`, error)
-              errorCount++
-              errors.push(`Row ${i + 2}: ${error.response?.data?.message || error.message}`)
-            }
-          }
-
-          setUploadProgress(100)
-
-          if (errorCount === 0) {
-            setUploadStatus('success')
-            setUploadMessage(`✅ Successfully uploaded ${successCount} journeys!`)
-            setTimeout(() => {
-              closeUploadModal()
-              fetchJourneys()
-            }, 2000)
-          } else if (successCount > 0) {
-            setUploadStatus('error')
-            setUploadMessage(`⚠️ Uploaded ${successCount} journeys, ${errorCount} failed. First errors: ${errors.slice(0, 5).join(' | ')}`)
-          } else {
-            setUploadStatus('error')
-            setUploadMessage(`❌ All uploads failed. Errors: ${errors.slice(0, 5).join(' | ')}`)
-          }
-
-        } catch (error) {
-          setUploadStatus('error')
-          setUploadMessage(`Parse error: ${error.message}`)
+      // Auto-close on success after showing the message
+      setTimeout(() => {
+        if (importResult.failed === 0) {
+          closeUploadModal()
         }
-      }
-
-      reader.onerror = () => {
-        setUploadStatus('error')
-        setUploadMessage('Failed to read file')
-      }
-
-      reader.readAsText(csvFile)
+        fetchJourneys()
+      }, 3000)
 
     } catch (error) {
+      console.error('❌ CSV upload failed:', error)
       setUploadStatus('error')
-      setUploadMessage(error.message)
+
+      // Handle specific error messages from the backend
+      const errorMessage = error.response?.data?.message || error.message
+
+      if (errorMessage.includes('Duplicate journey detected')) {
+        setUploadMessage('❌ Duplicate journeys detected. Please check for existing journeys with same date and characteristics.')
+      } else if (errorMessage.includes('duplicate')) {
+        setUploadMessage('❌ Some journeys are duplicates of existing data. Please review your CSV for repeated entries.')
+      } else {
+        setUploadMessage(`❌ Upload failed: ${errorMessage}`)
+      }
+
+      setUploadProgress(0)
     }
   }
 
@@ -414,29 +382,20 @@ function JourneyList() {
                 </button>
               </div>
 
-              {/* Vehicle Selector */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Vehicle <span className="text-red-500">*</span>
-                </label>
-                {vehicles.length > 0 ? (
-                  <select
-                    value={selectedVehicleId}
-                    onChange={(e) => setSelectedVehicleId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  >
-                    <option value="">Choose a vehicle...</option>
-                    {vehicles.map((vehicle) => (
-                      <option key={vehicle.id || vehicle.vehicle_id} value={vehicle.id || vehicle.vehicle_id}>
-                        {vehicle.model} - {vehicle.vin}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
-                    No vehicles found. Please add a vehicle first in your profile.
-                  </div>
-                )}
+              {/* Info about automatic vehicle selection */}
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Auto-Vehicle Selection:</strong> Your first registered vehicle will be automatically used for all CSV journey entries.
+                  {vehicles.length > 0 ? (
+                    <span className="block mt-1">
+                      Using: <strong>{vehicles[0].model} - {vehicles[0].vin}</strong>
+                    </span>
+                  ) : (
+                    <span className="block mt-1 text-red-600">
+                      ⚠️ No vehicles found. Please add a vehicle first in your profile.
+                    </span>
+                  )}
+                </p>
               </div>
 
               {/* File Input */}
@@ -467,6 +426,11 @@ function JourneyList() {
                 <p className="text-xs text-blue-700 mt-1">
                   Example: 150.5,28.3,2025-10-16T08:00:00,2025-10-16T10:30:00
                 </p>
+                <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                  <p className="text-xs text-yellow-800">
+                    <strong>Note:</strong> Duplicate journeys (same date, distance, and energy) will be automatically detected and rejected.
+                  </p>
+                </div>
               </div>
 
               {uploadStatus && (

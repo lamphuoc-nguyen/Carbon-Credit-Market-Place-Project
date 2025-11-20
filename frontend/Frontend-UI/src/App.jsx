@@ -14,10 +14,11 @@ import ContactPage from './pages/ContactPage';
 import CvaPage from './pages/CvaPage';
 import BuyerPage from './pages/BuyerPage';
 import MakerPlacePage from './pages/BuyerPage/MakerPlacePage';
-import Marketplace from './pages/Marketplace'; // Public marketplace for unauthenticated users
+import Marketplace from './pages/Marketplace';
 import Detailpage from './pages/BuyerPage/DetailPage';
 import PaymentPage from './pages/BuyerPage/PaymentPage';
 import PaymentSuccessPage from './pages/BuyerPage/PaymentSuccessPage';
+import TransactionSuccessPage from './pages/BuyerPage/TransactionSuccessPage';
 import WalletPage from './pages/BuyerPage/WalletPage';
 import CertificatePage from './pages/BuyerPage/CertificatePage';
 import ProfilePage from './pages/EvPage/Profile';
@@ -25,12 +26,12 @@ import EvOwner from './pages/EvPage';
 import JourneyList from './pages/EvPage/JourneyList';
 import CreateListingPage from './pages/EvPage/Listing';
 import Dashboard from './Components/CvaComponents/Dashboard';
-import PendingVerifications from './Components/CvaComponents/PendingVerifications';
 import ReviewJourneyDetail from './Components/CvaComponents/ReviewJourneyDetail';
 import VerifiedCredits from './Components/CvaComponents/VerifiedCredits';
 import Report from './Components/CvaComponents/Report';
 import DetailPage from './Components/CvaComponents/DetailPage';
-import ProtectedRoute from './Components/EVComponents/ProtectedRoute';
+import TransferRequestManagement from './Components/CvaComponents/TransferRequestManagement';
+import ProtectedRoute from './Components/ProtectedRoute';
 import Wallet from './pages/EvPage/Wallet';
 import AdminPage from './pages/AdminPage';
 import AdminDashboard from './Components/AdminComponents/AdminDashboard';
@@ -39,38 +40,31 @@ import Transactions from './Components/AdminComponents/Transactions';
 import WalletManagement from './Components/AdminComponents/WalletManagement';
 import PlatformReport from './Components/AdminComponents/PlatformReport';
 
-
 function App() {
   const location = useLocation();
 
-  // Ẩn Navbar & Footer nếu đang ở trang /cva
-  const hideLayout  = location.pathname === '/cva' || 
-                      location.pathname.startsWith('/admin') ||
-                      location.pathname === '/buyer' ||
-                      location.pathname === '/marketplace' ||
-                      location.pathname === '/payment' ||
-                      location.pathname === '/payment/callback' ||
-                      location.pathname === '/payment/success' ||
-                      location.pathname === '/wallet' ||
-                      location.pathname === '/certificate' ||
-                      location.pathname === '/ev-dashboard' ||
-                      location.pathname === '/ev-dashboard/journeys' ||
-                      location.pathname === '/ev-dashboard/wallet' ||
-                      location.pathname === '/ev-dashboard/Listing' ||
-                      location.pathname === '/ev-dashboard/profile' ||
-                      location.pathname === '/cva/pending' ||
-                      location.pathname === '/cva/review' ||
-                      location.pathname === '/cva/detail' ||
-                      location.pathname === '/cva/verified' ||
-                      location.pathname === '/cva/reports' ||
-                      location.pathname === '/cva/dashboard' ||
-                      location.pathname === '/cva/review/{journeyId}' ||
-                      location.pathname === '/cva/verified-credits' ||
-                      location.pathname === '/ev-dashboard/marketplace';
+  // Hide Navbar & Footer for specific pages
+  const hideLayout = location.pathname === '/cva' ||
+                     location.pathname.startsWith('/admin') ||
+                     location.pathname === '/buyer' ||
+                     location.pathname === '/marketplace' ||
+                     location.pathname === '/payment' ||
+                     location.pathname === '/payment/callback' ||
+                     location.pathname === '/payment/success' ||
+                     location.pathname === '/transaction-success' ||
+                     location.pathname === '/wallet' ||
+                     location.pathname === '/certificate' ||
+                     location.pathname === '/ev-dashboard' ||
+                     location.pathname === '/ev-dashboard/journeys' ||
+                     location.pathname === '/ev-dashboard/wallet' ||
+                     location.pathname === '/ev-dashboard/Listing' ||
+                     location.pathname === '/ev-dashboard/profile' ||
+                     location.pathname === '/ev-dashboard/marketplace' ||
+                     location.pathname.startsWith('/cva'); // Hide navbar for all CVA pages
 
   return (
     <>
-      {!hideLayout  && <Navbar />}
+      {!hideLayout && <Navbar />}
 
       <Routes>
         <Route path="/" element={<Navigate to="/home" />} />
@@ -83,97 +77,113 @@ function App() {
         <Route path="/dashboard" element={<HomePage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
-        <Route path="/cva" element={<CvaPage />} />
-        <Route path="/buyer" element={<BuyerPage />} />
-        <Route path="/marketplace/:listingId" element={<Detailpage />} />
-        <Route path="/marketplace-unauthed" element={<Marketplace />} /> {/* Public marketplace for unauthenticated users */}
-        <Route path="/payment" element={<PaymentPage />} />
-        <Route path="/payment/success" element={<PaymentSuccessPage />} />
-        <Route path="/wallet" element={<WalletPage />} />
-        <Route path="/certificate" element={<CertificatePage />} />
-        
-        
-        {/* --- EV Owner Routes --- */}
-<Route path="/ev-dashboard"
-element={
-  <ProtectedRoute requiredRole="EV_OWNER">
-    <EvOwner />
-  </ProtectedRoute>
-}/>
-<Route path="/ev-dashboard/profile"
-element={
-  <ProtectedRoute requiredRole="EV_OWNER">
-    <ProfilePage />
-  </ProtectedRoute>
-}/>
-<Route path="/ev-dashboard/journeys"
-element={
-  <ProtectedRoute requiredRole="EV_OWNER">
-    <JourneyList />
-  </ProtectedRoute>
-}/>
-<Route path="/ev-dashboard/marketplace"
-element={
-  <ProtectedRoute requiredRole="EV_OWNER">
-    <EvOwner />
-  </ProtectedRoute>
-}/>
-<Route path="/ev-dashboard/wallet"
-element={
-  <ProtectedRoute requiredRole="EV_OWNER">
-    <Wallet />
-  </ProtectedRoute>
-}/>
-<Route path="/ev-dashboard/listing"
-element={
-  <ProtectedRoute requiredRole="EV_OWNER">
-    <CreateListingPage />
-  </ProtectedRoute>
-}/>
 
-<Route path="/marketplace" element={<ProtectedRoute requiredRole="BUYER"><MakerPlacePage /></ProtectedRoute>} />
+        {/* --- Buyer Routes (Accessible to both BUYER and EV_OWNER) --- */}
+        <Route path="/buyer" element={
+          <ProtectedRoute allowedRoles={["BUYER", "EV_OWNER"]}>
+            <BuyerPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/marketplace/:listingId" element={
+          <ProtectedRoute allowedRoles={["BUYER", "EV_OWNER"]}>
+            <Detailpage />
+          </ProtectedRoute>
+        } />
+        <Route path="/marketplace" element={
+          <ProtectedRoute allowedRoles={["BUYER", "EV_OWNER"]}>
+            <MakerPlacePage />
+          </ProtectedRoute>
+        } />
+        <Route path="/marketplace-public" element={<Marketplace />} />
+        <Route path="/payment" element={
+          <ProtectedRoute allowedRoles={["BUYER", "EV_OWNER"]}>
+            <PaymentPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/payment/success" element={
+          <ProtectedRoute allowedRoles={["BUYER", "EV_OWNER"]}>
+            <PaymentSuccessPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/transaction-success" element={
+          <ProtectedRoute allowedRoles={["BUYER", "EV_OWNER"]}>
+            <TransactionSuccessPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/wallet" element={
+          <ProtectedRoute allowedRoles={["BUYER", "EV_OWNER"]}>
+            <WalletPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/certificate" element={
+          <ProtectedRoute allowedRoles={["BUYER", "EV_OWNER"]}>
+            <CertificatePage />
+          </ProtectedRoute>
+        } />
+
+        {/* --- EV Owner Routes --- */}
+        <Route path="/ev-dashboard" element={
+          <ProtectedRoute requiredRole="EV_OWNER">
+            <EvOwner />
+          </ProtectedRoute>
+        } />
+        <Route path="/ev-dashboard/profile" element={
+          <ProtectedRoute requiredRole="EV_OWNER">
+            <ProfilePage />
+          </ProtectedRoute>
+        } />
+        <Route path="/ev-dashboard/journeys" element={
+          <ProtectedRoute requiredRole="EV_OWNER">
+            <JourneyList />
+          </ProtectedRoute>
+        } />
+        <Route path="/ev-dashboard/marketplace" element={
+          <ProtectedRoute requiredRole="EV_OWNER">
+            <EvOwner />
+          </ProtectedRoute>
+        } />
+        <Route path="/ev-dashboard/wallet" element={
+          <ProtectedRoute requiredRole="EV_OWNER">
+            <Wallet />
+          </ProtectedRoute>
+        } />
+        <Route path="/ev-dashboard/listing" element={
+          <ProtectedRoute requiredRole="EV_OWNER">
+            <CreateListingPage />
+          </ProtectedRoute>
+        } />
 
         {/* --- CVA Routes --- */}
-        <Route path="/cva" element={<CvaPage />}> {/* PARENT Route */}
-
-          {/* CHILD Routes */}
+        <Route path="/cva" element={
+          <ProtectedRoute requiredRole="CVA">
+            <CvaPage />
+          </ProtectedRoute>
+        }>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
-
-          {/* ✅ THIS IS THE ROUTE YOU NEED */}
-          <Route path="pending" element={<PendingVerifications />} />
-
+          <Route path="transfer-requests" element={<TransferRequestManagement />} />
           <Route path="review/:journeyId" element={<ReviewJourneyDetail />} />
-          {/* Add other child routes like verified-credits, reports here */}
           <Route path="verified-credits" element={<VerifiedCredits />} />
           <Route path="reports" element={<Report />} />
           <Route path="detail/:journeyId" element={<DetailPage />} />
-
-        </Route> {/* End of PARENT Route */}
+        </Route>
 
         {/* --- Admin Routes --- */}
-        <Route path="/admin" element={<AdminPage />}> {/* PARENT Route */}
-
-          {/* CHILD Routes */}
+        <Route path="/admin" element={
+          <ProtectedRoute requiredRole="ADMIN">
+            <AdminPage />
+          </ProtectedRoute>
+        }>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboard />} />
-
-          {/* ✅ THIS IS THE ROUTE YOU NEED */}
           <Route path="user-management" element={<UserManagement />} />
           <Route path="transactions" element={<Transactions />} />
           <Route path="wallets-cash-flow" element={<WalletManagement />} />
           <Route path="platform-reports" element={<PlatformReport />} />
-
-
-
-        </Route> {/* End of PARENT Route */}
-
-       
+        </Route>
       </Routes>
 
-
       {!hideLayout && <Footer />}
-      
     </>
   );
 }

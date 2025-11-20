@@ -272,6 +272,7 @@ public class WalletController {
                 wallet.getCreditBalance(),
                 wallet.getCashBalance(),
                 wallet.getCo2ReducedKg(),
+                wallet.getCo2PendingTransfer(), // Include CO2 pending transfer amount
                 wallet.getUpdatedAt());
     }
 }
