@@ -72,8 +72,12 @@ public class AuthController {
                 try {
                     user.setProvince(User.Province.valueOf(request.getProvince()));
                 } catch (IllegalArgumentException e) {
-                    log.warn("Invalid province value: {}", request.getProvince());
-                    // Continue without setting province if invalid
+                    log.error("Invalid province value: {}", request.getProvince());
+                    return ResponseEntity.badRequest()
+                            .body(ApiResponse.<UserDTO>builder()
+                                    .success(false)
+                                    .message("Invalid province. Please provide a valid Vietnam province code.")
+                                    .build());
                 }
             }
             
