@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.carboncredit.dto.ApiResponse;
 import com.carboncredit.dto.Co2TransferRequestDTO;
 import com.carboncredit.dto.JourneyDataDTO;
+import com.carboncredit.dto.TransferRequestDetailDTO;
 import com.carboncredit.dto.CarbonCreditDTO;
 import com.carboncredit.entity.CarbonCredit;
 import com.carboncredit.entity.JourneyData;
@@ -56,117 +57,7 @@ public class CVAController {
     private final UserService userService;
     private final CarbonCreditRepository carbonCreditRepository;
 
-    /**
-     * Get all pending journey for CVA reviews
-     */
-
-    @GetMapping("/pending-journeys")
-    @PreAuthorize("hasRole('CVA')")
-    public ResponseEntity<ApiResponse<List<JourneyDataDTO>>> getPendingJourneys() {
-        try {
-            List<JourneyData> pendingJourneys = cvaService.getPendingJourneyForVerification();
-            List<JourneyDataDTO> dtos = pendingJourneys.stream().map(JourneyDataDTO::new).collect(Collectors.toList());
-
-            log.info("Retrieved {}  pending journeys for CVA review", dtos.size());
-
-            return ResponseEntity.ok(ApiResponse.success(dtos));
-        } catch (Exception e) {
-            log.error("Error fetching pending journeys: {}", e.getMessage());
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Failed to fetch pending journeys: " + e.getMessage()));
-        }
-    }
-
-    /**
-     * Get specific journey for review
-     *
-     */
-    @GetMapping("/journey/{id}")
-    @PreAuthorize("hasRole('CVA')")
-    public ResponseEntity<ApiResponse<JourneyDataDTO>> getJourneyForReview(@PathVariable UUID id) {
-        try {
-            JourneyData journey = cvaService.getJourneyDataForView(id);
-            return ResponseEntity.ok(ApiResponse.success(new JourneyDataDTO(journey)));
-        } catch (ResourceNotFoundException e) {
-            return ResponseEntity.status(404).body(ApiResponse.error("Journey not found: " + id));
-        } catch (Exception e) {
-            log.error("Error fetching journey {}: {}", id, e.getMessage());
-            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to fetch journey: " + e.getMessage()));
-        }
-    }
-
-    /**
-     * Approve journey and carbon credit
-     */
-    @PostMapping("/journey/{id}/approve")
-    @PreAuthorize("hasRole('CVA')")
-    public ResponseEntity<ApiResponse<JourneyDataDTO>> approveJourney(
-            @PathVariable UUID id,
-            @RequestParam(required = false, defaultValue = "Approved by CVA") String notes,
-            Authentication authentication) {
-        try {
-            User cva = userService.findByUsername(authentication.getName())
-                    .orElseThrow(() -> new ResourceNotFoundException("CVA user not found"));
-
-            JourneyData approvedJourney = cvaService.approveJourneyByCVA(id, cva, notes);
-
-            log.info("CVA {} approved journey {}", cva.getUsername(), id);
-
-            return ResponseEntity.ok(ApiResponse.success(
-                    "Journey verified successfully. CO2 reduction added to owner's wallet.",
-                    new JourneyDataDTO(approvedJourney)));
-
-        } catch (ResourceNotFoundException e) {
-            return ResponseEntity.status(404)
-                    .body(ApiResponse.error("Journey not found: " + id));
-        } catch (Exception e) {
-            log.error("Error approving journey {}: {}", id, e.getMessage());
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Failed to approve journey: " + e.getMessage()));
-        }
-    }
-
-    /**
-     * Reject journey with a reason
-     */
-    @PostMapping("/journey/{id}/reject")
-    @PreAuthorize("hasRole('CVA')")
-    public ResponseEntity<ApiResponse<JourneyDataDTO>> rejectJourney(@PathVariable UUID id, @RequestParam @NotBlank(message = "Rejection reason is required") String reason, Authentication authentication) {
-        try {
-            User cva = userService.findByUsername(authentication.getName()).orElseThrow(() -> new ResourceNotFoundException("CVA user not found"));
-
-            JourneyData rejectedJourney = cvaService.rejectJourneyByCVA(id, cva, reason);
-
-            log.warn("CVA {} rejected journey {}. Reason: {}", cva.getUsername(), id, reason);
-
-            return ResponseEntity.ok(ApiResponse.success("Journey rejected. Reason: " + reason, new JourneyDataDTO(rejectedJourney)));
-        } catch (ResourceNotFoundException e) {
-            return ResponseEntity.status(404).body(ApiResponse.error("Journey not found: " + id));
-        } catch (Exception e) {
-            log.error("error rejecting journey {}: {}", id, e.getMessage());
-            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to reject journey: " + e.getMessage()));
-        }
-
-    }
-
-
-    /**
-     * Get verification statistic
-     */
-    @GetMapping("/statistics")
-    @PreAuthorize("hasRole('CVA')")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getCVAStatistics(Authentication authentication) {
-        try {
-            User cva = userService.findByUsername(authentication.getName()).orElseThrow(() -> new ResourceNotFoundException("CVA user not found exception"));
-
-            Map<String, Object> stats = cvaService.getCVAStatistics(cva);
-
-            return ResponseEntity.ok(ApiResponse.success("CVA Statistics", stats));
-        } catch (Exception e) {
-            log.error("Error fetching CVA statistics: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to fetch statistics: " + e.getMessage()));
-        }
-    }
+ 
 
     // ================== CO2 TRANSFER REQUEST ENDPOINTS ==================
 
@@ -332,4 +223,5 @@ public class CVAController {
                     .body(ApiResponse.error("Failed to fetch verified credits: " + e.getMessage()));
         }
     }
+
 }

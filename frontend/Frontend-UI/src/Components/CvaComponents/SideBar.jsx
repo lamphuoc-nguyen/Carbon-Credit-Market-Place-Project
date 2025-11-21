@@ -2,12 +2,12 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
     LayoutDashboard, CheckCircle, FileText, Hammer, X, Leaf, Menu,
-    Shield, ArrowRightLeft // ✅ Add ArrowRightLeft for transfer requests
+    Shield, ArrowRightLeft
 } from 'lucide-react';
-import LogoutButton from '../LogoutButton'; // Adjust path if needed
-import NotificationButton from '../NotificationButton'; // Add notification button
+import LogoutButton from '../LogoutButton';
+import NotificationButton from '../NotificationButton';
 
-const PUBLIC_LOGO_PATH = "/organic.png"; // Make sure path is correct
+const PUBLIC_LOGO_PATH = "/organic.png";
 
 const iconMap = {
     Dashboard: LayoutDashboard,
@@ -15,7 +15,6 @@ const iconMap = {
     TransferRequests: ArrowRightLeft,
     Reports: FileText,
     AuditTools: Hammer,
-    // Settings removed as it's not used by navItems anymore
 };
 
 const navItems = [
@@ -40,7 +39,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         >
             <div className={`flex flex-col h-full overflow-hidden`}>
 
-                {/* 1. Header (Updated with NotificationButton) */}
+                {/* 1. Header */}
                 <div
                     className={`flex items-center h-16 border-b border-gray-100
                               ${isOpen ? 'justify-between p-4' : 'justify-center p-2'}`}
@@ -54,8 +53,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                         </div>
                     )}
                     <div className="flex items-center gap-2">
-                        {/* Notification Button */}
-                        <NotificationButton />
+                        {/* Đã xóa NotificationButton ở đây */}
 
                         {/* Toggle Button */}
                         <button
@@ -68,24 +66,33 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                     </div>
                 </div>
 
-                {/* 2. User Profile/Badge - UPDATED ICON */}
-                <div className={`p-4 border-b border-gray-100 flex items-center mb-4 ${!isOpen && 'justify-center'}`}>
-                    <div className={`p-2 rounded-full ${isOpen ? 'bg-blue-100' : 'bg-blue-100'}`}> {/* Changed color to blue */}
-                        {/* ✅ 2. USE SHIELD ICON HERE */}
-                        <Shield className={`h-6 w-6 ${isOpen ? 'text-blue-600' : 'text-blue-600'}`} />
-                    </div>
-                    {isOpen && (
-                        <div className="ml-3">
-                            <p className="font-semibold text-sm text-gray-800">CVA User</p>
-                            <div className="flex items-center mt-1 space-x-1">
-                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">cva</span>
-                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">Verified</span>
+                {/* 2. User Profile/Badge - Đã cập nhật NotificationButton vào đây */}
+                <div className={`p-4 border-b border-gray-100 flex items-center mb-4 ${!isOpen ? 'justify-center' : 'justify-between'}`}>
+                    {/* User Info Group */}
+                    <div className="flex items-center">
+                        <div className={`p-2 rounded-full bg-blue-100`}>
+                            <Shield className={`h-6 w-6 text-blue-600`} />
+                        </div>
+                        {isOpen && (
+                            <div className="ml-3">
+                                <p className="font-semibold text-sm text-gray-800">CVA User</p>
+                                <div className="flex items-center mt-1 space-x-1">
+                                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">cva</span>
+                                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">Verified</span>
+                                </div>
                             </div>
+                        )}
+                    </div>
+
+                    {/* Notification Button - Chỉ hiện khi sidebar mở để tránh vỡ layout khi đóng */}
+                    {isOpen && (
+                        <div className="ml-2">
+                            <NotificationButton />
                         </div>
                     )}
                 </div>
 
-                {/* 3. Navigation Items (Unchanged) */}
+                {/* 3. Navigation Items */}
                 <nav className="flex-1 px-4 space-y-1">
                     {navItems.map((item) => (
                         <NavLink
@@ -111,7 +118,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                     ))}
                 </nav>
 
-                {/* 4. Footer Items (Unchanged) */}
+                {/* 4. Footer Items */}
                 <div className="p-4 border-t border-gray-100 mt-auto">
                     <LogoutButton
                         className={`w-full flex items-center p-3 rounded-xl text-gray-600 hover:bg-red-50 hover:text-red-700 transition-colors duration-200 ${!isOpen && 'justify-center'}`}
