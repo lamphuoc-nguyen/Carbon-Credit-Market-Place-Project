@@ -97,8 +97,7 @@ Carbon-Credit-Market-Place-Project/
 
 ## Important Files
 - `README.md`: Quick start and project overview
-- `COMPLETE_DOCUMENTATION.md`: Comprehensive documentation (if exists)
-- `POSTMAN_TESTING_GUIDE.md`: API testing guide
+- `POSTMAN_TESTING_GUIDE.md`: Comprehensive API testing guide with endpoints, examples, and troubleshooting
 - `backend/pom.xml`: Backend dependencies
 - `frontend/Frontend-UI/package.json`: Frontend dependencies
 
@@ -129,7 +128,7 @@ Carbon-Credit-Market-Place-Project/
    - Manage wallet and view transactions
 
 ## Troubleshooting
-- For common issues, refer to COMPLETE_DOCUMENTATION.md
+- For common issues and API testing, refer to POSTMAN_TESTING_GUIDE.md
 - Check backend logs for API errors
 - Verify JWT token validity for authentication issues
 - Ensure proper CORS configuration for frontend-backend communication
