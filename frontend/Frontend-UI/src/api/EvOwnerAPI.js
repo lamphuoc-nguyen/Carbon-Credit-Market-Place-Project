@@ -54,14 +54,24 @@ const EvOwnerAPI = {
 
   // ==================== MARKETPLACE (LISTINGS) ====================
   marketplace: {
-    createListing: (creditId, price) => 
-      axiosInstance.post(`/credit-listings/create?creditId=${creditId}&price=${price}`),
+    createListing: (creditId, price, sellerLocation) => {
+      const params = new URLSearchParams();
+      params.append('creditId', creditId);
+      params.append('price', price);
+      if (sellerLocation) {
+        params.append('sellerLocation', sellerLocation);
+      }
+      return axiosInstance.post(`/credit-listings/create?${params.toString()}`);
+    },
 
     // Create combined listing from multiple credits
-    createCombinedListing: (creditIds, pricePerCredit) => {
+    createCombinedListing: (creditIds, pricePerCredit, sellerLocation) => {
       const params = new URLSearchParams();
       creditIds.forEach(id => params.append('creditIds', id));
       params.append('pricePerCredit', pricePerCredit);
+      if (sellerLocation) {
+        params.append('sellerLocation', sellerLocation);
+      }
 
       return axiosInstance.post(`/credit-listings/create-combined?${params.toString()}`);
     },

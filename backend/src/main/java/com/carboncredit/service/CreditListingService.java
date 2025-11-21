@@ -92,7 +92,7 @@ public class CreditListingService {
 
     // Create a combined listing from multiple credits
     @Transactional
-    public CreditListing createCombinedListing(List<UUID> creditIds, BigDecimal pricePerCredit, User owner) {
+    public CreditListing createCombinedListing(List<UUID> creditIds, BigDecimal pricePerCredit, User owner, String sellerLocation) {
         log.info("Creating combined listing for {} credits by user {} at {} per credit",
                  creditIds.size(), owner.getUsername(), pricePerCredit);
 
@@ -152,6 +152,7 @@ public class CreditListingService {
         listing.setListingType(CreditListing.ListingType.FIXED);
         listing.setPrice(totalPrice);
         listing.setStatus(CreditListing.ListingStatus.ACTIVE);
+        listing.setSellerLocation(sellerLocation);
 
         CreditListing savedListing = creditListingRepository.save(listing);
 
@@ -168,6 +169,11 @@ public class CreditListingService {
                  savedListing.getId(), totalCreditAmount, totalPrice);
 
         return savedListing;
+    }
+
+    // Overloaded method for backward compatibility
+    public CreditListing createCombinedListing(List<UUID> creditIds, BigDecimal pricePerCredit, User owner) {
+        return createCombinedListing(creditIds, pricePerCredit, owner, null);
     }
 
     // ==================== LISTING MANAGEMENT ====================

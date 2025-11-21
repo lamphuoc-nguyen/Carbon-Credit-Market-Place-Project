@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Store, Leaf, DollarSign, TrendingUp, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react';
+import { Store, Leaf, DollarSign, TrendingUp, AlertCircle, CheckCircle, ArrowRight, MapPin } from 'lucide-react';
 import EvOwnerAPI from '../../api/EvOwnerAPI';
 import Navbar from '../../Components/EVComponents/Navbar';
 
@@ -15,6 +15,7 @@ const CreateListingPage = () => {
   const [carbonCredits, setCarbonCredits] = useState([]);
   const [selectedCredits, setSelectedCredits] = useState([]); // Array of selected credit IDs
   const [pricePerCredit, setPricePerCredit] = useState('');
+  const [sellerLocation, setSellerLocation] = useState('');
   const [totalPrice, setTotalPrice] = useState(0);
   
 
@@ -228,7 +229,8 @@ const CreateListingPage = () => {
       // Use the new combined listing API
       const response = await EvOwnerAPI.marketplace.createCombinedListing(
         selectedCredits,
-        priceValue
+        priceValue,
+        sellerLocation || undefined  // Pass location if provided
       );
 
       console.log('✅ Combined listing created successfully:', response.data);
@@ -238,6 +240,7 @@ const CreateListingPage = () => {
       // Reset form
       setSelectedCredits([]);
       setPricePerCredit('');
+      setSellerLocation('');
       setTotalPrice(0);
 
       // Refresh data
@@ -445,6 +448,27 @@ const CreateListingPage = () => {
             </div>
             <p className="text-xs text-gray-500 mt-1">
               Suggested price: $8.00 - $15.00 per credit
+            </p>
+          </div>
+
+          {/* Seller Location */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Seller Location (Optional)
+            </label>
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type="text"
+                maxLength={100}
+                value={sellerLocation}
+                onChange={(e) => setSellerLocation(e.target.value)}
+                placeholder="e.g., Ho Chi Minh City, Vietnam"
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Add your location to help buyers find local carbon credits
             </p>
           </div>
 

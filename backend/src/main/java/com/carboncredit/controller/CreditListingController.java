@@ -64,6 +64,7 @@ public class CreditListingController {
     public ResponseEntity<CreditListingDTO> createCombinedListing(
             @RequestParam List<UUID> creditIds,
             @RequestParam BigDecimal pricePerCredit,
+            @RequestParam(required = false) String sellerLocation,
             Authentication authentication) {
         try {
             User user = userService.findByUsername(authentication.getName())
@@ -72,7 +73,7 @@ public class CreditListingController {
             log.info("Creating combined listing for {} credits by user {} at price {} per credit",
                      creditIds.size(), user.getUsername(), pricePerCredit);
 
-            CreditListing combinedListing = creditListingService.createCombinedListing(creditIds, pricePerCredit, user);
+            CreditListing combinedListing = creditListingService.createCombinedListing(creditIds, pricePerCredit, user, sellerLocation);
             CreditListingDTO dto = new CreditListingDTO(combinedListing);
 
             log.info("Combined listing created successfully: {} for {} credits",
