@@ -216,6 +216,18 @@ public class Co2TransferService {
         dto.setCvaNotes(request.getCvaNotes());
         dto.setRejectionReason(request.getRejectionReason());
         dto.setJourneyIds(request.getJourneyIds());
+        
+        // Load journey details if journeyIds exist
+        if (request.getJourneyIds() != null && !request.getJourneyIds().isEmpty()) {
+            List<com.carboncredit.dto.JourneyDataDTO> journeyDetails = new ArrayList<>();
+            for (UUID journeyId : request.getJourneyIds()) {
+                journeyDataRepository.findById(journeyId).ifPresent(journey -> 
+                    journeyDetails.add(new com.carboncredit.dto.JourneyDataDTO(journey))
+                );
+            }
+            dto.setJourneyDetails(journeyDetails);
+        }
+        
         return dto;
     }
 

@@ -15,9 +15,12 @@ import org.springframework.web.bind.annotation.RestController;
 import com.carboncredit.dto.ApiResponse;
 import com.carboncredit.dto.Co2TransferRequestDTO;
 import com.carboncredit.dto.JourneyDataDTO;
+import com.carboncredit.dto.CarbonCreditDTO;
+import com.carboncredit.entity.CarbonCredit;
 import com.carboncredit.entity.JourneyData;
 import com.carboncredit.entity.User;
 import com.carboncredit.exception.ResourceNotFoundException;
+import com.carboncredit.repository.CarbonCreditRepository;
 import com.carboncredit.service.CVAService;
 import com.carboncredit.service.UserService;
 
@@ -51,6 +54,7 @@ public class CVAController {
 
     private final CVAService cvaService;
     private final UserService userService;
+    private final CarbonCreditRepository carbonCreditRepository;
 
     /**
      * Get all pending journey for CVA reviews
@@ -302,6 +306,30 @@ public class CVAController {
             log.error("Error fetching verified journeys: {}", e.getMessage());
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Failed to fetch verified journeys: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get all verified carbon credits
+     */
+    @GetMapping("/verified-credits")
+    @PreAuthorize("hasRole('CVA')")
+    public ResponseEntity<ApiResponse<List<CarbonCreditDTO>>> getVerifiedCredits() {
+        try {
+            List<CarbonCredit> verifiedCredits = carbonCreditRepository.findByStatus(CarbonCredit.CreditStatus.VERIFIED);
+            List<CarbonCreditDTO> dtos = verifiedCredits.stream()
+                    .map(credit -> new CarbonCreditDTO(credit, true))
+                    .collect(Collectors.toList());
+
+            log.info("Retrieved {} verified credits for CVA review", dtos.size());
+
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Verified credits retrieved successfully",
+                    dtos));
+        } catch (Exception e) {
+            log.error("Error fetching verified credits: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to fetch verified credits: " + e.getMessage()));
         }
     }
 }

@@ -46,6 +46,9 @@ public class CreditListing {
     @Column(nullable = false, length = 20)
     private ListingStatus status;
 
+    @Column(name = "seller_location", length = 100)
+    private String sellerLocation;
+
     @CreatedDate
     @Column(name = "created_at")
     private LocalDateTime createdAt;
