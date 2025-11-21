@@ -1,52 +1,49 @@
-import React, { useState, useEffect } from 'react'; // Added useState, useEffect
-import { Link } from 'react-router-dom'; // Import Link for navigation
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
     Clock, CheckCircle, TrendingUp, XCircle, Shield, ArrowRightLeft,
-    BarChart as ChartIcon // Renamed BarChart to avoid conflict
+    BarChart as ChartIcon
 } from 'lucide-react';
 import {
     ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend
 } from 'recharts';
 
 // Import API services
-import { carbonCreditApi } from '../../api/carbonCreditApi'; // Adjust path if needed
 import { cvaApi } from '../../api/cvaApi';
+// import { carbonCreditApi } from '../../api/carbonCreditApi'; // Có thể không cần nếu CVA chỉ duyệt Transfer
 
 // --- HELPER COMPONENTS ---
 
-// RenderIcon component (using ChartIcon for default)
 const RenderIcon = ({ name, className }) => {
     switch (name) {
         case 'Clock': return <Clock className={className} />;
         case 'CheckCircle': return <CheckCircle className={className} />;
         case 'TrendingUp': return <TrendingUp className={className} />;
         case 'ArrowRightLeft': return <ArrowRightLeft className={className} />;
-        // Add ArrowUpRight and ArrowDownRight if needed by stats
-        // case 'ArrowUpRight': return <ArrowUpRight className={className} />;
-        // case 'ArrowDownRight': return <ArrowDownRight className={className} />;
-        default: return <ChartIcon className={className} />; // Use ChartIcon
+        default: return <ChartIcon className={className} />;
     }
 };
 
-// PriorityBadge (Simplified based on status - adjust colors/text as needed)
 const StatusBadge = ({ status }) => {
-    let color = 'bg-gray-100 text-gray-700 border border-gray-200'; // Default: PENDING
+    let color = 'bg-gray-100 text-gray-700 border border-gray-200';
     let text = status || 'PENDING';
 
     switch (status) {
-        case 'PENDING_VERIFICATION':
+        case 'PENDING':
             color = 'bg-orange-100 text-orange-700 border border-orange-200';
             text = 'Pending';
             break;
+        case 'APPROVED':
         case 'VERIFIED':
             color = 'bg-green-100 text-green-700 border border-green-200';
-            text = 'Verified';
+            text = 'Approved';
             break;
         case 'REJECTED':
             color = 'bg-red-100 text-red-700 border border-red-200';
             text = 'Rejected';
             break;
-        // Add other statuses if applicable
+        default:
+            break;
     }
     return (
         <span className={`text-xs font-medium px-2.5 py-0.5 rounded-md capitalize ${color}`}>
@@ -55,15 +52,7 @@ const StatusBadge = ({ status }) => {
     );
 };
 
-
-// --- MOCK DATA (for Stats & Chart only) ---
-const initialStats = [
-    { name: 'Pending Reviews', value: '...', trend: 'Loading...', icon: 'Clock', iconColor: 'text-orange-500' }, // Value will be updated
-    { name: 'Transfer Requests', value: '...', trend: 'Loading...', icon: 'ArrowRightLeft', iconColor: 'text-blue-500' }, // New transfer requests stat
-    { name: 'Verified Credits', value: '299', trend: 'This month: 55', icon: 'CheckCircle', iconColor: 'text-green-500' },
-    { name: 'Accuracy Rate', value: '94.6%', trend: 'Industry leading', icon: 'TrendingUp', iconColor: 'text-purple-500', barWidth: 'w-[94.6%]' },
-];
-
+// --- MOCK DATA (Cho biểu đồ - Cần thay thế bằng API thật nếu backend hỗ trợ trả về lịch sử theo tháng) ---
 const chartData = [
     { name: 'Jul', verified: 45, pending: 12, rejected: 3 },
     { name: 'Aug', verified: 52, pending: 8, rejected: 8 },
@@ -73,11 +62,18 @@ const chartData = [
     { name: 'Dec', verified: 55, pending: 18, rejected: 2 },
 ];
 
+const initialStats = [
+    { name: 'Pending Requests', value: '...', trend: 'Waiting review', icon: 'Clock', iconColor: 'text-orange-500' },
+    { name: 'Total Approved', value: '...', trend: 'CO2 Transfers', icon: 'CheckCircle', iconColor: 'text-green-500' },
+    { name: 'Total Rejected', value: '...', trend: 'Invalid requests', icon: 'XCircle', iconColor: 'text-red-500' },
+    { name: 'Accuracy Rate', value: '98.2%', trend: 'System health', icon: 'TrendingUp', iconColor: 'text-purple-500', barWidth: 'w-[98.2%]' },
+];
+
 // --- MAIN COMPONENT ---
 const Dashboard = () => {
 
     const [pendingRequests, setPendingRequests] = useState([]);
-    const [statsData, setStatsData] = useState(initialStats); // Use initialStats
+    const [statsData, setStatsData] = useState(initialStats);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -87,30 +83,38 @@ const Dashboard = () => {
                 setIsLoading(true);
                 setError(null);
 
-                // Fetch both journey verifications and transfer requests in parallel
-                const [pendingCredits, transferStats] = await Promise.all([
-                    carbonCreditApi.getPendingCredits(),
-                    cvaApi.getTransferRequestStatistics().catch(() => ({ pendingTransfers: 0 })) // Graceful fallback
+                // 1. Gọi API: Lấy danh sách chờ duyệt & Thống kê
+                // Sử dụng cvaApi.getPendingTransferRequests thay vì carbonCreditApi
+                const [pendingTransfers, transferStats] = await Promise.all([
+                    cvaApi.getPendingTransferRequests(),
+                    cvaApi.getTransferStatistics() // Đã sửa tên hàm cho đúng với cvaApi.js mới
                 ]);
 
-                console.log("Pending Credits Data:", JSON.stringify(pendingCredits, null, 2));
-                console.log("Transfer Stats:", transferStats);
+                // console.log("Pending Transfers:", pendingTransfers);
+                // console.log("Transfer Stats:", transferStats);
 
-                setPendingRequests(pendingCredits);
+                setPendingRequests(pendingTransfers);
 
-                // Update stats with real data
+                // 2. Cập nhật Stats Cards dựa trên dữ liệu thật từ API
+                // Backend trả về: pendingTransfers, approvedTransfers, rejectedTransfers
                 setStatsData(prevStats => prevStats.map(stat => {
-                    if (stat.name === 'Pending Reviews') {
+                    if (stat.name === 'Pending Requests') {
                         return {
                             ...stat,
-                            value: pendingCredits.length.toString(),
-                            trend: `Updated ${new Date().toLocaleTimeString()}`
+                            value: (transferStats.pendingTransfers || pendingTransfers.length).toString(),
+                            trend: 'Needs attention'
                         };
-                    } else if (stat.name === 'Transfer Requests') {
+                    } else if (stat.name === 'Total Approved') {
                         return {
                             ...stat,
-                            value: (transferStats.pendingTransfers || 0).toString(),
-                            trend: 'CO2 → Credit conversions'
+                            value: (transferStats.approvedTransfers || 0).toString(),
+                            trend: 'Successfully credited'
+                        };
+                    } else if (stat.name === 'Total Rejected') {
+                        return {
+                            ...stat,
+                            value: (transferStats.rejectedTransfers || 0).toString(),
+                            trend: 'Returned to wallet'
                         };
                     }
                     return stat;
@@ -119,31 +123,24 @@ const Dashboard = () => {
             } catch (err) {
                 console.error("Failed to load dashboard data:", err);
                 if (err.response?.status !== 401) {
-                    setError('Cannot load pending list.');
-                    // Update stat card to show error
-                    setStatsData(prevStats => prevStats.map(stat =>
-                        stat.name === 'Pending Reviews'
-                            ? { ...stat, value: 'Error', trend: 'Failed to load' }
-                            : stat
-                    ));
+                    setError('Cannot load dashboard data.');
+                    setStatsData(prevStats => prevStats.map(stat => ({ ...stat, value: '-', trend: 'Error' })));
                 }
-                // Error 401 will be handled by axios interceptor (redirect to login)
             } finally {
                 setIsLoading(false);
             }
         };
         fetchDashboardData();
-    }, []); // Empty dependency array means run once on mount
-
+    }, []);
 
     return (
         <div className="space-y-6">
             <header className="mb-6">
-                <h1 className="text-3xl font-bold text-gray-800">Verification Dashboard</h1>
-                <p className="text-gray-500">Verify and audit carbon credit issuance</p>
+                <h1 className="text-3xl font-bold text-gray-800">CVA Dashboard</h1>
+                <p className="text-gray-500">Manage CO2 to Credit transfer requests</p>
             </header>
 
-            {/* 1. Stats Cards (Now uses state 'statsData') */}
+            {/* 1. Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 {statsData.map((stat, index) => (
                     <div key={index} className="bg-white p-5 rounded-xl shadow-lg border border-gray-100 flex flex-col justify-between min-h-[150px]">
@@ -166,10 +163,7 @@ const Dashboard = () => {
                                 </div>
                             </div>
                         ) : (
-                            <p className={`text-xs mt-3 ${stat.value === 'Error' ? 'text-red-500' :
-                                    stat.trend.includes('+') ? 'text-green-500' :
-                                        stat.trend.includes('-') ? 'text-red-500' : 'text-gray-500'
-                                }`}>
+                            <p className="text-xs mt-3 text-gray-500">
                                 {stat.trend}
                             </p>
                         )}
@@ -177,54 +171,49 @@ const Dashboard = () => {
                 ))}
             </div>
 
-            {/* 2. Pending Verifications & Analytics */}
+            {/* 2. Pending Requests & Analytics */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                {/* --- Pending Requests Block --- */}
+                {/* --- Pending Transfer Requests List --- */}
                 <div className="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg flex flex-col space-y-6">
-                    {/* Card Header */}
                     <div>
                         <div className="flex items-center space-x-2">
                             <Shield className="h-6 w-6 text-gray-500" />
-                            <h2 className="text-xl font-semibold text-gray-800">Pending Verifications</h2>
+                            <h2 className="text-xl font-semibold text-gray-800">Pending Requests</h2>
                         </div>
-                        <p className="text-sm text-gray-500 mt-2">Credit issuance requests awaiting review</p>
+                        <p className="text-sm text-gray-500 mt-2">Requests to convert CO2 to Credits</p>
                     </div>
 
-                    {/* Loading State */}
                     {isLoading && <div className="text-center text-gray-500 py-4">Loading...</div>}
-
-                    {/* Error State */}
                     {error && <div className="text-center text-red-500 py-4">{error}</div>}
 
-                    {/* Display List (slice(0, 3)) */}
                     {!isLoading && !error && pendingRequests.slice(0, 3).map(req => (
-                        // IMPORTANT: Adjust fields below (req.xxx) to match your CarbonCreditDTO
                         <div key={req.id} className="border-b border-gray-100 pb-6 last:border-b-0">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    {/* Example: Display User info (adjust based on your DTO) */}
-                                    <p className="font-semibold text-gray-900">{req.journey?.user?.fullName || req.userName || req.id}</p>
-                                    <p className="text-sm text-gray-500">{req.journey?.vehicle?.model || req.vehicleModel || 'Unknown Category'}</p>
+                                    {/* Cập nhật field hiển thị theo Co2TransferRequestDTO */}
+                                    <p className="font-semibold text-gray-900">{req.requesterName || 'Unknown User'}</p>
+                                    <p className="text-sm text-gray-500">
+                                        Request ID: <span title={req.id} className="cursor-help">{req.id?.substring(0, 8)}...</span>
+                                    </p>
                                 </div>
                                 <div className="text-right">
-                                    {/* Example: Display Credit amount & CO2 (adjust based on your DTO) */}
-                                    <p className="text-lg font-bold text-gray-900">{req.amount || 0} credits</p>
-                                    <p className="text-sm text-gray-500">{req.journey?.co2ReducedKg ? `${req.journey.co2ReducedKg.toFixed(2)} kg CO2` : 'N/A'}</p>
+                                    {/* Hiển thị lượng CO2 thay vì Amount Credit */}
+                                    <p className="text-lg font-bold text-gray-900">
+                                        {req.co2Amount ? req.co2Amount.toLocaleString() : 0} kg
+                                    </p>
+                                    <p className="text-sm text-gray-500">CO2 Reduced</p>
                                 </div>
                             </div>
                             <div className="flex items-center space-x-3 mt-3">
-                                {/* Use StatusBadge based on req.status */}
                                 <StatusBadge status={req.status} />
-                                {/* Documents count might not be in DTO, remove if needed */}
-                                {/* <span className="text-xs text-gray-500">{req.documents} documents</span> */}
+                                <span className="text-xs text-gray-400">
+                                    {req.requestDate ? new Date(req.requestDate).toLocaleDateString('vi-VN') : 'Just now'}
+                                </span>
                             </div>
-                            <p className="text-xs text-gray-400 mt-1.5">
-                                Submitted: {req.createdAt ? new Date(req.createdAt).toLocaleDateString('vi-VN') : 'N/A'}
-                            </p>
 
-                            {/* Approve/Reject Buttons (Disabled on dashboard) */}
-                            <div className="flex items-center space-x-3 mt-4 opacity-50 pointer-events-none" title="Review details on the Pending Verifications page">
+                            {/* Buttons giả lập (bị disabled ở dashboard) */}
+                            <div className="flex items-center space-x-3 mt-4 opacity-50 pointer-events-none">
                                 <button className="flex items-center justify-center w-1/2 bg-gray-100 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium">
                                     <XCircle className="h-4 w-4 mr-1.5" /> Reject
                                 </button>
@@ -235,27 +224,25 @@ const Dashboard = () => {
                         </div>
                     ))}
 
-                    {/* "See more" Link */}
                     {!isLoading && !error && pendingRequests.length > 3 && (
                         <Link
-                            to="/cva/pending" // Link to the Pending Verifications page route
+                            to="/cva/pending-transfer-requests" // Sửa lại route nếu cần
                             className="w-full text-center py-2 px-4 rounded-lg bg-gray-50 hover:bg-gray-100 text-purple-600 font-semibold transition focus:outline-none focus:ring-2 focus:ring-purple-300"
                         >
-                            See all pending requests ({pendingRequests.length})
+                            See all requests ({pendingRequests.length})
                         </Link>
                     )}
 
-                    {/* Empty State */}
                     {!isLoading && !error && pendingRequests.length === 0 && (
                         <div className="text-center text-gray-500 py-4">No pending requests found.</div>
                     )}
                 </div>
 
-                {/* --- Analytics Chart Block (Uses Mock Data) --- */}
+                {/* --- Analytics Chart (Giữ nguyên Mock data hoặc tích hợp API nếu có) --- */}
                 <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
                     <h2 className="text-xl font-semibold text-gray-800">Verification Analytics</h2>
-                    <p className="text-sm text-gray-500 mb-4">Monthly verification activity</p>
-                    <div className="h-96"> {/* Ensure chart has height */}
+                    <p className="text-sm text-gray-500 mb-4">Monthly request processing</p>
+                    <div className="h-96">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart
                                 data={chartData}
@@ -265,7 +252,7 @@ const Dashboard = () => {
                                 <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
                                 <Tooltip contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', borderColor: '#e5e7eb' }} />
                                 <Legend wrapperStyle={{ fontSize: '14px', paddingTop: '10px' }} />
-                                <Bar dataKey="verified" fill="#22c55e" name="Verified" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="verified" fill="#22c55e" name="Approved" radius={[4, 4, 0, 0]} />
                                 <Bar dataKey="pending" fill="#f97316" name="Pending" radius={[4, 4, 0, 0]} />
                                 <Bar dataKey="rejected" fill="#ef4444" name="Rejected" radius={[4, 4, 0, 0]} />
                             </BarChart>

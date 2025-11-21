@@ -40,6 +40,9 @@ const WalletPage = () => {
   const [depositMethod, setDepositMethod] = useState('bank_transfer');
   const [depositing, setDepositing] = useState(false);
 
+  // Retirement Modal State
+  const [showRetirementModal, setShowRetirementModal] = useState(false);
+
   useEffect(() => {
     fetchWalletData();
   }, []);
@@ -61,6 +64,8 @@ const WalletPage = () => {
       // Fetch wallet info
       const walletData = await walletApi.getMyWallet();
       console.log('✅ Wallet data:', walletData);
+      console.log('🔑 Wallet userId:', walletData?.userId);
+      console.log('🔑 Wallet user.id:', walletData?.user?.id);
       setWallet(walletData);
 
       // Fetch wallet transactions
@@ -92,6 +97,12 @@ const WalletPage = () => {
     setRefreshing(true);
     await fetchWalletData();
     setRefreshing(false);
+  };
+
+  const handleRetirementSuccess = async (response) => {
+    console.log('✅ Retirement completed:', response);
+    // Refresh wallet data to update balances
+    await fetchWalletData();
   };
 
   const handleDeposit = async () => {
@@ -527,6 +538,14 @@ const WalletPage = () => {
             </div>
           </div>
         )}
+
+        {/* Retirement Modal */}
+        <RetirementModal
+          isOpen={showRetirementModal}
+          onClose={() => setShowRetirementModal(false)}
+          wallet={wallet}
+          onSuccess={handleRetirementSuccess}
+        />
       </div>
       <Footer />
     </div>

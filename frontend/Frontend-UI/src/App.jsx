@@ -26,7 +26,6 @@ import EvOwner from './pages/EvPage';
 import JourneyList from './pages/EvPage/JourneyList';
 import CreateListingPage from './pages/EvPage/Listing';
 import Dashboard from './Components/CvaComponents/Dashboard';
-import ReviewJourneyDetail from './Components/CvaComponents/ReviewJourneyDetail';
 import VerifiedCredits from './Components/CvaComponents/VerifiedCredits';
 import Report from './Components/CvaComponents/Report';
 import ReportEV from './pages/EvPage/ReportEV';
@@ -184,10 +183,9 @@ function App() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="transfer-requests" element={<TransferRequestManagement />} />
-          <Route path="review/:journeyId" element={<ReviewJourneyDetail />} />
           <Route path="verified-credits" element={<VerifiedCredits />} />
           <Route path="reports" element={<Report />} />
-          <Route path="detail/:journeyId" element={<DetailPage />} />
+          <Route path="transfer-request/:id" element={<TransferRequestDetailPage />} />
         </Route>
 
         {/* --- Admin Routes --- */}

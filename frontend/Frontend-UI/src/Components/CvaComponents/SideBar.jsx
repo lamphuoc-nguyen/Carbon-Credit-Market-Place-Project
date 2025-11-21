@@ -2,12 +2,12 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
     LayoutDashboard, CheckCircle, FileText, Hammer, X, Leaf, Menu,
-    Shield, ArrowRightLeft // ✅ Add ArrowRightLeft for transfer requests
+    Shield, ArrowRightLeft
 } from 'lucide-react';
-import LogoutButton from '../LogoutButton'; // Adjust path if needed
-import NotificationButton from '../NotificationButton'; // Add notification button
+import LogoutButton from '../LogoutButton';
+import NotificationButton from '../NotificationButton';
 
-const PUBLIC_LOGO_PATH = "/organic.png"; // Make sure path is correct
+const PUBLIC_LOGO_PATH = "/organic.png";
 
 const iconMap = {
     Dashboard: LayoutDashboard,
@@ -15,7 +15,6 @@ const iconMap = {
     TransferRequests: ArrowRightLeft,
     Reports: FileText,
     AuditTools: Hammer,
-    // Settings removed as it's not used by navItems anymore
 };
 
 const navItems = [
@@ -86,7 +85,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                     <NotificationButton dropdownPosition="left" />
                 </div>
 
-                {/* 3. Navigation Items (Unchanged) */}
+                {/* 3. Navigation Items */}
                 <nav className="flex-1 px-4 space-y-1">
                     {navItems.map((item) => (
                         <NavLink
@@ -112,7 +111,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                     ))}
                 </nav>
 
-                {/* 4. Footer Items (Unchanged) */}
+                {/* 4. Footer Items */}
                 <div className="p-4 border-t border-gray-100 mt-auto">
                     <LogoutButton
                         className={`w-full flex items-center p-3 rounded-xl text-gray-600 hover:bg-red-50 hover:text-red-700 transition-colors duration-200 ${!isOpen && 'justify-center'}`}
