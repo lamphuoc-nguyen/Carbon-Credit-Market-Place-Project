@@ -667,19 +667,53 @@ export const buyerApi = {
     /**
      * 🌿 Khởi tạo retirement (loại bỏ carbon credits vĩnh viễn)
      * POST /api/retirement/initiate
+     * 
+     * Flow đầy đủ theo backend:
+     * 1. Validate user là BUYER
+     * 2. Kiểm tra wallet credit balance
+     * 3. Trừ ngay credits từ wallet
+     * 4. Chọn và đánh dấu CarbonCredit entities là RETIRED (FIFO)
+     * 5. Tạo RetirementTransaction (status: COMPLETED)
+     * 6. Tạo Certificate (status: PENDING_GENERATION)
+     * 7. Gửi notification
+     * 8. Trigger async PDF generation
+     * 
      * @param {Object} retirementData - Dữ liệu retirement
      * @param {string} retirementData.userId - UUID của buyer
-     * @param {number} retirementData.amountToRetireKg - Số lượng credits muốn retire (kg)
+     * @param {number} retirementData.amountToRetireKg - Số lượng credits muốn retire (phải là số nguyên)
      * @param {string} retirementData.projectInfo - Thông tin dự án (optional)
      * @param {string} retirementData.retirementPurpose - Mục đích retire (optional)
-     * @returns {Promise<RetirementTransaction>} Retirement transaction với certificate đang được tạo
+     * @returns {Promise<Object>} Response: { retirement, message }
      */
     initiateRetirement: async (retirementData) => {
         try {
+            console.log('🌿 ========== INITIATING RETIREMENT ==========');
+            console.log('Retirement data:', retirementData);
+            
             const response = await axiosInstance.post('/api/retirement/initiate', retirementData);
+            
+            console.log('✅ Retirement initiated successfully:', response.data);
+            console.log('Certificate generation in progress...');
+            
             return response.data;
         } catch (error) {
-            console.error('❌ Lỗi khi khởi tạo retirement:', error);
+            console.error('❌ ========== RETIREMENT FAILED ==========');
+            console.error('Error:', error);
+            console.error('Error details:', error.response?.data);
+            
+            // Provide helpful error messages
+            if (error.response?.data?.error?.includes('Insufficient credits')) {
+                throw new Error('Insufficient credits in wallet. Please purchase more credits before retiring.');
+            } else if (error.response?.data?.error?.includes('Only buyers can retire')) {
+                throw new Error('Only BUYER role can retire carbon credits.');
+            } else if (error.response?.data?.error?.includes('whole number')) {
+                throw new Error('Credit count must be a whole number (no decimals).');
+            } else if (error.response?.status === 400) {
+                throw new Error(error.response.data?.error || 'Invalid retirement request.');
+            } else if (error.response?.status === 404) {
+                throw new Error('User not found.');
+            }
+            
             throw error;
         }
     },
@@ -692,10 +726,17 @@ export const buyerApi = {
      */
     getRetirementDetails: async (retirementId) => {
         try {
+            console.log('📄 Fetching retirement details:', retirementId);
             const response = await axiosInstance.get(`/api/retirement/${retirementId}`);
+            console.log('✅ Retirement details:', response.data);
             return response.data;
         } catch (error) {
             console.error(`❌ Lỗi khi lấy chi tiết retirement ${retirementId}:`, error);
+            
+            if (error.response?.status === 404) {
+                throw new Error('Retirement transaction not found.');
+            }
+            
             throw error;
         }
     },
@@ -710,9 +751,11 @@ export const buyerApi = {
      */
     getUserRetirementHistory: async (userId, page = 0, size = 10) => {
         try {
+            console.log('📋 Fetching retirement history for user:', userId);
             const response = await axiosInstance.get(`/api/retirement/user/${userId}`, {
                 params: { page, size }
             });
+            console.log(`✅ Found ${response.data.totalElements} retirement transactions`);
             return response.data;
         } catch (error) {
             console.error(`❌ Lỗi khi lấy lịch sử retirement của user ${userId}:`, error);
@@ -728,10 +771,17 @@ export const buyerApi = {
      */
     getRetirementCertificate: async (retirementId) => {
         try {
+            console.log('🎓 Fetching certificate for retirement:', retirementId);
             const response = await axiosInstance.get(`/api/retirement/${retirementId}/certificate`);
+            console.log('✅ Certificate status:', response.data.status);
             return response.data;
         } catch (error) {
             console.error(`❌ Lỗi khi lấy certificate cho retirement ${retirementId}:`, error);
+            
+            if (error.response?.status === 404) {
+                throw new Error('Certificate not found. It may still be generating.');
+            }
+            
             throw error;
         }
     },
@@ -746,12 +796,63 @@ export const buyerApi = {
      */
     getUserCertificates: async (userId, page = 0, size = 10) => {
         try {
+            console.log('📚 Fetching certificates for user:', userId);
             const response = await axiosInstance.get(`/api/retirement/certificates/user/${userId}`, {
                 params: { page, size }
             });
+            console.log(`✅ Found ${response.data.totalElements} certificates`);
             return response.data;
         } catch (error) {
             console.error(`❌ Lỗi khi lấy certificates của user ${userId}:`, error);
+            throw error;
+        }
+    },
+
+    /**
+     * 📥 Lấy download URL cho certificate PDF
+     * GET /api/retirement/{retirementId}/certificate/download
+     * 
+     * Backend sẽ tạo signed URL từ Google Cloud Storage
+     * URL có hiệu lực trong 1 giờ
+     * 
+     * @param {string} retirementId - UUID của retirement transaction
+     * @returns {Promise<Object>} { url, fileName, message }
+     */
+    getCertificateDownloadUrl: async (retirementId) => {
+        try {
+            console.log('📥 Generating download URL for retirement:', retirementId);
+            const response = await axiosInstance.get(`/api/retirement/${retirementId}/certificate/download`);
+            console.log('✅ Download URL generated. Valid for 1 hour.');
+            return response.data;
+        } catch (error) {
+            console.error(`❌ Lỗi khi lấy download URL cho retirement ${retirementId}:`, error);
+            
+            if (error.response?.status === 404) {
+                throw new Error('Certificate not found.');
+            } else if (error.response?.status === 400) {
+                const errorMsg = error.response.data?.error || 'Certificate is not ready for download';
+                throw new Error(errorMsg);
+            }
+            
+            throw error;
+        }
+    },
+
+    /**
+     * 📊 Lấy thống kê retirement của user
+     * GET /api/retirement/statistics/{userId}
+     * 
+     * @param {string} userId - UUID của user
+     * @returns {Promise<Object>} { totalRetired, completedCount, totalCount }
+     */
+    getRetirementStatistics: async (userId) => {
+        try {
+            console.log('📊 Fetching retirement statistics for user:', userId);
+            const response = await axiosInstance.get(`/api/retirement/statistics/${userId}`);
+            console.log('✅ Retirement stats:', response.data);
+            return response.data;
+        } catch (error) {
+            console.error(`❌ Lỗi khi lấy thống kê retirement của user ${userId}:`, error);
             throw error;
         }
     },
