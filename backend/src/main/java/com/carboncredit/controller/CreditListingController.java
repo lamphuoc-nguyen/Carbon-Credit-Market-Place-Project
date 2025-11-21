@@ -39,13 +39,16 @@ public class CreditListingController {
 
     // create fixed-price listing
     @PostMapping("/create")
-    public ResponseEntity<CreditListingDTO> createListing(@RequestParam UUID creditId, @RequestParam BigDecimal price,
+    public ResponseEntity<CreditListingDTO> createListing(
+            @RequestParam UUID creditId, 
+            @RequestParam BigDecimal price,
+            @RequestParam(required = false) String sellerLocation,
             Authentication authentication) {
         try {
             User owner = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            CreditListing listing = creditListingService.createFixedPriceListing(creditId, owner, price);
+            CreditListing listing = creditListingService.createFixedPriceListing(creditId, owner, price, sellerLocation);
 
             log.info("Listing created successfully by user: {}", owner.getUsername());
             return ResponseEntity.status(HttpStatus.CREATED).body(new CreditListingDTO(listing)); // FIX: Convert to DTO

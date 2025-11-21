@@ -8,6 +8,7 @@ import com.carboncredit.entity.CreditListing.ListingType;
 
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -30,4 +31,7 @@ public class CreditListingRequest {
     private BigDecimal minBid;
 
     private LocalDateTime auctionEndTime;
+
+    @Size(max = 100, message = "Seller location must not exceed 100 characters")
+    private String sellerLocation;
 }

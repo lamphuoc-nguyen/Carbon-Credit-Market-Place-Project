@@ -19,6 +19,7 @@ public class UserDTO {
     private User.UserRole role;
     private String fullName;
     private String phone;
+    private User.Province province;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -30,6 +31,7 @@ public class UserDTO {
         this.role = user.getRole();
         this.fullName = user.getFullName();
         this.phone = user.getPhone();
+        this.province = user.getProvince();
         this.createdAt = user.getCreatedAt();
         this.updatedAt = user.getUpdatedAt();
     }

@@ -53,6 +53,10 @@ public class User {
     @Column(name = "full_name", nullable = false, length = 100)
     private String fullName;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "province", length = 50)
+    private Province province;
+
     // Relationships
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Vehicle> vehicles;
@@ -65,5 +69,18 @@ public class User {
 
     public enum UserRole {
         EV_OWNER, BUYER, CVA, ADMIN
+    }
+
+    public enum Province {
+        AN_GIANG, BA_RIA_VUNG_TAU, BAC_LIEU, BAC_KAN, BAC_GIANG, BAC_NINH,
+        BEN_TRE, BINH_DUONG, BINH_DINH, BINH_PHUOC, BINH_THUAN, CA_MAU,
+        CAO_BANG, CAN_THO, DA_NANG, DAK_LAK, DAK_NONG, DIEN_BIEN, DONG_NAI,
+        DONG_THAP, GIA_LAI, HA_GIANG, HA_NAM, HA_NOI, HA_TINH, HAI_DUONG,
+        HAI_PHONG, HAU_GIANG, HOA_BINH, HO_CHI_MINH, HUNG_YEN, KHANH_HOA,
+        KIEN_GIANG, KON_TUM, LAI_CHAU, LAO_CAI, LANG_SON, LAM_DONG, LONG_AN,
+        NAM_DINH, NGHE_AN, NINH_BINH, NINH_THUAN, PHU_THO, PHU_YEN, QUANG_BINH,
+        QUANG_NAM, QUANG_NGAI, QUANG_NINH, QUANG_TRI, SOC_TRANG, SON_LA,
+        TAY_NINH, THAI_BINH, THAI_NGUYEN, THANH_HOA, THUA_THIEN_HUE, TIEN_GIANG,
+        TRA_VINH, TUYEN_QUANG, VINH_LONG, VINH_PHUC, YEN_BAI
     }
 }

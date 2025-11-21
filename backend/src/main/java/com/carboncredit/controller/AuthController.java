@@ -66,6 +66,21 @@ public class AuthController {
             user.setFullName(request.getFullName());
             user.setPhone(request.getPhone());
             user.setRole(User.UserRole.valueOf(request.getRole()));
+            
+            // Set province if provided
+            if (request.getProvince() != null && !request.getProvince().isEmpty()) {
+                try {
+                    user.setProvince(User.Province.valueOf(request.getProvince()));
+                } catch (IllegalArgumentException e) {
+                    log.error("Invalid province value: {}", request.getProvince());
+                    return ResponseEntity.badRequest()
+                            .body(ApiResponse.<UserDTO>builder()
+                                    .success(false)
+                                    .message("Invalid province. Please provide a valid Vietnam province code.")
+                                    .build());
+                }
+            }
+            
             user.setCreatedAt(LocalDateTime.now());
             user.setUpdatedAt(LocalDateTime.now());
 

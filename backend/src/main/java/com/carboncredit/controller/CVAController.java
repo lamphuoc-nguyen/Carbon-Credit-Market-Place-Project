@@ -15,10 +15,12 @@ import org.springframework.web.bind.annotation.RestController;
 import com.carboncredit.dto.ApiResponse;
 import com.carboncredit.dto.Co2TransferRequestDTO;
 import com.carboncredit.dto.JourneyDataDTO;
-import com.carboncredit.dto.TransferRequestDetailDTO;
+import com.carboncredit.dto.CarbonCreditDTO;
+import com.carboncredit.entity.CarbonCredit;
 import com.carboncredit.entity.JourneyData;
 import com.carboncredit.entity.User;
 import com.carboncredit.exception.ResourceNotFoundException;
+import com.carboncredit.repository.CarbonCreditRepository;
 import com.carboncredit.service.CVAService;
 import com.carboncredit.service.UserService;
 
@@ -52,6 +54,7 @@ public class CVAController {
 
     private final CVAService cvaService;
     private final UserService userService;
+    private final CarbonCreditRepository carbonCreditRepository;
 
     /**
      * Get all pending journey for CVA reviews
@@ -307,27 +310,26 @@ public class CVAController {
     }
 
     /**
-     * Get detailed transfer request information for CVA review
+     * Get all verified carbon credits
      */
-    @GetMapping("/transfer-request/{requestId}")
+    @GetMapping("/verified-credits")
     @PreAuthorize("hasRole('CVA')")
-    public ResponseEntity<ApiResponse<TransferRequestDetailDTO>> getTransferRequestDetail(
-            @PathVariable UUID requestId) {
+    public ResponseEntity<ApiResponse<List<CarbonCreditDTO>>> getVerifiedCredits() {
         try {
-            TransferRequestDetailDTO detailRequest = cvaService.getTransferRequestDetail(requestId);
+            List<CarbonCredit> verifiedCredits = carbonCreditRepository.findByStatus(CarbonCredit.CreditStatus.VERIFIED);
+            List<CarbonCreditDTO> dtos = verifiedCredits.stream()
+                    .map(credit -> new CarbonCreditDTO(credit, true))
+                    .collect(Collectors.toList());
 
-            log.info("Retrieved detailed transfer request {} for CVA review", requestId);
+            log.info("Retrieved {} verified credits for CVA review", dtos.size());
 
             return ResponseEntity.ok(ApiResponse.success(
-                    "Transfer request details retrieved successfully",
-                    detailRequest));
-        } catch (ResourceNotFoundException e) {
-            return ResponseEntity.status(404)
-                    .body(ApiResponse.error("Transfer request not found: " + requestId));
+                    "Verified credits retrieved successfully",
+                    dtos));
         } catch (Exception e) {
-            log.error("Error retrieving transfer request details {}: {}", requestId, e.getMessage());
+            log.error("Error fetching verified credits: {}", e.getMessage());
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Failed to retrieve transfer request details: " + e.getMessage()));
+                    .body(ApiResponse.error("Failed to fetch verified credits: " + e.getMessage()));
         }
     }
 }

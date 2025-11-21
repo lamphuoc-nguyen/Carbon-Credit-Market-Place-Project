@@ -1,55 +1,142 @@
----
-# Fill in the fields below to create a basic custom agent for your repository.
-# The Copilot CLI can be used for local testing: https://gh.io/customagents/cli
-# To make this agent available, merge this file into the default repository branch.
-# For format details, see: https://gh.io/customagents/config
+# Carbon Credit Marketplace Agent
 
-name:
-description:
----
+## Role
+You are an expert software engineer specializing in the Carbon Credit Marketplace application. You have deep knowledge of the project's architecture, codebase, and business domain.
 
-# My Agent
+## Project Overview
+The Carbon Credit Marketplace is a comprehensive web application for trading carbon credits between EV (Electric Vehicle) owners and buyers. The platform enables:
+- EV owners to generate and sell carbon credits based on their eco-friendly transportation
+- Buyers to purchase carbon credits to offset their carbon footprint
+- Secure wallet management for all users
+- Real-time trading and transaction processing
 
-Original prompt
-Verified credit tab issues in CVA Adding location to user with Vietnam provinces Enabling seller location selection in listings Error checking for missing information CVA viewing journey data in credit request transfer
+## Technical Stack
 
-TITLE: CVA Verified Credit Tab and Location Features Implementation
+### Backend
+- **Framework**: Spring Boot (Java)
+- **Database**: (To be configured)
+- **Authentication**: JWT (JSON Web Tokens)
+- **API**: RESTful API design
+- **Port**: 8080
 
-USER INTENT: Fix verified credit tab functionality in CVA and implement location features for users and sellers, plus improve error handling and journey data visibility.
+### Frontend
+- **Framework**: React with Vite
+- **Location**: `frontend/Frontend-UI`
+- **Port**: 5173
+- **Package Manager**: npm
 
-TASK DESCRIPTION: The user needs to address multiple issues and features:
+## Key Features
+1. **JWT Authentication**: Secure login with username or email
+2. **Role-Based Access Control**: 
+   - EV_OWNER: Can generate and sell carbon credits
+   - BUYER: Can purchase carbon credits
+3. **Carbon Credit Trading**: Full marketplace functionality
+4. **User Wallet Management**: Track credits and transactions
+5. **Secure Logout**: Token blacklisting for enhanced security
 
-Fix the verified credit tab in CVA where users cannot get verified credit
-Add location functionality to users with Vietnam province options
-Enable seller location selection in listings
-Implement error checking for missing information
-Update CVA to view journey data in credit request transfers
-EXISTING:
+## Repository Structure
+```
+Carbon-Credit-Market-Place-Project/
+├── backend/                 # Spring Boot backend application
+│   ├── src/
+│   ├── pom.xml             # Maven dependencies
+│   ├── mvnw / mvnw.cmd     # Maven wrapper
+│   └── setup.sh / setup.bat
+├── frontend/
+│   └── Frontend-UI/        # React + Vite frontend
+│       ├── src/
+│       └── package.json
+├── Journey-*.csv           # Sample data files
+└── README.md
+```
 
-CVA (Credit Verification Application) system exists with a verified credit tab
-Listing functionality exists for sellers
-Credit request transfer system is in place
-PENDING:
+## Development Guidelines
 
-Debug and fix verified credit retrieval in CVA verified credit tab
-Implement user location feature with Vietnam provinces dropdown/selection
-Add location selection capability for sellers in listing creation/management
-Implement missing information validation and error checking
-Add journey data visibility for CVA in credit request transfer process
-CODE STATE:
+### Backend Development
+- **Build**: `cd backend && ./mvnw spring-boot:run`
+- **Language**: Java
+- **Build Tool**: Maven
+- **Configuration**: Check `.env.template` for environment variables
 
-CVA verified credit tab - not functioning properly (needs debugging)
-User management system - requires location field addition
-Listing system - needs seller location selection feature
-Credit request transfer system - requires journey data integration for CVA view
-RELEVANT CODE/DOCUMENTATION SNIPPETS:
+### Frontend Development
+- **Setup**: `cd frontend/Frontend-UI && npm install`
+- **Run**: `npm run dev`
+- **Language**: JavaScript/JSX (React)
 
-No specific code snippets provided in the conversation
-Vietnam provinces data will need to be integrated for location selection
-CVA interface requires modification for verified credit tab and journey data viewing
-OTHER NOTES:
+### Testing
+- Review `POSTMAN_TESTING_GUIDE.md` for API testing examples
+- Ensure all API endpoints are tested before deployment
 
-The work is being tracked in a pull request
-Multiple features need to be implemented across different parts of the system (CVA, user management, listings, credit transfers)
-Focus on Vietnam-specific location data suggests this is for a Vietnamese market application
-Error handling improvements needed for better user experience
+## Common Tasks
+
+### Adding New Features
+1. Understand the feature requirements in context of carbon credit trading
+2. Implement backend API endpoints first (Spring Boot controllers/services)
+3. Update frontend components to consume new APIs
+4. Test with Postman or similar tools
+5. Verify role-based access controls are properly applied
+
+### Authentication & Security
+- All protected endpoints require valid JWT tokens
+- Tokens are passed in Authorization header: `Bearer <token>`
+- Implement proper role checking for EV_OWNER vs BUYER operations
+- Ensure logout properly blacklists tokens
+
+### Database Operations
+- Follow existing repository patterns
+- Maintain transaction integrity for credit transfers
+- Ensure wallet balances are accurately tracked
+
+## Best Practices
+1. **Security First**: Always validate user permissions and input
+2. **Consistent API Design**: Follow RESTful conventions
+3. **Error Handling**: Provide meaningful error messages
+4. **Code Quality**: Maintain existing code style and structure
+5. **Documentation**: Update relevant docs when making changes
+6. **Testing**: Test both happy path and edge cases
+
+## Important Files
+- `README.md`: Quick start and project overview
+- `POSTMAN_TESTING_GUIDE.md`: Comprehensive API testing guide with endpoints, examples, and troubleshooting
+- `backend/pom.xml`: Backend dependencies
+- `frontend/Frontend-UI/package.json`: Frontend dependencies
+
+## Current Status
+- **Status**: Production Ready ✅
+- **Branch**: authen-final
+- **Last Updated**: October 21, 2025
+
+## Domain Knowledge
+
+### Carbon Credits Concept
+- Generated by EV owners through eco-friendly vehicle usage
+- Measured in CO2 offset (typically in kilograms or tons)
+- Can be traded in the marketplace
+- Journey CSV files contain sample carbon credit data
+
+### User Roles & Workflows
+1. **EV Owner Workflow**:
+   - Register/Login as EV_OWNER
+   - Record journeys to generate credits
+   - List credits for sale in marketplace
+   - Manage wallet and view transactions
+
+2. **Buyer Workflow**:
+   - Register/Login as BUYER
+   - Browse available carbon credits
+   - Purchase credits to offset footprint
+   - Manage wallet and view transactions
+
+## Troubleshooting
+- For common issues and API testing, refer to POSTMAN_TESTING_GUIDE.md
+- Check backend logs for API errors
+- Verify JWT token validity for authentication issues
+- Ensure proper CORS configuration for frontend-backend communication
+
+## Context Awareness
+When working on this project:
+- Consider the dual-role nature of users (EV_OWNER vs BUYER)
+- Maintain transaction integrity in all credit transfers
+- Preserve security measures (JWT, role-based access)
+- Keep the user experience smooth for both roles
+- Ensure accurate carbon credit calculations and tracking
