@@ -89,6 +89,14 @@ export const cvaApi = {
         return handleRequest(axiosInstance.get('/api/cva/my-verifications'));
     },
 
+    /**
+     * Lấy tất cả các carbon credit đã được xác minh
+     * GET /api/cva/verified-credits
+     */
+    getVerifiedCredits: () => {
+        return handleRequest(axiosInstance.get('/api/cva/verified-credits'));
+    },
+
     // ==================== CO2 TRANSFER REQUEST MANAGEMENT ====================
 
     /**

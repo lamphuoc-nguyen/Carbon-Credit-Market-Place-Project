@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Store, Leaf, DollarSign, TrendingUp, AlertCircle, CheckCircle, ArrowRight, MapPin } from 'lucide-react';
 import EvOwnerAPI from '../../api/EvOwnerAPI';
 import Navbar from '../../Components/EVComponents/Navbar';
+import { VIETNAM_PROVINCES } from '../../utils/vietnamProvinces';
 
 
 const CreateListingPage = () => {
@@ -457,15 +458,24 @@ const CreateListingPage = () => {
               Seller Location (Optional)
             </label>
             <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-              <input
-                type="text"
-                maxLength={100}
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10" size={20} />
+              <select
                 value={sellerLocation}
                 onChange={(e) => setSellerLocation(e.target.value)}
-                placeholder="e.g., Ho Chi Minh City, Vietnam"
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              />
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent appearance-none bg-white"
+              >
+                {VIETNAM_PROVINCES.map((province) => (
+                  <option key={province.value} value={province.value}>
+                    {province.label}
+                  </option>
+                ))}
+              </select>
+              {/* Custom dropdown arrow */}
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <svg className="w-5 h-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </div>
             </div>
             <p className="text-xs text-gray-500 mt-1">
               Add your location to help buyers find local carbon credits

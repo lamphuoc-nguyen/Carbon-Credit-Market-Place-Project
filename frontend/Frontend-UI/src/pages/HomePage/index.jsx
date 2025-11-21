@@ -9,6 +9,7 @@ import SubContent from "../../Components/SubContent";
 const HomePage = () => {
     return (
         <>
+            <Navbar />
             <div>
                 <MainContent />
             </div>
@@ -29,6 +30,7 @@ const HomePage = () => {
             <div>
                 <CallToAction />
             </div>
+            <Footer />
         </>
     )
 

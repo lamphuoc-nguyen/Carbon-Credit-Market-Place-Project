@@ -21,6 +21,11 @@ const PaymentPage = () => {
   const [error, setError] = useState(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
+  // Pending transaction management
+  const [pendingTransactions, setPendingTransactions] = useState([]);
+  const [showPendingModal, setShowPendingModal] = useState(false);
+  const [selectedPendingTransaction, setSelectedPendingTransaction] = useState(null);
+
   useEffect(() => {
     // Redirect if no listing data
     if (!listing) {
@@ -28,8 +33,9 @@ const PaymentPage = () => {
       return;
     }
     
-    // Fetch wallet info
+    // Fetch wallet info and check for pending transactions
     fetchWalletInfo();
+    checkPendingTransactions();
   }, [listing, navigate]);
 
   const fetchWalletInfo = async () => {
@@ -141,6 +147,30 @@ const PaymentPage = () => {
       }
 
       setError(errorMessage);
+    }
+  };
+
+  const checkPendingTransactions = async () => {
+    try {
+      console.log('🔍 Checking for pending transactions...');
+      const pendingTxs = await buyerApi.getPendingTransactions();
+
+      // Filter pending transactions for the current listing
+      const relatedPending = pendingTxs.filter(tx =>
+        tx.listingId === listing.id ||
+        tx.listing?.id === listing.id
+      );
+
+      setPendingTransactions(relatedPending);
+
+      if (relatedPending.length > 0) {
+        console.log(`🕐 Found ${relatedPending.length} pending transaction(s) for this listing`);
+        setShowPendingModal(true);
+      }
+
+    } catch (err) {
+      console.error('❌ Error checking pending transactions:', err);
+      // Don't show error to user for this background check
     }
   };
 
@@ -303,6 +333,82 @@ const PaymentPage = () => {
     }
   };
 
+  const handleResumePendingTransaction = async (transaction) => {
+    try {
+      setLoading(true);
+      setSelectedPendingTransaction(transaction);
+      setShowPendingModal(false);
+
+      if (transaction.paymentMethod?.includes('VNPAY') || transaction.paymentMethod?.includes('BANK')) {
+        // Resume VNPay transaction
+        console.log('🔄 Resuming VNPay transaction...');
+        const result = await buyerApi.resumeVNPayTransaction(transaction.id);
+
+        // Save transaction info for callback
+        localStorage.setItem('pendingTransactionId', result.transactionId);
+        localStorage.setItem('pendingListing', JSON.stringify(listing));
+
+        // Redirect to VNPay
+        window.location.href = result.paymentUrl;
+
+      } else if (transaction.paymentMethod?.includes('WALLET')) {
+        // Complete wallet transaction
+        console.log('💰 Completing wallet transaction...');
+        const completedTransaction = await buyerApi.completePendingWalletTransaction(transaction.id);
+
+        // Navigate to success page
+        navigate('/transaction-success', {
+          state: {
+            transactionData: {
+              transactionId: completedTransaction.id,
+              co2ReducedKg: Math.round((listing.credit?.co2ReducedKg || 1000) * (quantity / listing.credit?.creditAmount || 1)),
+              amount: quantity,
+              completedAt: completedTransaction.completedAt || new Date().toISOString(),
+              buyerId: completedTransaction.buyerId,
+              buyerUsername: completedTransaction.buyerUsername || wallet?.username,
+              totalPrice: totalPrice,
+              status: 'COMPLETED',
+              paymentMethod: 'WALLET',
+              creditId: listing.credit?.id,
+              listingId: listing.id
+            }
+          },
+          replace: true
+        });
+      }
+
+    } catch (err) {
+      console.error('❌ Error resuming transaction:', err);
+      setError(err.message || 'Failed to resume transaction. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelPendingTransaction = async (transaction) => {
+    try {
+      setLoading(true);
+
+      await buyerApi.cancelPendingTransaction(transaction.id, 'Cancelled by user in payment page');
+
+      // Remove from pending list
+      setPendingTransactions(prev => prev.filter(tx => tx.id !== transaction.id));
+
+      // If no more pending transactions, close modal
+      if (pendingTransactions.length <= 1) {
+        setShowPendingModal(false);
+      }
+
+      console.log('✅ Transaction cancelled successfully');
+
+    } catch (err) {
+      console.error('❌ Error cancelling transaction:', err);
+      setError(err.message || 'Failed to cancel transaction. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!listing) {
     return null; // Will redirect in useEffect
   }
@@ -449,10 +555,25 @@ const PaymentPage = () => {
               
               {/* Listing Info */}
               <div className="mb-4 pb-4 border-b border-gray-200">
-                <p className="text-sm text-gray-500 mb-1">Seller</p>
-                <p className="font-semibold text-gray-900">
-                  {listing.credit?.owner?.username || 'N/A'}
-                </p>
+                <div className="mb-3">
+                  <p className="text-sm text-gray-500 mb-1">Seller</p>
+                  <p className="font-semibold text-gray-900">
+                    {listing.credit?.owner?.username || 'N/A'}
+                  </p>
+                </div>
+                {listing.sellerLocation && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>
+                      {listing.sellerLocation.split('-').map(word =>
+                        word.charAt(0).toUpperCase() + word.slice(1)
+                      ).join(' ')}, Vietnam
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Order Details */}
@@ -568,6 +689,16 @@ const PaymentPage = () => {
                     {listing.credit?.owner?.username || 'N/A'}
                   </span>
                 </div>
+                {listing.sellerLocation && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Location:</span>
+                    <span className="font-semibold text-gray-900">
+                      {listing.sellerLocation.split('-').map(word =>
+                        word.charAt(0).toUpperCase() + word.slice(1)
+                      ).join(' ')}, Vietnam
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-gray-600">Credits Selected:</span>
                   <span className="font-semibold text-green-600">{quantity} tonnes</span>
@@ -640,6 +771,82 @@ const PaymentPage = () => {
                 ) : (
                   'Confirm & Pay'
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pending Transactions Modal */}
+      {showPendingModal && (
+        <div className="fixed inset-0 bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-fade-in">
+            <div className="text-center mb-4">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Pending Transactions</h2>
+              <p className="text-gray-600 text-sm">
+                You have pending transactions for this listing. Please complete or cancel them before proceeding.
+              </p>
+            </div>
+
+            {/* Transaction List */}
+            <div className="max-h-60 overflow-y-auto mb-4">
+              {pendingTransactions.length === 0 ? (
+                <p className="text-center text-gray-500 text-sm py-4">
+                  No pending transactions found.
+                </p>
+              ) : (
+                pendingTransactions.map(tx => (
+                  <div key={tx.id} className="bg-gray-50 rounded-lg shadow-sm border border-gray-200 p-4 mb-3">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-xs text-gray-500">
+                        Transaction ID: {tx.id}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {new Date(tx.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center">
+                      <div className="flex-1 mb-3 sm:mb-0">
+                        <div className="text-sm text-gray-700">
+                          <span className="font-semibold">Seller:</span> {tx.listing?.credit?.owner?.username || 'N/A'}
+                        </div>
+                        <div className="text-sm text-gray-700">
+                          <span className="font-semibold">Credits:</span> {tx.amount} tonnes
+                        </div>
+                        <div className="text-sm text-gray-700">
+                          <span className="font-semibold">Total Price:</span> ${formatPrice(tx.totalPrice)}
+                        </div>
+                        <div className="text-sm text-gray-700">
+                          <span className="font-semibold">Payment Method:</span> {tx.paymentMethod}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleResumePendingTransaction(tx)}
+                          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
+                        >
+                          Resume
+                        </button>
+                        <button
+                          onClick={() => handleCancelPendingTransaction(tx)}
+                          className="flex-1 px-4 py-2 border-2 border-red-600 text-red-600 rounded-lg font-semibold hover:bg-red-50 transition"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Close Button */}
+            <div className="text-center">
+              <button
+                onClick={() => setShowPendingModal(false)}
+                className="px-4 py-2 bg-gray-200 rounded-lg font-semibold hover:bg-gray-300 transition"
+              >
+                Close
               </button>
             </div>
           </div>
