@@ -5,7 +5,7 @@ import Footer from '../../Components/Footer'
 const AboutPage = () => {
   return (
       <>
-      <Navbar />
+     
       <div className="min-h-screen bg-gray-50">
 
           {/* Hero Section */}

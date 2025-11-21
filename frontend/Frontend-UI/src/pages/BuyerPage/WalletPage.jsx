@@ -21,6 +21,8 @@ import {
   Earth
 } from 'lucide-react';
 import Navbar_Buyer from '../../Components/BuyerComponents/Navbar-Buyer';
+import RetirementModal from '../../Components/BuyerComponents/RetirementModal';
+import RetirementHistory from '../../Components/BuyerComponents/RetirementHistory';
 import { walletApi } from '../../api';
 
 const WalletPage = () => {
@@ -38,6 +40,9 @@ const WalletPage = () => {
   const [depositAmount, setDepositAmount] = useState('');
   const [depositMethod, setDepositMethod] = useState('bank_transfer');
   const [depositing, setDepositing] = useState(false);
+
+  // Retirement Modal State
+  const [showRetirementModal, setShowRetirementModal] = useState(false);
 
   useEffect(() => {
     fetchWalletData();
@@ -60,6 +65,8 @@ const WalletPage = () => {
       // Fetch wallet info
       const walletData = await walletApi.getMyWallet();
       console.log('✅ Wallet data:', walletData);
+      console.log('🔑 Wallet userId:', walletData?.userId);
+      console.log('🔑 Wallet user.id:', walletData?.user?.id);
       setWallet(walletData);
 
       // Fetch wallet transactions
@@ -91,6 +98,12 @@ const WalletPage = () => {
     setRefreshing(true);
     await fetchWalletData();
     setRefreshing(false);
+  };
+
+  const handleRetirementSuccess = async (response) => {
+    console.log('✅ Retirement completed:', response);
+    // Refresh wallet data to update balances
+    await fetchWalletData();
   };
 
   const handleDeposit = async () => {
@@ -394,6 +407,14 @@ const WalletPage = () => {
 
             <div className="space-y-4">
               <button
+                onClick={() => setShowRetirementModal(true)}
+                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 rounded-xl font-medium hover:from-green-600 hover:to-emerald-700 transition-all duration-300 flex items-center justify-center space-x-2 shadow-md hover:shadow-lg"
+              >
+                <Recycle className="w-5 h-5" />
+                <span>Retire Credits</span>
+              </button>
+
+              <button
                 onClick={handleRefresh}
                 disabled={refreshing}
                 className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl font-medium transition-colors flex items-center justify-center space-x-2"
@@ -461,6 +482,16 @@ const WalletPage = () => {
             </div>
           </div>
         </div>
+
+        {/* Retirement History Section */}
+        {wallet && (
+          <div className="mb-12">
+            <RetirementHistory 
+              userId={wallet.userId || wallet.user?.id} 
+              onRefresh={fetchWalletData}
+            />
+          </div>
+        )}
 
         {/* Modern Transaction History */}
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
@@ -700,6 +731,14 @@ const WalletPage = () => {
             </div>
           </div>
         )}
+
+        {/* Retirement Modal */}
+        <RetirementModal
+          isOpen={showRetirementModal}
+          onClose={() => setShowRetirementModal(false)}
+          wallet={wallet}
+          onSuccess={handleRetirementSuccess}
+        />
       </div>
     </div>
   );
