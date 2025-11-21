@@ -24,6 +24,10 @@ public class CarbonCreditDTO {
     private LocalDateTime verifiedAt;
     private LocalDateTime listedAt;
 
+    // Verification information for audit tracking
+    private UUID verifiedById;
+    private String verifiedByUsername;
+
     // Constructor from CarbonCredit entity
     public CarbonCreditDTO(CarbonCredit credit) {
         this.id = credit.getId();
@@ -35,6 +39,14 @@ public class CarbonCreditDTO {
         this.createdAt = credit.getCreatedAt();
         this.verifiedAt = credit.getVerifiedAt();
         this.listedAt = credit.getListedAt();
+
+        // Handle verifiedBy with null safety
+        this.verifiedById = credit.getVerifiedBy() != null
+                ? credit.getVerifiedBy().getId()
+                : null;
+        this.verifiedByUsername = credit.getVerifiedBy() != null
+                ? credit.getVerifiedBy().getUsername()
+                : null;
     }
 
     // Lightweight constructor for preventing circular references
@@ -54,5 +66,13 @@ public class CarbonCreditDTO {
         this.createdAt = credit.getCreatedAt();
         this.verifiedAt = credit.getVerifiedAt();
         this.listedAt = credit.getListedAt();
+
+        // Handle verifiedBy with null safety
+        this.verifiedById = credit.getVerifiedBy() != null
+                ? credit.getVerifiedBy().getId()
+                : null;
+        this.verifiedByUsername = credit.getVerifiedBy() != null
+                ? credit.getVerifiedBy().getUsername()
+                : null;
     }
 }

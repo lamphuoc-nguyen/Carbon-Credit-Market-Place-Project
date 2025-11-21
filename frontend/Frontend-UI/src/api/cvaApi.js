@@ -138,4 +138,14 @@ export const cvaApi = {
     getTransferRequestStatistics: () => {
         return handleRequest(axiosInstance.get('/api/cva/transfer-statistics'));
     },
+
+    /**
+     * Lấy thông tin chi tiết về một yêu cầu chuyển đổi CO2
+     * GET /api/cva/transfer-request/{requestId}
+     * @param {string} requestId - ID của yêu cầu chuyển đổi
+     * @returns {Promise<TransferRequestDetailDTO>}
+     */
+    getTransferRequestDetail: (requestId) => {
+        return handleRequest(axiosInstance.get(`/api/cva/transfer-request/${requestId}`));
+    },
 };

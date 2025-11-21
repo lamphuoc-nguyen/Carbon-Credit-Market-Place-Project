@@ -78,6 +78,7 @@ public class CarbonCreditService {
 
         credit.setStatus(CreditStatus.VERIFIED);
         credit.setVerifiedAt(LocalDateTime.now());
+        credit.setVerifiedBy(verifier); // FIX: Set the CVA who verified this credit
         // Recalculate credit amount with VERIFIED status for better rate
         credit.setCreditAmount(calculateCreditAmount(credit.getCo2ReducedKg(), CreditStatus.VERIFIED));
 

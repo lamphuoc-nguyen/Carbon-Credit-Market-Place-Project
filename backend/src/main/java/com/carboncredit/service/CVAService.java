@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.carboncredit.dto.Co2TransferRequestDTO;
+import com.carboncredit.dto.TransferRequestDetailDTO;
+import com.carboncredit.dto.TransferRequestDetailDTO;
 import com.carboncredit.entity.CarbonCredit;
 import com.carboncredit.entity.JourneyData;
 import com.carboncredit.entity.User;
@@ -280,4 +282,11 @@ public class CVAService {
         return stats;
     }
 
+    /**
+     * Get detailed transfer request information for CVA review
+     */
+    @Transactional(readOnly = true)
+    public TransferRequestDetailDTO getTransferRequestDetail(UUID requestId) {
+        return co2TransferService.getTransferRequestDetail(requestId);
+    }
 }
