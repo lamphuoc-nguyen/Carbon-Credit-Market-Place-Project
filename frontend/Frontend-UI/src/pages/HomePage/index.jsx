@@ -5,6 +5,7 @@ import Navbar from "../../Components/Navbar";
 import ProjectsSection from "../../Components/ProjectsSection";
 import AboutSection from "../../Components/AboutSection";
 import SubContent from "../../Components/SubContent";
+import React from "react";
 
 const HomePage = () => {
     return (
@@ -30,7 +31,7 @@ const HomePage = () => {
             <div>
                 <CallToAction />
             </div>
-            <Footer />
+            
         </>
     )
 

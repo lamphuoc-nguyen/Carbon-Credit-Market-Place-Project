@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cvaApi } from '../../api/cvaApi';
+import { userApi } from '../../api/userApi';
+import { vehicleApi } from '../../api/vehicleApi';
+import { carbonCreditApi } from '../../api/carbonCreditApi';
 import LoadingOverlay from '../../Components/LoadingOverlay';
 import {
     CheckCircle,
@@ -20,6 +23,10 @@ import {
     ArrowUp,
     ArrowDown,
     Sparkles,
+    FileDown,
+    Download,
+    User,
+    Car,
 } from 'lucide-react';
 
 const Report = () => {
@@ -27,6 +34,13 @@ const Report = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
+    const [exporting, setExporting] = useState(false);
+    const [additionalStats, setAdditionalStats] = useState({
+        totalUsers: 0,
+        totalVehicles: 0,
+        totalCreditsIssued: 0,
+        pendingCredits: 0
+    });
     const navigate = useNavigate();
 
     const fetchStats = useCallback(async (isRefresh = false) => {
@@ -38,8 +52,29 @@ const Report = () => {
             }
             setError(null);
 
-            const data = await cvaApi.getCVAStatistics();
+            // Fetch main transfer statistics
+            const data = await cvaApi.getTransferStatistics();
             setStats(data);
+
+            // Fetch additional statistics in parallel
+            try {
+                const [users, vehicles, credits, pendingCredits] = await Promise.all([
+                    userApi.getAllUsers().catch(() => []),
+                    vehicleApi.getAllVehicles().catch(() => []),
+                    cvaApi.getVerifiedCredits().catch(() => []),
+                    carbonCreditApi.getPendingCredits().catch(() => [])
+                ]);
+
+                setAdditionalStats({
+                    totalUsers: Array.isArray(users) ? users.length : 0,
+                    totalVehicles: Array.isArray(vehicles) ? vehicles.length : 0,
+                    totalCreditsIssued: Array.isArray(credits) ? credits.length : 0,
+                    pendingCredits: Array.isArray(pendingCredits) ? pendingCredits.length : 0
+                });
+            } catch (additionalErr) {
+                console.warn('Could not fetch additional statistics:', additionalErr);
+                // Continue with main stats even if additional stats fail
+            }
         } catch (err) {
             console.error('Error fetching CVA statistics:', err);
 
@@ -63,12 +98,135 @@ const Report = () => {
         fetchStats(true);
     };
 
+    const handleExportReport = async (format = 'csv') => {
+        try {
+            setExporting(true);
+
+            // Fetch verified credits data
+            const verifiedCredits = await cvaApi.getVerifiedCredits();
+
+            if (format === 'csv') {
+                exportToCSV(verifiedCredits);
+            } else if (format === 'json') {
+                exportToJSON(verifiedCredits);
+            }
+        } catch (err) {
+            console.error('Error exporting report:', err);
+            alert('Failed to export report. Please try again.');
+        } finally {
+            setExporting(false);
+        }
+    };
+
+    const exportToCSV = (credits) => {
+        // Format data for Excel with tab separator (more reliable than comma)
+        const headers = [
+            'Credit ID',
+            'Owner Username',
+            'Owner Email',
+            'CO2 Amount (kg)',
+            'Credit Value',
+            'Status',
+            'Issued Date',
+            'Verified By',
+            'Certificate ID'
+        ];
+
+        // Create rows with tab separation
+        const rows = credits.map(credit => {
+            const issuedDate = credit.issuedDate
+                ? new Date(credit.issuedDate).toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                })
+                : '';
+
+            return [
+                credit.id || '',
+                credit.owner?.username || credit.ownerUsername || '',
+                credit.owner?.email || '',
+                credit.co2Amount || '0',
+                credit.creditValue || '0',
+                credit.status || '',
+                issuedDate,
+                credit.verifiedByUsername || '',
+                credit.certificateId || ''
+            ].join('\t'); // Use TAB instead of comma
+        });
+
+        // Combine with newlines
+        const tsvContent = [headers.join('\t'), ...rows].join('\r\n'); // Windows line ending
+
+        // Create Excel-compatible file
+        const BOM = '\uFEFF';
+        const blob = new Blob([BOM + tsvContent], {
+            type: 'text/tab-separated-values;charset=utf-8;'
+        });
+
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        const timestamp = new Date().toISOString().split('T')[0];
+
+        link.setAttribute('href', url);
+        link.setAttribute('download', `carbon-credit-report-${timestamp}.xls`); // Use .xls extension
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
+    const exportToJSON = (credits) => {
+        // Create comprehensive report object
+        const report = {
+            reportTitle: 'Carbon Credit Issuance Report',
+            generatedDate: new Date().toISOString(),
+            statistics: {
+                totalCreditsIssued: credits.length,
+                totalCO2Converted: credits.reduce((sum, c) => sum + (c.co2Amount || 0), 0),
+                totalCreditValue: credits.reduce((sum, c) => sum + (c.creditValue || 0), 0)
+            },
+            credits: credits.map(credit => ({
+                id: credit.id,
+                owner: {
+                    username: credit.owner?.username || credit.ownerUsername,
+                    email: credit.owner?.email,
+                    userId: credit.ownerId
+                },
+                co2Amount: credit.co2Amount,
+                creditValue: credit.creditValue,
+                status: credit.status,
+                issuedDate: credit.issuedDate,
+                verifiedBy: credit.verifiedByUsername,
+                certificateId: credit.certificateId,
+                journeyIds: credit.journeyIds
+            }))
+        };
+
+        // Create blob and download
+        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        const timestamp = new Date().toISOString().split('T')[0];
+
+        link.setAttribute('href', url);
+        link.setAttribute('download', `carbon-credit-report-${timestamp}.json`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     const calculateMetrics = () => {
         if (!stats) return {};
 
-        const total = stats.totalProcessed || 0;
-        const verified = stats.totalVerified || 0;
-        const rejected = stats.totalRejected || 0;
+        const total = stats.totalProcessedTransfers || 0;
+        const verified = stats.approvedTransfers || 0;
+        const rejected = stats.rejectedTransfers || 0;
 
         return {
             rejectionRate: total > 0 ? ((rejected / total) * 100).toFixed(1) : 0,
@@ -168,7 +326,7 @@ const Report = () => {
                             </div>
                         </div>
                         <p className="text-4xl font-bold text-gray-900 mb-2 tracking-tight">
-                            {stats.totalProcessed ?? 0}
+                            {stats.totalProcessedTransfers ?? 0}
                         </p>
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                             <Activity className="h-4 w-4" />
@@ -187,11 +345,11 @@ const Report = () => {
                             </div>
                         </div>
                         <p className="text-4xl font-bold text-gray-900 mb-2 tracking-tight">
-                            {stats.totalVerified ?? 0}
+                            {stats.approvedTransfers ?? 0}
                         </p>
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                             <TrendingUp className="h-4 w-4" />
-                            <span className="font-medium">Verified journeys</span>
+                            <span className="font-medium">Approved transfers</span>
                         </div>
                     </div>
 
@@ -206,7 +364,7 @@ const Report = () => {
                             </div>
                         </div>
                         <p className="text-4xl font-bold text-gray-900 mb-2 tracking-tight">
-                            {stats.totalRejected ?? 0}
+                            {stats.rejectedTransfers ?? 0}
                         </p>
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                             <Percent className="h-4 w-4" />
@@ -225,7 +383,7 @@ const Report = () => {
                             </div>
                         </div>
                         <p className="text-4xl font-bold text-gray-900 mb-2 tracking-tight">
-                            {stats.pendingReview ?? 0}
+                            {stats.pendingTransfers ?? 0}
                         </p>
                         <div className="flex items-center gap-2 text-sm text-gray-500">
                             <AlertCircle className="h-4 w-4" />
@@ -264,7 +422,7 @@ const Report = () => {
                                         strokeWidth="12"
                                         fill="transparent"
                                         strokeDasharray={`${2 * Math.PI * 70}`}
-                                        strokeDashoffset={`${2 * Math.PI * 70 * (1 - (stats.approvalRate || 0) / 100)
+                                        strokeDashoffset={`${2 * Math.PI * 70 * (1 - (stats.transferApprovalRate || 0) / 100)
                                             }`}
                                         className="transition-all duration-1000"
                                         strokeLinecap="round"
@@ -284,8 +442,8 @@ const Report = () => {
                                 </svg>
                                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                                     <span className="text-4xl font-bold text-gray-900">
-                                        {stats.approvalRate != null
-                                            ? stats.approvalRate.toFixed(1)
+                                        {stats.transferApprovalRate != null
+                                            ? stats.transferApprovalRate.toFixed(1)
                                             : '0.0'}
                                     </span>
                                     <span className="text-lg font-bold text-indigo-600">%</span>
@@ -293,7 +451,7 @@ const Report = () => {
                             </div>
                         </div>
                         <p className="text-center text-sm text-gray-500">
-                            Percentage of journeys approved
+                            Percentage of transfers approved
                         </p>
                     </div>
 
@@ -344,7 +502,7 @@ const Report = () => {
                                         <span>View Pending</span>
                                     </div>
                                     <span className="bg-amber-200 text-amber-800 px-3 py-1 rounded-full text-sm font-bold">
-                                        {stats.pendingReview ?? 0}
+                                        {stats.pendingTransfers ?? 0}
                                     </span>
                                 </div>
                             </button>
@@ -377,11 +535,11 @@ const Report = () => {
                             <div className="flex items-center gap-2 mb-2">
                                 <ListChecks className="h-5 w-5 text-blue-600" />
                                 <p className="text-sm text-gray-500 font-semibold">
-                                    Total Verified
+                                    Total Approved
                                 </p>
                             </div>
                             <p className="text-3xl font-bold text-blue-600">
-                                {stats.totalVerified ?? 0}
+                                {stats.approvedTransfers ?? 0}
                             </p>
                         </div>
                         <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
@@ -392,7 +550,7 @@ const Report = () => {
                                 </p>
                             </div>
                             <p className="text-3xl font-bold text-rose-600">
-                                {stats.totalRejected ?? 0}
+                                {stats.rejectedTransfers ?? 0}
                             </p>
                         </div>
                         <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
@@ -416,6 +574,113 @@ const Report = () => {
                             <p className="text-3xl font-bold text-amber-600">
                                 {metrics.avgPerDay}
                             </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* System Overview Statistics */}
+                <div className="bg-white p-6 md:p-8 rounded-xl border border-gray-200 shadow-sm mb-8">
+                    <div className="flex items-center gap-3 mb-6">
+                        <h2 className="text-2xl font-bold text-gray-900">
+                            System Overview
+                        </h2>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
+                            <div className="flex items-center gap-2 mb-2">
+                                <User className="h-5 w-5 text-purple-600" />
+                                <p className="text-sm text-purple-700 font-semibold">
+                                    Total Users
+                                </p>
+                            </div>
+                            <p className="text-3xl font-bold text-purple-900">
+                                {additionalStats.totalUsers}
+                            </p>
+                        </div>
+                        <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-xl p-4 border border-cyan-200">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Car className="h-5 w-5 text-cyan-600" />
+                                <p className="text-sm text-cyan-700 font-semibold">
+                                    Total Vehicles
+                                </p>
+                            </div>
+                            <p className="text-3xl font-bold text-cyan-900">
+                                {additionalStats.totalVehicles}
+                            </p>
+                        </div>
+                        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4 border border-green-200">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Award className="h-5 w-5 text-green-600" />
+                                <p className="text-sm text-green-700 font-semibold">
+                                    Credits Issued
+                                </p>
+                            </div>
+                            <p className="text-3xl font-bold text-green-900">
+                                {additionalStats.totalCreditsIssued}
+                            </p>
+                        </div>
+                        <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Clock className="h-5 w-5 text-orange-600" />
+                                <p className="text-sm text-orange-700 font-semibold">
+                                    Pending Credits
+                                </p>
+                            </div>
+                            <p className="text-3xl font-bold text-orange-900">
+                                {additionalStats.pendingCredits}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Export Report Section */}
+                <div className="bg-white p-6 md:p-8 rounded-xl border border-gray-200 shadow-sm mb-8">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="p-3 bg-blue-100 rounded-lg">
+                            <FileDown className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-900">
+                                Export Carbon Credit Report
+                            </h2>
+                            <p className="text-sm text-gray-500 mt-1">
+                                Download detailed report of issued carbon credits
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <button
+                            onClick={() => handleExportReport('csv')}
+                            disabled={exporting}
+                            className={`flex items-center justify-center gap-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-4 px-6 rounded-xl transition-all shadow-md ${exporting ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
+                        >
+                            <Download className={`h-5 w-5 ${exporting ? 'animate-bounce' : ''}`} />
+                            <span>Export as CSV</span>
+                        </button>
+                        <button
+                            onClick={() => handleExportReport('json')}
+                            disabled={exporting}
+                            className={`flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-xl transition-all shadow-md ${exporting ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
+                        >
+                            <Download className={`h-5 w-5 ${exporting ? 'animate-bounce' : ''}`} />
+                            <span>Export as JSON</span>
+                        </button>
+                    </div>
+
+                    <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-start gap-3">
+                            <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                            <div>
+                                <p className="text-sm font-semibold text-blue-900 mb-1">Report Information</p>
+                                <p className="text-sm text-blue-700">
+                                    The report includes all verified carbon credits with details such as owner information,
+                                    CO2 amounts, credit values, issuance dates, and verification data.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>

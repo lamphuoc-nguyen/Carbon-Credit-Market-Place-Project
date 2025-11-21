@@ -1,36 +1,94 @@
 import axiosInstance from "./axiosInstance";
 
 /**
- * Helper function để xử lý wrapper { success: true, data: ... }
- * Nó sẽ trả về phần 'data' nếu thành công, hoặc ném lỗi nếu thất bại.
+ * Helper function để validate và trích xuất dữ liệu từ response.
+ * Backend trả về: { success: true, message: "...", data: ... }
  */
 const validateResponse = (response) => {
-    if (response.data && response.data.success) {
-        return response.data.data; // Chỉ trả về phần 'data'
-    } else {
-        // Ném lỗi nếu success: false hoặc không có data
-        throw new Error(response.data.message || 'API request failed');
+    // Kiểm tra nếu response tồn tại và có data
+    if (response && response.data) {
+        // Trường hợp thành công (success = true)
+        if (response.data.success) {
+            return response.data.data; // Trả về phần data thực tế (VehicleDTO, List, v.v.)
+        }
+
+        // Trường hợp thất bại (success = false) -> Ném lỗi với message từ backend
+        throw new Error(response.data.message || 'Request failed');
     }
+
+    // Fallback cho các trường hợp không đúng chuẩn ApiResponse (ít gặp)
+    if (response.status >= 200 && response.status < 300) {
+        return response.data;
+    }
+
+    throw new Error('No response data received');
 };
 
 export const vehicleApi = {
 
+    // ==================== CORE CRUD OPERATIONS ====================
+
     /**
-     * Lấy chi tiết MỘT vehicle bằng ID
-     * Dùng cho: Trang ReviewJourneyDetail.jsx
+     * Tạo phương tiện mới
+     * Endpoint: POST /api/vehicles
+     * Body: { vin, model, registrationDate, ... }
+     */
+    createVehicle: async (vehicleData) => {
+        try {
+            const response = await axiosInstance.post('/api/vehicles', vehicleData);
+            return validateResponse(response);
+        } catch (error) {
+            console.error("Error creating vehicle:", error);
+            throw error;
+        }
+    },
+
+    /**
+     * Cập nhật thông tin phương tiện
+     * Endpoint: PUT /api/vehicles/{id}
+     */
+    updateVehicle: async (vehicleId, vehicleData) => {
+        if (!vehicleId) throw new Error('Vehicle ID is required');
+        try {
+            const response = await axiosInstance.put(`/api/vehicles/${vehicleId}`, vehicleData);
+            return validateResponse(response);
+        } catch (error) {
+            console.error(`Error updating vehicle ${vehicleId}:`, error);
+            throw error;
+        }
+    },
+
+    /**
+     * Lấy chi tiết phương tiện theo ID
      * Endpoint: GET /api/vehicles/{id}
      */
     getVehicleById: async (vehicleId) => {
         if (!vehicleId) throw new Error('Vehicle ID is required');
         try {
             const response = await axiosInstance.get(`/api/vehicles/${vehicleId}`);
-            // Controller này trả về ApiResponse, nên chúng ta dùng validateResponse
             return validateResponse(response);
         } catch (error) {
             console.error(`Error fetching vehicle ${vehicleId}:`, error);
-            throw error; // Ném lỗi để interceptor hoặc component xử lý
+            throw error;
         }
     },
+
+    /**
+     * Xóa phương tiện
+     * Endpoint: DELETE /api/vehicles/{id}
+     */
+    deleteVehicle: async (vehicleId) => {
+        if (!vehicleId) throw new Error('Vehicle ID is required');
+        try {
+            const response = await axiosInstance.delete(`/api/vehicles/${vehicleId}`);
+            return validateResponse(response); // Trả về null hoặc message thành công
+        } catch (error) {
+            console.error(`Error deleting vehicle ${vehicleId}:`, error);
+            throw error;
+        }
+    },
+
+    // ==================== USER SPECIFIC ====================
 
     /**
      * Lấy danh sách xe của người dùng đang đăng nhập
@@ -46,59 +104,10 @@ export const vehicleApi = {
         }
     },
 
-    /**
-     * Tạo một vehicle mới
-     * Endpoint: POST /api/vehicles
-     */
-    createVehicle: async (vehicleData) => {
-        // vehicleData là một object, ví dụ:
-        // { vin: "...", model: "...", registrationDate: "..." }
-        // userId sẽ được set ở backend hoặc bạn có thể thêm vào đây nếu là Admin
-        try {
-            const response = await axiosInstance.post('/api/vehicles', vehicleData);
-            return validateResponse(response);
-        } catch (error) {
-            console.error("Error creating vehicle:", error);
-            throw error;
-        }
-    },
+    // ==================== ADMIN / CVA OPERATIONS ====================
 
     /**
-     * Cập nhật một vehicle
-     * Endpoint: PUT /api/vehicles/{id}
-     */
-    updateVehicle: async (vehicleId, vehicleData) => {
-        if (!vehicleId) throw new Error('Vehicle ID is required');
-        try {
-            const response = await axiosInstance.put(`/api/vehicles/${vehicleId}`, vehicleData);
-            return validateResponse(response);
-        } catch (error) {
-            console.error(`Error updating vehicle ${vehicleId}:`, error);
-            throw error;
-        }
-    },
-
-    /**
-     * Xóa một vehicle
-     * Endpoint: DELETE /api/vehicles/{id}
-     */
-    deleteVehicle: async (vehicleId) => {
-        if (!vehicleId) throw new Error('Vehicle ID is required');
-        try {
-            const response = await axiosInstance.delete(`/api/vehicles/${vehicleId}`);
-            return validateResponse(response); // Thường trả về { success: true, message: "..." }
-        } catch (error) {
-            console.error(`Error deleting vehicle ${vehicleId}:`, error);
-            throw error;
-        }
-    },
-
-    // ===========================================
-    // CÁC HÀM DÀNH CHO ADMIN / CVA
-    // ===========================================
-
-    /**
-     * Lấy TẤT CẢ vehicle (Admin/CVA)
+     * Lấy danh sách TẤT CẢ xe trên hệ thống (Admin/CVA)
      * Endpoint: GET /api/vehicles
      */
     getAllVehicles: async () => {
@@ -112,7 +121,7 @@ export const vehicleApi = {
     },
 
     /**
-     * Lấy vehicle theo User ID (Admin/CVA)
+     * Lấy danh sách xe của một User cụ thể (Admin/CVA)
      * Endpoint: GET /api/vehicles/user/{userId}
      */
     getVehiclesByUserId: async (userId) => {
@@ -127,7 +136,7 @@ export const vehicleApi = {
     },
 
     /**
-     * Lấy vehicle theo VIN (Admin/CVA)
+     * Tìm xe theo số VIN (Admin/CVA)
      * Endpoint: GET /api/vehicles/vin/{vin}
      */
     getVehicleByVin: async (vin) => {
@@ -139,5 +148,5 @@ export const vehicleApi = {
             console.error(`Error fetching vehicle by VIN ${vin}:`, error);
             throw error;
         }
-    },
+    }
 };

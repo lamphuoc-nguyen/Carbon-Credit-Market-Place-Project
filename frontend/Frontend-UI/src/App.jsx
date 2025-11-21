@@ -26,10 +26,9 @@ import EvOwner from './pages/EvPage';
 import JourneyList from './pages/EvPage/JourneyList';
 import CreateListingPage from './pages/EvPage/Listing';
 import Dashboard from './Components/CvaComponents/Dashboard';
-import ReviewJourneyDetail from './Components/CvaComponents/ReviewJourneyDetail';
 import VerifiedCredits from './Components/CvaComponents/VerifiedCredits';
 import Report from './Components/CvaComponents/Report';
-import DetailPage from './Components/CvaComponents/DetailPage';
+import TransferRequestDetailPage from './pages/CvaPage/TransferRequestDetailPage';
 import TransferRequestManagement from './Components/CvaComponents/TransferRequestManagement';
 import ProtectedRoute from './Components/ProtectedRoute';
 import Wallet from './pages/EvPage/Wallet';
@@ -45,22 +44,22 @@ function App() {
 
   // Hide Navbar & Footer for specific pages
   const hideLayout = location.pathname === '/cva' ||
-                     location.pathname.startsWith('/admin') ||
-                     location.pathname === '/buyer' ||
-                     location.pathname === '/marketplace' ||
-                     location.pathname === '/payment' ||
-                     location.pathname === '/payment/callback' ||
-                     location.pathname === '/payment/success' ||
-                     location.pathname === '/transaction-success' ||
-                     location.pathname === '/wallet' ||
-                     location.pathname === '/certificate' ||
-                     location.pathname === '/ev-dashboard' ||
-                     location.pathname === '/ev-dashboard/journeys' ||
-                     location.pathname === '/ev-dashboard/wallet' ||
-                     location.pathname === '/ev-dashboard/Listing' ||
-                     location.pathname === '/ev-dashboard/profile' ||
-                     location.pathname === '/ev-dashboard/marketplace' ||
-                     location.pathname.startsWith('/cva'); // Hide navbar for all CVA pages
+    location.pathname.startsWith('/admin') ||
+    location.pathname === '/buyer' ||
+    location.pathname === '/marketplace' ||
+    location.pathname === '/payment' ||
+    location.pathname === '/payment/callback' ||
+    location.pathname === '/payment/success' ||
+    location.pathname === '/transaction-success' ||
+    location.pathname === '/wallet' ||
+    location.pathname === '/certificate' ||
+    location.pathname === '/ev-dashboard' ||
+    location.pathname === '/ev-dashboard/journeys' ||
+    location.pathname === '/ev-dashboard/wallet' ||
+    location.pathname === '/ev-dashboard/Listing' ||
+    location.pathname === '/ev-dashboard/profile' ||
+    location.pathname === '/ev-dashboard/marketplace' ||
+    location.pathname.startsWith('/cva'); // Hide navbar for all CVA pages
 
   return (
     <>
@@ -162,10 +161,9 @@ function App() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="transfer-requests" element={<TransferRequestManagement />} />
-          <Route path="review/:journeyId" element={<ReviewJourneyDetail />} />
           <Route path="verified-credits" element={<VerifiedCredits />} />
           <Route path="reports" element={<Report />} />
-          <Route path="detail/:journeyId" element={<DetailPage />} />
+          <Route path="transfer-request/:id" element={<TransferRequestDetailPage />} />
         </Route>
 
         {/* --- Admin Routes --- */}
