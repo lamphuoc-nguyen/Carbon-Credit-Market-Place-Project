@@ -114,9 +114,15 @@ public class WalletService {
     }
 
     /** Convert CO2 reduction to credits (1000kg CO2 = 1 credit) and create CarbonCredit entities */
-    public Wallet convertCo2ToCredits(UUID userId, BigDecimal co2Amount) {
+    public Wallet convertCo2ToCredits(UUID userId, BigDecimal co2Amount, User verifier) {
         if (co2Amount.compareTo(new BigDecimal("1000")) < 0) {
             throw new IllegalArgumentException("Minimum 1000kg CO2 required for conversion to credits");
+        }
+
+        // Verifier is optional for system-generated credits
+        // If provided, validate that it's admin/CVA
+        if (verifier != null && verifier.getRole() != User.UserRole.ADMIN && verifier.getRole() != User.UserRole.CVA) {
+            throw new IllegalArgumentException("Only ADMIN or CVA users can verify credits");
         }
 
         Wallet wallet = findByUserId(userId)
@@ -142,6 +148,7 @@ public class WalletService {
             credit.setStatus(CarbonCredit.CreditStatus.VERIFIED); // Ready for marketplace
             credit.setCreatedAt(LocalDateTime.now());
             credit.setVerifiedAt(LocalDateTime.now());
+            credit.setVerifiedBy(verifier); // Set the admin/system user who approved the conversion
             // No journey link - this credit comes from accumulated CO2 conversion
 
             carbonCreditRepository.save(credit);
@@ -170,7 +177,12 @@ public class WalletService {
     }
 
     /** Process approved transfer request */
-    public void processApprovedTransfer(UUID userId, BigDecimal co2Amount, BigDecimal creditsToGenerate) {
+    public void processApprovedTransfer(UUID userId, BigDecimal co2Amount, BigDecimal creditsToGenerate, User verifier) {
+        // Validate verifier (should be admin/CVA who approved the transfer)
+        if (verifier != null && verifier.getRole() != User.UserRole.ADMIN && verifier.getRole() != User.UserRole.CVA) {
+            throw new IllegalArgumentException("Only ADMIN or CVA users can approve transfers");
+        }
+
         Wallet wallet = findByUserId(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Wallet not found for user: " + userId));
 
@@ -187,6 +199,7 @@ public class WalletService {
             credit.setStatus(CarbonCredit.CreditStatus.VERIFIED); // Ready for marketplace
             credit.setCreatedAt(LocalDateTime.now());
             credit.setVerifiedAt(LocalDateTime.now());
+            credit.setVerifiedBy(verifier); // Set the admin/CVA who approved the transfer
 
             carbonCreditRepository.save(credit);
         }

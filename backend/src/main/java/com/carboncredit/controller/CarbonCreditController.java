@@ -132,8 +132,8 @@ public class CarbonCreditController {
                         .body(ApiResponse.error("Insufficient CO2 reduction balance. Current balance: " + currentCo2Balance + "kg"));
             }
 
-            // Perform conversion
-            Wallet updatedWallet = walletService.convertCo2ToCredits(user.getId(), co2Amount);
+            // Perform conversion (system auto-verification since CO2 already came from verified journeys)
+            Wallet updatedWallet = walletService.convertCo2ToCredits(user.getId(), co2Amount, null);
 
             // Calculate converted credits
             BigDecimal creditsConverted = co2Amount.divide(new BigDecimal("1000"), 6, java.math.RoundingMode.DOWN);

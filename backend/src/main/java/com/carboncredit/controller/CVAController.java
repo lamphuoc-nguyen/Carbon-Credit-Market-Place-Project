@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.carboncredit.dto.ApiResponse;
 import com.carboncredit.dto.Co2TransferRequestDTO;
 import com.carboncredit.dto.JourneyDataDTO;
+import com.carboncredit.dto.TransferRequestDetailDTO;
 import com.carboncredit.entity.JourneyData;
 import com.carboncredit.entity.User;
 import com.carboncredit.exception.ResourceNotFoundException;
@@ -302,6 +303,31 @@ public class CVAController {
             log.error("Error fetching verified journeys: {}", e.getMessage());
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("Failed to fetch verified journeys: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get detailed transfer request information for CVA review
+     */
+    @GetMapping("/transfer-request/{requestId}")
+    @PreAuthorize("hasRole('CVA')")
+    public ResponseEntity<ApiResponse<TransferRequestDetailDTO>> getTransferRequestDetail(
+            @PathVariable UUID requestId) {
+        try {
+            TransferRequestDetailDTO detailRequest = cvaService.getTransferRequestDetail(requestId);
+
+            log.info("Retrieved detailed transfer request {} for CVA review", requestId);
+
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Transfer request details retrieved successfully",
+                    detailRequest));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.status(404)
+                    .body(ApiResponse.error("Transfer request not found: " + requestId));
+        } catch (Exception e) {
+            log.error("Error retrieving transfer request details {}: {}", requestId, e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to retrieve transfer request details: " + e.getMessage()));
         }
     }
 }

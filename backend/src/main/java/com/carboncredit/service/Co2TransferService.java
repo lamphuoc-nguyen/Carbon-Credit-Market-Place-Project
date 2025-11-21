@@ -2,6 +2,7 @@ package com.carboncredit.service;
 
 import com.carboncredit.dto.Co2TransferRequestDTO;
 import com.carboncredit.dto.CreateTransferRequestDTO;
+import com.carboncredit.dto.TransferRequestDetailDTO;
 import com.carboncredit.entity.Co2TransferRequest;
 import com.carboncredit.entity.JourneyData;
 import com.carboncredit.entity.User;
@@ -119,8 +120,8 @@ public class Co2TransferService {
             throw new BusinessOperationException("Transfer request must be in PENDING status. Current status: " + request.getStatus());
         }
 
-        // Process the transfer
-        walletService.processApprovedTransfer(request.getUser().getId(), request.getCo2Amount(), request.getCreditsToGenerate());
+        // Process the transfer (CVA who approved acts as verifier)
+        walletService.processApprovedTransfer(request.getUser().getId(), request.getCo2Amount(), request.getCreditsToGenerate(), cva);
 
         // Update request status
         request.setStatus(Co2TransferRequest.TransferStatus.APPROVED);
@@ -202,6 +203,17 @@ public class Co2TransferService {
         return new CVATransferStats(approvedByThisCVA, rejectedByThisCVA, totalProcessedByThisCVA, approvalRate);
     }
 
+    /**
+     * Get detailed transfer request information
+     */
+    @Transactional(readOnly = true)
+    public TransferRequestDetailDTO getTransferRequestDetail(UUID requestId) {
+        Co2TransferRequest request = transferRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Transfer request not found"));
+
+        return convertToDetailDTO(request);
+    }
+
     private Co2TransferRequestDTO convertToDTO(Co2TransferRequest request) {
         Co2TransferRequestDTO dto = new Co2TransferRequestDTO();
         dto.setId(request.getId());
@@ -216,6 +228,52 @@ public class Co2TransferService {
         dto.setCvaNotes(request.getCvaNotes());
         dto.setRejectionReason(request.getRejectionReason());
         dto.setJourneyIds(request.getJourneyIds());
+        return dto;
+    }
+
+    private TransferRequestDetailDTO convertToDetailDTO(Co2TransferRequest request) {
+        TransferRequestDetailDTO dto = new TransferRequestDetailDTO();
+        dto.setId(request.getId());
+        dto.setUserId(request.getUser().getId());
+        dto.setUsername(request.getUser().getUsername());
+        dto.setUserEmail(request.getUser().getEmail());
+        dto.setUserRole(request.getUser().getRole().name());
+        dto.setCo2Amount(request.getCo2Amount());
+        dto.setCreditsToGenerate(request.getCreditsToGenerate());
+        dto.setStatus(request.getStatus());
+        dto.setCreatedAt(request.getCreatedAt());
+        dto.setProcessedAt(request.getProcessedAt());
+        dto.setProcessedByUsername(request.getProcessedBy() != null ? request.getProcessedBy().getUsername() : null);
+        dto.setCvaNotes(request.getCvaNotes());
+        dto.setRejectionReason(request.getRejectionReason());
+
+        // Get user's current wallet balance
+        Wallet wallet = walletService.getOrCreateWallet(request.getUser());
+        dto.setUserCurrentCo2Balance(wallet.getAvailableCo2().add(wallet.getCo2PendingTransfer()));
+        dto.setUserCurrentCreditBalance(wallet.getCreditBalance());
+
+        // Get journey details if journeyIds are available
+        List<TransferRequestDetailDTO.JourneyDetailForTransferDTO> journeyDetails = new ArrayList<>();
+        if (request.getJourneyIds() != null && !request.getJourneyIds().isEmpty()) {
+            for (UUID journeyId : request.getJourneyIds()) {
+                journeyDataRepository.findById(journeyId).ifPresent(journey -> {
+                    TransferRequestDetailDTO.JourneyDetailForTransferDTO journeyDetail =
+                        new TransferRequestDetailDTO.JourneyDetailForTransferDTO();
+                    journeyDetail.setJourneyId(journey.getId());
+                    journeyDetail.setVehiclePlate(journey.getVehicle() != null ? journey.getVehicle().getVin() : "N/A");
+                    journeyDetail.setVehicleModel(journey.getVehicle() != null ? journey.getVehicle().getModel() : "N/A");
+                    journeyDetail.setVehicleType("EV"); // Since all vehicles in this system are electric
+                    journeyDetail.setCo2Reduced(journey.getCo2ReducedKg());
+                    journeyDetail.setDistance(journey.getDistanceKm());
+                    journeyDetail.setJourneyDate(journey.getStartTime());
+                    journeyDetail.setVerificationStatus(journey.getVerificationStatus().name());
+                    journeyDetail.setVerifiedBy(journey.getVerifiedBy() != null ? journey.getVerifiedBy().getUsername() : "Not verified");
+                    journeyDetails.add(journeyDetail);
+                });
+            }
+        }
+        dto.setJourneyDetails(journeyDetails);
+
         return dto;
     }
 

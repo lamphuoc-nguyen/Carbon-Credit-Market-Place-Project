@@ -89,6 +89,7 @@ public class JourneyDataService {
             journeyData.setVerificationStatus(JourneyData.VerificationStatus.VALID);
             journeyData.setVerificationDate(LocalDateTime.now());
             journeyData.setVerificationNotes("Auto-validated based on system rules");
+            // Note: verifiedBy is left null for auto-validated journeys to distinguish from manual CVA verification
             log.info("Journey auto-validated for user {}", journeyData.getUser().getId());
         } else {
             journeyData.setVerificationStatus(JourneyData.VerificationStatus.PENDING_VERIFICATION);
