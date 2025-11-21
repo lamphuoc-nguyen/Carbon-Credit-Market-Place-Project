@@ -1,17 +1,18 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-    LayoutDashboard, Clock, CheckCircle, FileText, Hammer, X, Leaf, Menu,
-    Shield // ✅ 1. IMPORT SHIELD INSTEAD OF SETTINGS
+    LayoutDashboard, CheckCircle, FileText, Hammer, X, Leaf, Menu,
+    Shield, ArrowRightLeft // ✅ Add ArrowRightLeft for transfer requests
 } from 'lucide-react';
 import LogoutButton from '../LogoutButton'; // Adjust path if needed
+import NotificationButton from '../NotificationButton'; // Add notification button
 
 const PUBLIC_LOGO_PATH = "/organic.png"; // Make sure path is correct
 
 const iconMap = {
     Dashboard: LayoutDashboard,
-    PendingVerifications: Clock,
     VerifiedCredits: CheckCircle,
+    TransferRequests: ArrowRightLeft,
     Reports: FileText,
     AuditTools: Hammer,
     // Settings removed as it's not used by navItems anymore
@@ -19,10 +20,9 @@ const iconMap = {
 
 const navItems = [
     { name: 'Dashboard', key: 'dashboard', icon: 'Dashboard' },
-    { name: 'Pending Verifications', key: 'pending', icon: 'PendingVerifications' },
+    { name: 'CO2 Transfer Requests', key: 'transfer-requests', icon: 'TransferRequests' },
     { name: 'Verified Credits', key: 'verified-credits', icon: 'VerifiedCredits' },
     { name: 'Reports', key: 'reports', icon: 'Reports' },
-   
 ];
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
@@ -40,10 +40,10 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
         >
             <div className={`flex flex-col h-full overflow-hidden`}>
 
-                {/* 1. Header (Unchanged) */}
+                {/* 1. Header (Updated with NotificationButton) */}
                 <div
                     className={`flex items-center h-16 border-b border-gray-100
-                              ${isOpen ? 'justify-between p-4' : 'justify-center p-4'}`}
+                              ${isOpen ? 'justify-between p-4' : 'justify-center p-2'}`}
                 >
                     {isOpen && (
                         <div className="flex items-center">
@@ -53,13 +53,19 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                             </span>
                         </div>
                     )}
-                    <button
-                        onClick={() => setIsOpen(!isOpen)}
-                        className="p-1 rounded-lg text-gray-600 hover:bg-gray-100"
-                        aria-label="Toggle sidebar"
-                    >
-                        {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {/* Notification Button */}
+                        <NotificationButton />
+
+                        {/* Toggle Button */}
+                        <button
+                            onClick={() => setIsOpen(!isOpen)}
+                            className="p-1 rounded-lg text-gray-600 hover:bg-gray-100"
+                            aria-label="Toggle sidebar"
+                        >
+                            {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                        </button>
+                    </div>
                 </div>
 
                 {/* 2. User Profile/Badge - UPDATED ICON */}

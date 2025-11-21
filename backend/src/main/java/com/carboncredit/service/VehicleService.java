@@ -20,6 +20,7 @@ import java.util.UUID;
 public class VehicleService {
     private final VehicleRepository vehicleRepository;
     private final UserService userService;
+    private final NotificationService notificationService;
 
     public Vehicle createVehicle(Vehicle vehicle) {
         if (vehicleRepository.existsByVin(vehicle.getVin())) {
@@ -36,7 +37,12 @@ public class VehicleService {
             throw new IllegalArgumentException("Vehicle must be associated with a user");
         }
 
-        return vehicleRepository.save(vehicle);
+        Vehicle savedVehicle = vehicleRepository.save(vehicle);
+
+        // Send notification for vehicle linked
+        notificationService.notifyVehicleLinked(user, vehicle.getModel(), vehicle.getId().toString());
+
+        return savedVehicle;
     }
 
     @Transactional(readOnly = true)
@@ -82,5 +88,11 @@ public class VehicleService {
 
     public Optional<Vehicle> findByIdAndUser(UUID id, User user) {
         return vehicleRepository.findByIdAndUser(id,user);
+    }
+
+    @Transactional(readOnly = true)
+    public Vehicle getUsersFirstVehicle(User user) {
+        List<Vehicle> userVehicles = findByUser(user);
+        return userVehicles.isEmpty() ? null : userVehicles.get(0);
     }
 }

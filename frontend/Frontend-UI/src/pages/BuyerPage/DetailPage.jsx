@@ -15,6 +15,8 @@ const Detailpage = () => {
   const [listing, setListing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [purchaseAmount, setPurchaseAmount] = useState(1); // Amount buyer wants to buy
+  const [showAmountModal, setShowAmountModal] = useState(false);
 
   const fetchListingDetails = async () => {
     setLoading(true);
@@ -35,6 +37,8 @@ const Detailpage = () => {
         
         if (foundListing) {
           setListing(foundListing);
+          // Initialize purchase amount to 1 or minimum available
+          setPurchaseAmount(Math.min(1, foundListing.credit?.creditAmount || 1));
           console.log('✅ Listing found on page', page, ':', foundListing);
           return;
         }
@@ -65,18 +69,24 @@ const Detailpage = () => {
   }, [listingId]);
 
   const handlePurchase = () => {
+    setShowAmountModal(true);
+  };
+
+  const handleConfirmPurchase = () => {
     const creditAmount = listing.credit?.creditAmount || 0;
-    // listing.price is already the total price (not per tonne)
-    const totalPrice = listing.price;
-    
-    // Navigate to payment page with listing data (buy all credits)
+    const pricePerTonne = listing.price / creditAmount; // Calculate price per tonne
+    const totalPrice = pricePerTonne * purchaseAmount;
+
+    // Navigate to payment page with buyer's selected amount
     navigate('/payment', {
       state: {
         listing,
-        quantity: creditAmount, // Buy entire credit amount
+        quantity: purchaseAmount, // Use buyer's selected amount
         totalPrice: totalPrice
       }
     });
+
+    setShowAmountModal(false);
   };
 
   if (loading) {
@@ -227,41 +237,36 @@ const Detailpage = () => {
               
               {/* Price */}
               <div className="mb-6">
-                <p className="text-sm text-gray-500 uppercase tracking-wide mb-2">Total Price</p>
+                <p className="text-sm text-gray-500 uppercase tracking-wide mb-2">Price per Tonne</p>
                 <div className="flex items-baseline">
                   <span className="text-4xl font-bold text-green-600">
-                    ${formatPrice(listing.price || 0)}
+                    ${formatPrice((listing.price || 0) / (listing.credit?.creditAmount || 1))}
                   </span>
                   <span className="text-lg text-gray-500 ml-2">USD</span>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
-                  For {listing.credit?.creditAmount || 0} tonnes
+                  Total available: {listing.credit?.creditAmount || 0} tonnes
                 </p>
               </div>
 
-              {/* Total Calculation */}
-              {listing.credit?.creditAmount && (
-                <div className="mb-6 p-4 bg-green-50 rounded-lg border-2 border-green-200">
-                  <div className="flex justify-between mb-2">
-                    <span className="text-gray-700 font-medium">Total Credits:</span>
-                    <span className="font-bold text-green-600">{listing.credit.creditAmount} tonnes</span>
-                  </div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-gray-700 font-medium">Total Price:</span>
-                    <span className="font-semibold">${formatPrice(listing.price)}</span>
-                  </div>
-                  <div className="border-t border-green-300 my-2"></div>
-                  <div className="flex justify-between">
-                    <span className="font-bold text-gray-900">You will pay:</span>
-                    <span className="font-bold text-green-600 text-2xl">
-                      ${formatPrice(listing.price || 0)}
-                    </span>
-                  </div>
-                  <p className="text-xs text-center text-green-700 mt-3 font-semibold">
-                    ✓ Purchasing all available credits
-                  </p>
+              {/* Amount Selection Preview */}
+              <div className="mb-6 p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-gray-700 font-medium">Selected Amount:</span>
+                  <span className="font-bold text-blue-600">{purchaseAmount} tonnes</span>
                 </div>
-              )}
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-gray-700 font-medium">Price per tonne:</span>
+                  <span className="font-semibold">${formatPrice((listing.price || 0) / (listing.credit?.creditAmount || 1))}</span>
+                </div>
+                <div className="border-t border-blue-300 my-2"></div>
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-gray-900">You will pay:</span>
+                  <span className="font-bold text-blue-600 text-2xl">
+                    ${formatPrice(((listing.price || 0) / (listing.credit?.creditAmount || 1)) * purchaseAmount)}
+                  </span>
+                </div>
+              </div>
 
               {/* Action Buttons */}
               <div className="space-y-3">
@@ -270,7 +275,7 @@ const Detailpage = () => {
                   disabled={listing.status !== 'ACTIVE'}
                   className="w-full bg-green-600 text-white py-4 px-6 rounded-xl font-bold text-lg hover:bg-green-700 disabled:bg-gray-300 cursor-pointer transition-all shadow-lg hover:shadow-xl"
                 >
-                  {listing.status === 'ACTIVE' ? '🛒 Buy All Credits' : 'Not Available'}
+                  {listing.status === 'ACTIVE' ? '📋 Select Amount & Purchase' : 'Not Available'}
                 </button>
                 
                 <button
@@ -291,6 +296,100 @@ const Detailpage = () => {
           </div>
         </div>
       </div>
+
+      {/* Amount Selection Modal */}
+      {showAmountModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Select Purchase Amount</h3>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Amount (tonnes CO₂)
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="1"
+                  max={listing.credit?.creditAmount || 1}
+                  step="1"
+                  value={purchaseAmount}
+                  onChange={(e) => setPurchaseAmount(Math.max(1, Math.min(parseInt(e.target.value) || 1, listing.credit?.creditAmount || 1)))}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
+                  tonnes
+                </span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Available: {listing.credit?.creditAmount || 0} tonnes
+              </p>
+            </div>
+
+            {/* Price Calculation in Modal */}
+            <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-700 font-medium">Amount:</span>
+                <span className="font-bold text-green-600">{purchaseAmount} tonnes</span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span className="text-gray-700 font-medium">Price per tonne:</span>
+                <span className="font-semibold">${formatPrice((listing.price || 0) / (listing.credit?.creditAmount || 1))}</span>
+              </div>
+              <div className="border-t border-green-300 my-2"></div>
+              <div className="flex justify-between">
+                <span className="font-bold text-gray-900">Total Cost:</span>
+                <span className="font-bold text-green-600 text-xl">
+                  ${formatPrice(((listing.price || 0) / (listing.credit?.creditAmount || 1)) * purchaseAmount)}
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Amount Buttons */}
+            <div className="mb-4">
+              <p className="text-sm font-medium text-gray-700 mb-2">Quick Select:</p>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => setPurchaseAmount(1)}
+                  className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition-colors"
+                >
+                  1 tonne
+                </button>
+                <button
+                  onClick={() => setPurchaseAmount(Math.floor((listing.credit?.creditAmount || 1) / 2))}
+                  className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition-colors"
+                >
+                  Half
+                </button>
+                <button
+                  onClick={() => setPurchaseAmount(listing.credit?.creditAmount || 1)}
+                  className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200 transition-colors"
+                >
+                  All ({listing.credit?.creditAmount || 0})
+                </button>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowAmountModal(false);
+                  setPurchaseAmount(1);
+                }}
+                className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmPurchase}
+                className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors"
+              >
+                Continue to Payment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

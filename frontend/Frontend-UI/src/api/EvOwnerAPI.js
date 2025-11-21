@@ -1,188 +1,155 @@
-import axios from 'axios';
-
-// Create axios instance with base configuration
-const api = axios.create({
-  baseURL: 'http://localhost:8080/api',
-  headers: { 'Content-Type': 'application/json' },
-});
-
-// CarbonCredit API (no /api prefix)
-const carbonApi = axios.create({
-  baseURL: 'http://localhost:8080',
-  headers: { 'Content-Type': 'application/json' },
-});
-
-// Attach token to both
-[api, carbonApi].forEach(instance => {
-  instance.interceptors.request.use(config => {
-    const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-    return config;
-  });
-});
-
-
+import axiosInstance from './axiosInstance';
 
 const EvOwnerAPI = {
   // ==================== AUTHENTICATION ====================
   auth: {
-    register: (userData) => api.post('/auth/register', userData),
-    login: (credentials) => api.post('/auth/login', credentials),
-    logout: () => api.post('/auth/logout'),
+    register: (userData) => axiosInstance.post('/api/auth/register', userData),
+    login: (credentials) => axiosInstance.post('/api/auth/login', credentials),
+    logout: () => axiosInstance.post('/api/auth/logout'),
   },
 
   // ==================== USER PROFILE ====================
   user: {
-    getProfile: () => api.get('/users/me'),
-    getUserById: (userId) => api.get(`/users/${userId}`),
-    getUserByUsername: (username) => api.get(`/users/username/${username}`),
-    updateProfile: (userId, userData) => api.put(`/users/${userId}`, userData),
+    getProfile: () => axiosInstance.get('/api/users/me'),
+    getUserById: (userId) => axiosInstance.get(`/api/users/${userId}`),
+    getUserByUsername: (username) => axiosInstance.get(`/api/users/username/${username}`),
+    updateProfile: (userId, userData) => axiosInstance.put(`/api/users/${userId}`, userData),
   },
 
   // ==================== VEHICLE MANAGEMENT ====================
   vehicles: {
-    createVehicle: (vehicleData) => api.post('/vehicles', vehicleData),
-    getMyVehicles: () => api.get('/vehicles/my-vehicles'),
-    getVehicleById: (vehicleId) => api.get(`/vehicles/${vehicleId}`),
-    updateVehicle: (vehicleId, vehicleData) => api.put(`/vehicles/${vehicleId}`, vehicleData),
-    deleteVehicle: (vehicleId) => api.delete(`/vehicles/${vehicleId}`),
+    createVehicle: (vehicleData) => axiosInstance.post('/api/vehicles', vehicleData),
+    getMyVehicles: () => axiosInstance.get('/api/vehicles/my-vehicles'),
+    getVehicleById: (vehicleId) => axiosInstance.get(`/api/vehicles/${vehicleId}`),
+    updateVehicle: (vehicleId, vehicleData) => axiosInstance.put(`/api/vehicles/${vehicleId}`, vehicleData),
+    deleteVehicle: (vehicleId) => axiosInstance.delete(`/api/vehicles/${vehicleId}`),
   },
 
   // ==================== JOURNEY MANAGEMENT ====================
   journeys: {
-    createJourney: (journeyData) => api.post('/journeys', journeyData),
-    getMyJourneys: () => api.get('/journeys/my-journeys'),
-    getJourneyById: (journeyId) => api.get(`/journeys/${journeyId}`),
-    updateJourney: (journeyId, journeyData) => api.put(`/journeys/${journeyId}`, journeyData),
-    deleteJourney: (journeyId) => api.delete(`/journeys/${journeyId}`),
-    getStatistics: () => api.get('/journeys/statistics'),
+    createJourney: (journeyData) => axiosInstance.post('/api/journeys', journeyData),
+    getMyJourneys: () => axiosInstance.get('/api/journeys/my-journeys'),
+    getJourneyById: (journeyId) => axiosInstance.get(`/api/journeys/${journeyId}`),
+    updateJourney: (journeyId, journeyData) => axiosInstance.put(`/api/journeys/${journeyId}`, journeyData),
+    deleteJourney: (journeyId) => axiosInstance.delete(`/api/journeys/${journeyId}`),
+    getStatistics: () => axiosInstance.get('/api/journeys/statistics'),
+    // CSV import functionality
+    importCsv: (csvFile) => {
+      const formData = new FormData();
+      formData.append('file', csvFile);
+      return axiosInstance.post('/api/journeys/import-csv', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    },
   },
 
   // ==================== CARBON CREDITS ====================
   carbonCredits: {
-    getAvailableCredits: () => api.get('/carbon-credits'),
-    getCreditById: (creditId) => api.get(`/carbon-credits/${creditId}`),
-    getMyCreditsByUserId: (userId) => carbonApi.get(`/carbon-credits/user/${userId}`),
+    getAvailableCredits: () => axiosInstance.get('/api/carbon-credits'),
+    getCreditById: (creditId) => axiosInstance.get(`/api/carbon-credits/${creditId}`),
+    getMyCreditsByUserId: (userId) => axiosInstance.get(`/carbon-credits/user/${userId}`),
   },
 
   // ==================== MARKETPLACE (LISTINGS) ====================
   marketplace: {
     createListing: (creditId, price) => 
-      axios.post(`http://localhost:8080/credit-listings/create?creditId=${creditId}&price=${price}`, null, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('authToken') || sessionStorage.getItem('authToken')}`,
-        },
-      }),
+      axiosInstance.post(`/credit-listings/create?creditId=${creditId}&price=${price}`),
+
+    // Create combined listing from multiple credits
+    createCombinedListing: (creditIds, pricePerCredit) => {
+      const params = new URLSearchParams();
+      creditIds.forEach(id => params.append('creditIds', id));
+      params.append('pricePerCredit', pricePerCredit);
+
+      return axiosInstance.post(`/credit-listings/create-combined?${params.toString()}`);
+    },
+
     getActiveListings: (params = {}) => {
       const { page = 0, size = 20, sortBy = 'newest' } = params;
-      return axios.get(`http://localhost:8080/credit-listings`, {
+      return axiosInstance.get('/credit-listings', {
         params: { page, size, sortBy },
       });
     },
+
     searchByPriceRange: (minPrice, maxPrice, params = {}) => {
       const { page = 0, size = 20 } = params;
-      return axios.get(`http://localhost:8080/credit-listings/search`, {
+      return axiosInstance.get('/credit-listings/search', {
         params: { minPrice, maxPrice, page, size },
       });
     },
+
     getMyListings: (params = {}) => {
       const { page = 0, size = 20 } = params;
-      return api.get('/credit-listings/my-listings', { params: { page, size } });
+      return axiosInstance.get('/credit-listings/my-listings', { params: { page, size } });
     },
+
     getMyActiveListings: (params = {}) => {
       const { page = 0, size = 20 } = params;
-      return api.get('/credit-listings/my-active-listings', { params: { page, size } });
+      return axiosInstance.get('/credit-listings/my-active-listings', { params: { page, size } });
     },
-    updateListingPrice: (listingId, newPrice) => 
-      axios.put(`http://localhost:8080/credit-listings/${listingId}/price?newPrice=${newPrice}`, null, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('authToken') || sessionStorage.getItem('authToken')}`,
-        },
-      }),
-    cancelListing: (listingId) => 
-      axios.delete(`http://localhost:8080/credit-listings/${listingId}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('authToken') || sessionStorage.getItem('authToken')}`,
-        },
-      }),
-    getMarketplaceStats: () => axios.get('http://localhost:8080/credit-listings/stats'),
+
+    updateListingPrice: (listingId, newPrice) =>
+      axiosInstance.put(`/credit-listings/${listingId}/price?newPrice=${newPrice}`),
+
+    cancelListing: (listingId) =>
+      axiosInstance.delete(`/credit-listings/${listingId}`),
+
+    getMarketplaceStats: () => axiosInstance.get('/credit-listings/stats'),
   },
 
   // ==================== TRANSACTIONS ====================
   transactions: {
     initiatePurchase: (listingId) => 
-      axios.post('http://localhost:8080/transactions/purchase', { listingId }, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('authToken') || sessionStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json',
-        },
-      }),
-    completeTransaction: (transactionId) => 
-      axios.post(`http://localhost:8080/transactions/${transactionId}/complete`, null, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('authToken') || sessionStorage.getItem('authToken')}`,
-        },
-      }),
-    cancelTransaction: (transactionId) => 
-      axios.post(`http://localhost:8080/transactions/${transactionId}/cancel`, null, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('authToken') || sessionStorage.getItem('authToken')}`,
-        },
-      }),
-    getTransactionById: (transactionId) => 
-      axios.get(`http://localhost:8080/transactions/${transactionId}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('authToken') || sessionStorage.getItem('authToken')}`,
-        },
-      }),
+      axiosInstance.post('/transactions/purchase', { listingId }),
+
+    completeTransaction: (transactionId) =>
+      axiosInstance.post(`/transactions/${transactionId}/complete`),
+
+    cancelTransaction: (transactionId) =>
+      axiosInstance.post(`/transactions/${transactionId}/cancel`),
+
+    getTransactionById: (transactionId) =>
+      axiosInstance.get(`/transactions/${transactionId}`),
+
     getMyTransactions: (params = {}) => {
       const { page = 0, size = 10 } = params;
-      return axios.get('http://localhost:8080/transactions/my-transactions', {
+      return axiosInstance.get('/transactions/my-transactions', {
         params: { page, size },
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('authToken') || sessionStorage.getItem('authToken')}`,
-        },
       });
     },
+
     getPurchaseHistory: (params = {}) => {
       const { page = 0, size = 10 } = params;
-      return axios.get('http://localhost:8080/transactions/purchases', {
+      return axiosInstance.get('/transactions/purchases', {
         params: { page, size },
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('authToken') || sessionStorage.getItem('authToken')}`,
-        },
       });
     },
+
     getSalesHistory: (params = {}) => {
       const { page = 0, size = 10 } = params;
-      return axios.get('http://localhost:8080/transactions/sales', {
+      return axiosInstance.get('/transactions/sales', {
         params: { page, size },
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('authToken') || sessionStorage.getItem('authToken')}`,
-        },
       });
     },
-    createDispute: (transactionId, reason) => 
-      axios.post(`http://localhost:8080/transactions/${transactionId}/dispute`, { reason }, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('authToken') || sessionStorage.getItem('authToken')}`,
-          'Content-Type': 'application/json',
-        },
-      }),
+
+    createDispute: (transactionId, reason) =>
+      axiosInstance.post(`/transactions/${transactionId}/dispute`, { reason }),
   },
 
-  // ==================== WALLET ====================
-  wallet: {
-    getMyWallet: () => api.get('/wallets/my-wallet'),
-    checkBalance: (amount, balanceType) => 
-      api.get('/wallets/balance-check', {
+  // ==================== WALLET MANAGEMENT ====================
+  wallets: {
+    getMyWallet: () => axiosInstance.get('/api/wallets/my-wallet'),
+    checkBalance: (amount, balanceType) =>
+      axiosInstance.get('/api/wallets/balance-check', {
         params: { amount, balanceType },
       }),
-    deposit: (depositData) => api.post('/wallets/deposit', depositData),
-    withdraw: (withdrawData) => api.post('/wallets/withdraw', withdrawData),
+    deposit: (depositData) => axiosInstance.post('/api/wallets/deposit', depositData),
+    withdraw: (withdrawData) => axiosInstance.post('/api/wallets/withdraw', withdrawData),
     getTransactions: (params = {}) => {
       const { page = 0, size = 10 } = params;
-      return api.get('/wallets/transactions', { params: { page, size } });
+      return axiosInstance.get('/api/wallets/transactions', { params: { page, size } });
     },
   },
 };
@@ -258,7 +225,7 @@ const listCredit = async () => {
 // 5. GET WALLET INFO
 const checkWallet = async () => {
   try {
-    const response = await EvOwnerAPI.wallet.getMyWallet();
+    const response = await EvOwnerAPI.wallets.getMyWallet();
     console.log('Wallet info:', response.data);
   } catch (error) {
     console.error('Failed to get wallet:', error.response?.data);

@@ -25,59 +25,79 @@ const PaymentSuccessPage = () => {
       }
 
       console.log('✅ Payment successful! Transaction ID:', transactionId);
-      setMessage('Thanh toán thành công! Đang chuyển đến trang certificate...');
+      setMessage('Thanh toán thành công! Đang xử lý dữ liệu...');
 
       // Lấy thông tin transaction từ backend
       try {
+        console.log('🔄 Fetching transaction details...');
         const transaction = await buyerApi.getTransactionDetails(transactionId);
-        console.log('Transaction data:', transaction);
+        console.log('✅ Transaction data received:', transaction);
+
+        // Validate transaction structure
+        if (!transaction || !transaction.id) {
+          throw new Error('Invalid transaction data received');
+        }
 
         setStatus('success');
+        setMessage('Giao dịch thành công! Đang chuyển đến trang thành công...');
 
-        // Redirect đến certificate page với transaction data
+        // Navigate to success page with transaction data - NO AUTO RETIREMENT
         setTimeout(() => {
-          navigate('/certificate', {
+          navigate('/transaction-success', {
             state: {
               transactionData: {
                 transactionId: transaction.id,
-                status: transaction.status,
+                status: transaction.status || 'COMPLETED',
                 amount: transaction.amount,
-                completedAt: transaction.completedAt,
+                co2ReducedKg: transaction.credit?.co2ReducedKg || 1000,
+                completedAt: transaction.completedAt || new Date().toISOString(),
                 paymentMethod: transaction.paymentMethod || 'VNPAY',
-                co2ReducedKg: transaction.credit?.co2ReducedKg || 0,
-                buyerUsername: transaction.buyer?.username,
-                sellerUsername: transaction.seller?.username,
+                buyerId: transaction.buyer?.id || transaction.buyerId,
+                buyerUsername: transaction.buyer?.username || transaction.buyerUsername,
+                totalPrice: transaction.amount || transaction.totalPrice,
                 creditId: transaction.credit?.id,
                 listingId: transaction.listing?.id
               }
             },
             replace: true
           });
-        }, 1500);
+        }, 2000);
 
       } catch (error) {
-        console.error('Error fetching transaction:', error);
-        
-        // Nếu không lấy được transaction detail, vẫn redirect với basic info
-        setStatus('success');
-        setTimeout(() => {
-          navigate('/certificate', {
-            state: {
-              transactionData: {
-                transactionId: transactionId,
-                status: 'COMPLETED',
-                paymentMethod: 'VNPAY'
-              }
-            },
-            replace: true
-          });
-        }, 1500);
+        console.error('❌ Error fetching transaction:', error);
+        console.error('Error details:', {
+          status: error.response?.status,
+          data: error.response?.data,
+          message: error.message
+        });
+
+        setStatus('error');
+
+        if (error.response?.status === 404) {
+          setMessage('Giao dịch không tìm thấy. Có thể đang được xử lý...');
+
+          // Retry after delay
+          setTimeout(() => {
+            window.location.reload();
+          }, 5000);
+        } else {
+          setMessage('Có lỗi xảy ra khi lấy thông tin giao dịch. Vui lòng kiểm tra lại trong lịch sử giao dịch.');
+
+          // Navigate to wallet page to check transaction history
+          setTimeout(() => {
+            navigate('/wallet', { replace: true });
+          }, 3000);
+        }
       }
 
     } catch (error) {
-      console.error('Error handling payment success:', error);
+      console.error('❌ Error handling payment success:', error);
       setStatus('error');
       setMessage('Có lỗi xảy ra. Vui lòng kiểm tra lại giao dịch trong lịch sử.');
+
+      setTimeout(() => {
+        navigate('/wallet', { replace: true });
+      }, 3000);
     }
   };
 

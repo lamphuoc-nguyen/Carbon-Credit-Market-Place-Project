@@ -5,6 +5,7 @@ import {
     Leaf, X, Menu, Settings, CheckCircle // Keep CheckCircle if used elsewhere
 } from 'lucide-react';
 import LogoutButton from '../LogoutButton'; // Adjust path if needed
+import NotificationButton from '../NotificationButton'; // Add notification button
 
 const PUBLIC_LOGO_PATH = "/organic.png"; // Make sure this path is correct relative to public folder
 
@@ -42,10 +43,10 @@ const AdminSidebar = ({ isOpen, setIsOpen }) => {
         >
             <div className={`flex flex-col h-full overflow-hidden`}>
 
-                {/* 1. Header */}
+                {/* 1. Header (Updated with NotificationButton) */}
                 <div
                     className={`flex items-center h-16 border-b border-gray-100
-                              ${isOpen ? 'justify-between p-4' : 'justify-center p-4'}`}
+                              ${isOpen ? 'justify-between p-4' : 'justify-center p-2'}`}
                 >
                     {isOpen && (
                         <div className="flex items-center">
@@ -55,13 +56,19 @@ const AdminSidebar = ({ isOpen, setIsOpen }) => {
                             </span>
                         </div>
                     )}
-                    <button
-                        onClick={() => setIsOpen(!isOpen)}
-                        className="p-1 rounded-lg text-gray-600 hover:bg-gray-100"
-                        aria-label="Toggle sidebar"
-                    >
-                        {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {/* Notification Button */}
+                        <NotificationButton />
+
+                        {/* Toggle Button */}
+                        <button
+                            onClick={() => setIsOpen(!isOpen)}
+                            className="p-1 rounded-lg text-gray-600 hover:bg-gray-100"
+                            aria-label="Toggle sidebar"
+                        >
+                            {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                        </button>
+                    </div>
                 </div>
 
                 {/* 2. User Profile/Badge (Placeholder - Add your actual user info display here) */}

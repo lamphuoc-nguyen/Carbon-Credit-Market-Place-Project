@@ -124,5 +124,69 @@ export const walletApi = {
             { params } // Gửi data trong params
         );
         return response.data; // Trả về WalletResponse
-    }
+    },
+
+    /**
+     * Lấy số dư CO2 khả dụng (chưa bị khóa để chuyển đổi)
+     * Derived from wallet data: co2ReducedKg - co2PendingTransfer
+     */
+    getAvailableCo2Balance: async () => {
+        const response = await axiosInstance.get('/api/wallets/my-wallet');
+        const wallet = response.data;
+
+        // Handle different response structures
+        const walletData = wallet.data || wallet;
+
+        const total = walletData?.co2ReducedKg || 0;
+        const pending = walletData?.co2PendingTransfer || 0; // Defaults to 0 if field doesn't exist
+
+        console.log('💰 Wallet CO2 Data:', {
+            total,
+            pending,
+            available: total - pending,
+            rawWalletData: walletData
+        });
+
+        return Math.max(0, total - pending); // Ensure non-negative result
+    },
+
+    /**
+     * Lấy số dư CO2 đang bị khóa (chờ duyệt chuyển đổi)
+     */
+    getPendingCo2Balance: async () => {
+        const response = await axiosInstance.get('/api/wallets/my-wallet');
+        const wallet = response.data;
+
+        // Handle different response structures
+        const walletData = wallet.data || wallet;
+
+        return walletData?.co2PendingTransfer || 0; // Defaults to 0 if field doesn't exist
+    },
+
+    /**
+     * Lấy tổng số dư CO2 (bao gồm cả đang khóa)
+     */
+    getTotalCo2Balance: async () => {
+        const response = await axiosInstance.get('/api/wallets/my-wallet');
+        const wallet = response.data;
+
+        // Handle different response structures
+        const walletData = wallet.data || wallet;
+
+        return walletData?.co2ReducedKg || 0;
+    },
+
+    /**
+     * Kiểm tra xem có đủ CO2 để tạo yêu cầu chuyển đổi không
+     * @param {number} amount - Số lượng CO2 cần kiểm tra (kg)
+     * @returns {Promise<boolean>}
+     */
+    checkSufficientCo2: async (amount) => {
+        const response = await axiosInstance.get('/api/wallets/my-wallet');
+        const wallet = response.data;
+        const total = wallet.data?.co2ReducedKg || 0;
+        const pending = wallet.data?.co2PendingTransfer || 0;
+        const availableCo2 = total - pending;
+        return availableCo2 >= amount;
+    },
 };

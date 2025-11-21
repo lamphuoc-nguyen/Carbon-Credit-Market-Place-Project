@@ -1,16 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import {
+  Wallet,
+  DollarSign,
+  ArrowUpRight,
+  ArrowDownRight,
+  RefreshCw,
+  Eye,
+  EyeOff,
+  Plus,
+  CreditCard,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Calendar,
+  Leaf,
+  ShoppingCart,
+  Recycle,
+  TreePine,
+  Earth
+} from 'lucide-react';
 import Navbar_Buyer from '../../Components/BuyerComponents/Navbar-Buyer';
-import { buyerApi } from '../../api';
+import { walletApi } from '../../api';
 
 const WalletPage = () => {
   const navigate = useNavigate();
-  
+
   const [wallet, setWallet] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
-  
+  const [showBalance, setShowBalance] = useState(true);
+
   // Deposit Modal State
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
@@ -22,210 +44,198 @@ const WalletPage = () => {
   }, []);
 
   const fetchWalletData = async () => {
-    // Check if user is logged in
     const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-    
+
     if (!token) {
       console.warn('⚠️ No token found - user not logged in');
       setLoading(false);
       setError('NOT_LOGGED_IN');
       return;
     }
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       // Fetch wallet info
-      const walletData = await buyerApi.getMyWallet();
-      console.log('✅ Raw Wallet Response:', JSON.stringify(walletData, null, 2));
-      console.log('✅ User ID:', walletData.userId);
-      console.log('✅ Cash Balance:', walletData.cashBalance);
-      console.log('✅ Credit Balance:', walletData.creditBalance);
-      
+      const walletData = await walletApi.getMyWallet();
+      console.log('✅ Wallet data:', walletData);
       setWallet(walletData);
-      
+
       // Fetch wallet transactions
       try {
-        const transactionsData = await buyerApi.getWalletTransactions(0, 10);
+        const transactionsData = await walletApi.getWalletTransactions(0, 10);
         setTransactions(transactionsData.content || []);
-        console.log('✅ Transactions:', transactionsData);
+        console.log('✅ Transactions loaded:', transactionsData.content?.length || 0);
       } catch (txError) {
-        console.warn('⚠️ Could not fetch transactions:', txError);
+        console.error('⚠️ Failed to load transactions:', txError);
+        setTransactions([]);
       }
-      
+
     } catch (err) {
-      console.error('❌ Error fetching wallet data:', err);
-      setError(err.response?.data?.message || err.message || 'Failed to load wallet information');
+      console.error('❌ Failed to fetch wallet:', err);
+
+      if (err.response?.status === 401) {
+        setError('AUTHENTICATION_FAILED');
+      } else if (err.response?.status === 404) {
+        setError('WALLET_NOT_FOUND');
+      } else {
+        setError('FETCH_ERROR');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeposit = async (e) => {
-    e.preventDefault();
-    
-    const amount = parseFloat(depositAmount);
-    
-    if (!amount || amount <= 0) {
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchWalletData();
+    setRefreshing(false);
+  };
+
+  const handleDeposit = async () => {
+    if (!depositAmount || parseFloat(depositAmount) <= 0) {
       alert('Please enter a valid amount');
       return;
     }
-    
-    if (amount < 10) {
-      alert('Minimum deposit amount is $10');
-      return;
-    }
-    
+
     setDepositing(true);
-    
     try {
-      await buyerApi.depositFunds(amount, depositMethod);
-      
-      // Reset form and close modal
-      setDepositAmount('');
+      await walletApi.depositFunds({
+        amount: parseFloat(depositAmount),
+        paymentMethodId: depositMethod // walletApi expects paymentMethodId not method
+      });
+
+      alert(`Deposit initiated successfully! Amount: $${depositAmount}`);
       setShowDepositModal(false);
-      
-      // Refresh wallet data
-      fetchWalletData();
-      
-    } catch (err) {
-      console.error('❌ Deposit Error:', err);
-      alert(err.response?.data?.message || err.message || 'Deposit failed. Please try again.');
+      setDepositAmount('');
+      await fetchWalletData(); // Refresh wallet data
+    } catch (error) {
+      console.error('❌ Deposit failed:', error);
+      alert('Deposit failed. Please try again.');
     } finally {
       setDepositing(false);
     }
   };
 
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2
+    }).format(amount || 0);
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getTransactionIcon = (type) => {
+    switch (type) {
+      case 'DEPOSIT':
+        return <ArrowDownRight className="w-5 h-5 text-green-600" />;
+      case 'WITHDRAWAL':
+        return <ArrowUpRight className="w-5 h-5 text-red-600" />;
+      case 'PURCHASE':
+        return <CreditCard className="w-5 h-5 text-blue-600" />;
+      default:
+        return <Leaf className="w-5 h-5 text-gray-600" />;
+    }
+  };
+
+  const getTransactionColor = (type) => {
+    switch (type) {
+      case 'DEPOSIT':
+        return 'text-green-600';
+      case 'WITHDRAWAL':
+        return 'text-red-600';
+      case 'PURCHASE':
+        return 'text-blue-600';
+      default:
+        return 'text-gray-600';
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'COMPLETED':
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'PENDING':
+        return <Clock className="w-4 h-4 text-yellow-500" />;
+      case 'FAILED':
+        return <XCircle className="w-4 h-4 text-red-500" />;
+      default:
+        return <Clock className="w-4 h-4 text-gray-500" />;
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'COMPLETED':
+        return 'bg-green-100 text-green-800';
+      case 'PENDING':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'FAILED':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Error states
+  if (error === 'NOT_LOGGED_IN') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-2xl shadow-lg text-center max-w-md">
+          <Wallet className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Authentication Required</h2>
+          <p className="text-gray-600 mb-6">Please login to access your wallet</p>
+          <button
+            onClick={() => navigate('/login')}
+            className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (error === 'AUTHENTICATION_FAILED') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-2xl shadow-lg text-center max-w-md">
+          <XCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Authentication Failed</h2>
+          <p className="text-gray-600 mb-6">Your session has expired. Please login again.</p>
+          <button
+            onClick={() => navigate('/login')}
+            className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition"
+          >
+            Login Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar_Buyer />
-        <div className="flex flex-col items-center justify-center py-20">
-          <div className="relative">
-            <div className="w-16 h-16 border-4 border-green-200 rounded-full"></div>
-            <div className="w-16 h-16 border-4 border-green-600 rounded-full animate-spin border-t-transparent absolute top-0 left-0"></div>
-          </div>
-          <p className="mt-4 text-gray-600 font-medium">Loading wallet...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show login prompt if user is not logged in
-  if (error === 'NOT_LOGGED_IN') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
-        <Navbar_Buyer />
-        <div className="max-w-2xl mx-auto px-4 py-20">
-          <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden">
-            {/* Icon Header */}
-            <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-8 text-center">
-              <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              </div>
-              <h2 className="text-3xl font-bold text-white mb-2">Login Required</h2>
-              <p className="text-green-100 text-lg">Please login to view your wallet</p>
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-green-200 rounded-full"></div>
+              <div className="w-16 h-16 border-4 border-green-600 rounded-full animate-spin border-t-transparent absolute top-0 left-0"></div>
             </div>
-
-            {/* Content */}
-            <div className="p-8 text-center">
-              <p className="text-gray-600 mb-8 text-lg">
-                You need to be logged in to access your wallet and manage your carbon credits.
-              </p>
-
-              {/* Features List */}
-              <div className="bg-gray-50 rounded-xl p-6 mb-8">
-                <h3 className="font-semibold text-gray-900 mb-4">With your wallet you can:</h3>
-                <div className="space-y-3 text-left">
-                  <div className="flex items-center">
-                    <svg className="w-5 h-5 mr-3 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
-                    </svg>
-                    <span className="text-gray-700">View your cash and credit balances</span>
-                  </div>
-                  <div className="flex items-center">
-                    <svg className="w-5 h-5 mr-3 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
-                    </svg>
-                    <span className="text-gray-700">Deposit funds to buy carbon credits</span>
-                  </div>
-                  <div className="flex items-center">
-                    <svg className="w-5 h-5 mr-3 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
-                    </svg>
-                    <span className="text-gray-700">Track all your transactions</span>
-                  </div>
-                  <div className="flex items-center">
-                    <svg className="w-5 h-5 mr-3 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
-                    </svg>
-                    <span className="text-gray-700">Manage your carbon credit portfolio</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <button
-                  onClick={() => navigate('/login')}
-                  className="flex-1 px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 cursor-pointer"
-                >
-                  <div className="flex items-center justify-center">
-                    <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                    </svg>
-                    Login
-                  </div>
-                </button>
-                
-                <button
-                  onClick={() => navigate('/register')}
-                  className="flex-1 px-8 py-4 bg-white border-2 border-green-600 text-green-600 rounded-xl font-bold text-lg hover:bg-green-50 transition-all cursor-pointer"
-                >
-                  <div className="flex items-center justify-center">
-                    <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                    </svg>
-                    Create Account
-                  </div>
-                </button>
-              </div>
-
-              {/* Browse Marketplace Link */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <p className="text-gray-600 mb-3">or</p>
-                <button
-                  onClick={() => navigate('/marketplace')}
-                  className="text-green-600 hover:text-green-700 font-semibold hover:underline cursor-pointer"
-                >
-                  Browse Marketplace without logging in →
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show error for other types of errors
-  if (error || !wallet) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar_Buyer />
-        <div className="max-w-4xl mx-auto px-4 py-12">
-          <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-lg">
-            <h3 className="text-lg font-semibold text-red-900 mb-2">Error</h3>
-            <p className="text-red-700">{error || 'Wallet not found'}</p>
-            <button
-              onClick={() => navigate('/marketplace')}
-              className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 cursor-pointer"
-            >
-              Back to Marketplace
-            </button>
+            <p className="mt-4 text-gray-600 font-medium">Loading your wallet...</p>
           </div>
         </div>
       </div>
@@ -233,176 +243,66 @@ const WalletPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-green-50 to-emerald-50">
       <Navbar_Buyer />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">My Wallet</h1>
-          <p className="text-gray-600 mt-2">Manage your carbon credit wallet and transactions</p>
+
+      {/* Modern Hero Header */}
+      <div className="bg-gradient-to-r from-green-800 via-emerald-700 to-teal-800 relative overflow-hidden">
+        {/* Organic Background Shapes */}
+        <div className="absolute inset-0">
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-green-600/20 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-emerald-500/15 rounded-full blur-3xl"></div>
+          <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-teal-600/10 rounded-full blur-3xl"></div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Side - Wallet Info */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* User Info Card */}
-            <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-2xl shadow-lg p-8 text-white">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div>
               <div className="flex items-center space-x-4 mb-6">
-                <div className="w-20 h-20 bg-white/20 backdrop-blur rounded-full flex items-center justify-center text-3xl font-bold">
-                  {wallet.fullName?.charAt(0).toUpperCase() || wallet.username?.charAt(0).toUpperCase() || 'U'}
+                <div className="relative">
+                  <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl border border-white/30">
+                    <Leaf className="w-12 h-12 text-green-200" />
+                  </div>
+                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-emerald-400 rounded-full flex items-center justify-center">
+                    <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                  </div>
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold">{wallet.fullName || wallet.username || 'User'}</h2>
-                  <p className="text-green-100">@{wallet.username || 'username'}</p>
-                  <span className="inline-block mt-2 px-3 py-1 bg-white/20 backdrop-blur rounded-full text-sm font-semibold">
-                    BUYER
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                {/* Cash Balance */}
-                <div className="bg-white rounded-xl p-4 shadow-lg">
-                  <p className="text-gray-500 text-sm mb-1">Cash Balance</p>
-                  <p className="text-3xl font-bold text-green-600">${wallet.cashBalance?.toLocaleString() || '0.00'}</p>
-                </div>
-
-                {/* Credit Balance */}
-                <div className="bg-white rounded-xl p-4 shadow-lg">
-                  <p className="text-gray-500 text-sm mb-1">Credit Balance</p>
-                  <p className="text-3xl font-bold text-blue-600">{wallet.creditBalance?.toLocaleString() || '0'}</p>
-                  <p className="text-gray-500 text-xs mt-1">tonnes CO₂e</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  onClick={() => setShowDepositModal(true)}
-                  className="flex flex-col items-center justify-center p-4 bg-green-50 hover:bg-green-100 rounded-xl transition border-2 border-green-200 hover:border-green-400 cursor-pointer"
-                >
-                  <svg className="w-6 h-6 mb-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                  <span className="font-semibold text-gray-900 text-sm">Deposit Funds</span>
-                </button>
-
-                <button
-                  onClick={() => navigate('/marketplace')}
-                  className="flex flex-col items-center justify-center p-4 bg-blue-50 hover:bg-blue-100 rounded-xl transition border-2 border-blue-200 hover:border-blue-400 cursor-pointer"
-                >
-                  <svg className="w-6 h-6 mb-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
-                  <span className="font-semibold text-gray-900 text-sm">Buy Credits</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Transaction History */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Transactions</h3>
-              
-              {transactions.length === 0 ? (
-                <div className="text-center py-8">
-                  <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <p className="text-gray-500">No transactions yet</p>
-                  <p className="text-sm text-gray-400 mt-1">Your transaction history will appear here</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {transactions.map((tx, index) => (
-                    <div key={tx.id || index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          tx.type === 'DEPOSIT' ? 'bg-green-100' : 'bg-blue-100'
-                        }`}>
-                          {tx.type === 'DEPOSIT' ? (
-                            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                            </svg>
-                          ) : (
-                            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                            </svg>
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-900">{tx.type || 'Transaction'}</p>
-                          <p className="text-sm text-gray-500">
-                            {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : 'N/A'}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className={`font-bold ${
-                          tx.type === 'DEPOSIT' ? 'text-green-600' : 'text-blue-600'
-                        }`}>
-                          {tx.type === 'DEPOSIT' ? '+' : ''}${tx.amount?.toFixed(2) || '0.00'}
-                        </p>
-                        <p className="text-xs text-gray-500">{tx.status || 'COMPLETED'}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right Side - Stats & Info */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Wallet Stats */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Wallet Statistics</h3>
-              
-              <div className="space-y-4">
-                <div className="p-4 bg-purple-50 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-1">Wallet ID</p>
-                  <p className="font-mono text-xs text-gray-900 break-all">
-                    {wallet.walletId?.toString() || wallet.id?.toString() || 'N/A'}
+                  <h1 className="text-5xl font-bold text-white mb-2">
+                    EcoWallet
+                  </h1>
+                  <p className="text-emerald-200 text-xl font-medium">
+                    Sustainable Carbon Credit Portfolio
                   </p>
                 </div>
-
-                <div className="p-4 bg-green-50 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-1">Account Status</p>
-                  <span className="inline-block px-3 py-1 bg-green-500 text-white rounded-full text-sm font-semibold">
-                    Active
-                  </span>
+              </div>
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-emerald-200 text-sm font-medium">Total Impact</p>
+                    <p className="text-3xl font-bold text-white">
+                      {((wallet?.creditBalance || 0) * 2.5).toFixed(1)}
+                    </p>
+                    <p className="text-emerald-300 text-sm">tons CO₂ offset</p>
+                  </div>
+                  <div>
+                    <p className="text-emerald-200 text-sm font-medium">Active Credits</p>
+                    <p className="text-3xl font-bold text-white">
+                      {(wallet?.creditBalance || 0).toLocaleString()}
+                    </p>
+                    <p className="text-emerald-300 text-sm">carbon credits</p>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Security Info */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Security</h3>
-              
-              <div className="space-y-3">
-                <div className="flex items-center text-sm">
-                  <svg className="w-5 h-5 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
-                  </svg>
-                  <span className="text-gray-700">2FA Enabled</span>
+            <div className="flex justify-center lg:justify-end">
+              <div className="relative">
+                <div className="w-64 h-64 bg-gradient-to-br from-green-400 to-emerald-600 rounded-full flex items-center justify-center shadow-2xl">
+                  <Earth className="w-32 h-32 text-white" />
                 </div>
-                
-                <div className="flex items-center text-sm">
-                  <svg className="w-5 h-5 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
-                  </svg>
-                  <span className="text-gray-700">Verified Account</span>
-                </div>
-                
-                <div className="flex items-center text-sm">
-                  <svg className="w-5 h-5 mr-2 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"/>
-                  </svg>
-                  <span className="text-gray-700">Secure Encryption</span>
+                <div className="absolute -bottom-4 -right-4 bg-white rounded-xl px-4 py-2 shadow-lg">
+                  <p className="text-green-700 font-bold text-sm">Going Green!</p>
                 </div>
               </div>
             </div>
@@ -410,123 +310,397 @@ const WalletPage = () => {
         </div>
       </div>
 
-      {/* Deposit Modal */}
-      {showDepositModal && (
-        <div className="fixed inset-0 bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Deposit Funds</h2>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Balance Dashboard Cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12 -mt-16 relative z-10">
+          {/* Cash Balance Card */}
+          <div className="bg-white rounded-3xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-4">
+                <div className="p-4 bg-gradient-to-br from-green-100 to-emerald-100 rounded-2xl">
+                  <DollarSign className="w-8 h-8 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">Cash Balance</h3>
+                  <p className="text-gray-500">Available for investment</p>
+                </div>
+              </div>
               <button
-                onClick={() => setShowDepositModal(false)}
-                className="text-gray-400 hover:text-gray-600 transition cursor-pointer"
+                onClick={() => setShowBalance(!showBalance)}
+                className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                {showBalance ? <Eye className="w-5 h-5 text-gray-600" /> : <EyeOff className="w-5 h-5 text-gray-600" />}
               </button>
             </div>
 
-            <form onSubmit={handleDeposit}>
-              {/* Amount Input */}
-              <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  Deposit Amount (USD)
-                </label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 text-lg">$</span>
-                  <input
-                    type="number"
-                    value={depositAmount}
-                    onChange={(e) => setDepositAmount(e.target.value)}
-                    placeholder="0.00"
-                    step="0.01"
-                    min="10"
-                    required
-                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:border-green-600 focus:outline-none text-lg font-semibold"
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-2">Minimum deposit: $10.00</p>
+            <div className="mb-6">
+              <p className="text-4xl font-bold text-gray-900 mb-2">
+                {showBalance ? formatCurrency(wallet?.cashBalance) : '••••••••'}
+              </p>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <p className="text-green-600 text-sm font-medium">Ready to invest</p>
               </div>
+            </div>
 
-              {/* Payment Method */}
-              <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-900 mb-3">
-                  Payment Method
-                </label>
-                
-                <div className="space-y-3">
-                  <label className={`flex items-center p-4 border-2 rounded-xl cursor-pointer transition ${
-                    depositMethod === 'bank_transfer' 
-                      ? 'border-green-600 bg-green-50' 
-                      : 'border-gray-200 hover:border-green-300'
-                  }`}>
-                    <input
-                      type="radio"
-                      name="depositMethod"
-                      value="bank_transfer"
-                      checked={depositMethod === 'bank_transfer'}
-                      onChange={(e) => setDepositMethod(e.target.value)}
-                      className="mr-3"
-                    />
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-900">Bank Transfer</p>
-                      <p className="text-xs text-gray-500">Direct bank transfer</p>
-                    </div>
-                  </label>
+            <button
+              onClick={() => setShowDepositModal(true)}
+              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-4 rounded-2xl font-semibold hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+            >
+              <Plus className="w-5 h-5 inline mr-2" />
+              Add Funds
+            </button>
+          </div>
 
-                  <label className={`flex items-center p-4 border-2 rounded-xl cursor-pointer transition ${
-                    depositMethod === 'credit_card' 
-                      ? 'border-green-600 bg-green-50' 
-                      : 'border-gray-200 hover:border-green-300'
-                  }`}>
-                    <input
-                      type="radio"
-                      name="depositMethod"
-                      value="credit_card"
-                      checked={depositMethod === 'credit_card'}
-                      onChange={(e) => setDepositMethod(e.target.value)}
-                      className="mr-3"
-                    />
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-900">Credit/Debit Card</p>
-                      <p className="text-xs text-gray-500">Visa, Mastercard</p>
-                    </div>
-                  </label>
+          {/* Carbon Credits Card */}
+          <div className="bg-gradient-to-br from-green-600 to-emerald-700 rounded-3xl p-8 text-white shadow-xl hover:shadow-2xl transition-all duration-300 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
+            <div className="relative z-10">
+              <div className="flex items-center space-x-4 mb-6">
+                <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl">
+                  <TreePine className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold">Carbon Credits</h3>
+                  <p className="text-green-200">Environmental portfolio</p>
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowDepositModal(false)}
-                  className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition cursor-pointer"
-                  disabled={depositing}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={depositing || !depositAmount || parseFloat(depositAmount) < 10}
-                  className="flex-1 px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 disabled:bg-gray-300 transition cursor-pointer"
-                >
-                  {depositing ? (
-                    <span className="flex items-center justify-center">
-                      <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                      </svg>
-                      Processing...
-                    </span>
-                  ) : (
-                    'Deposit'
-                  )}
-                </button>
+              <p className="text-4xl font-bold mb-2">
+                {showBalance ? (wallet?.creditBalance || 0).toLocaleString() : '••••••'}
+              </p>
+              <p className="text-green-200 mb-4">Active credits</p>
+
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
+                <div className="flex items-center space-x-2">
+                  <Recycle className="w-4 h-4" />
+                  <span className="text-sm">≈ {((wallet?.creditBalance || 0) * 1000).toLocaleString()} trees protected</span>
+                </div>
               </div>
-            </form>
+            </div>
+          </div>
+
+          {/* Quick Actions Card */}
+          <div className="bg-white rounded-3xl p-8 shadow-xl border border-gray-100 hover:shadow-2xl transition-all duration-300">
+            <div className="flex items-center space-x-4 mb-6">
+              <div className="p-4 bg-gradient-to-br from-teal-100 to-cyan-100 rounded-2xl">
+                <Wallet className="w-8 h-8 text-teal-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Quick Actions</h3>
+                <p className="text-gray-500">Manage your portfolio</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl font-medium transition-colors flex items-center justify-center space-x-2"
+              >
+                <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+                <span>Refresh Data</span>
+              </button>
+
+              <button
+                onClick={() => navigate('/marketplace')}
+                className="w-full bg-gradient-to-r from-teal-500 to-cyan-600 text-white py-3 rounded-xl font-medium hover:from-teal-600 hover:to-cyan-700 transition-all duration-300 flex items-center justify-center space-x-2"
+              >
+                <ShoppingCart className="w-5 h-5" />
+                <span>Browse Market</span>
+              </button>
+            </div>
           </div>
         </div>
-      )}
+
+        {/* Environmental Impact Stats */}
+        <div className="bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 rounded-3xl p-8 mb-12 text-white relative overflow-hidden">
+          <div className="absolute inset-0">
+            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-black/10 to-transparent"></div>
+            <div className="absolute bottom-0 right-0 w-64 h-64 bg-white/5 rounded-full translate-y-32 translate-x-32"></div>
+          </div>
+
+          <div className="relative z-10">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold mb-2">Your Environmental Impact</h2>
+              <p className="text-emerald-200 text-lg">Making a difference for our planet</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+              <div className="text-center">
+                <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl inline-block mb-4">
+                  <Earth className="w-8 h-8" />
+                </div>
+                <p className="text-3xl font-bold mb-1">{((wallet?.creditBalance || 0) * 2.5).toFixed(1)}</p>
+                <p className="text-emerald-200">Tons CO₂ Offset</p>
+              </div>
+
+              <div className="text-center">
+                <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl inline-block mb-4">
+                  <TreePine className="w-8 h-8" />
+                </div>
+                <p className="text-3xl font-bold mb-1">{((wallet?.creditBalance || 0) * 45).toLocaleString()}</p>
+                <p className="text-emerald-200">Trees Equivalent</p>
+              </div>
+
+              <div className="text-center">
+                <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl inline-block mb-4">
+                  <Recycle className="w-8 h-8" />
+                </div>
+                <p className="text-3xl font-bold mb-1">{transactions.length}</p>
+                <p className="text-emerald-200">Green Transactions</p>
+              </div>
+
+              <div className="text-center">
+                <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl inline-block mb-4">
+                  <Leaf className="w-8 h-8" />
+                </div>
+                <p className="text-3xl font-bold mb-1">92.5%</p>
+                <p className="text-emerald-200">Sustainability Score</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Modern Transaction History */}
+        <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+          <div className="bg-gradient-to-r from-gray-50 to-green-50 p-8 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-6">
+                <div className="p-4 bg-gradient-to-br from-green-100 to-emerald-100 rounded-2xl">
+                  <Calendar className="w-8 h-8 text-green-600" />
+                </div>
+                <div>
+                  <h2 className="text-3xl font-bold text-gray-900">Transaction History</h2>
+                  <p className="text-gray-600 text-lg">Your green investment journey</p>
+                </div>
+              </div>
+              <div className="bg-white rounded-2xl px-6 py-3 shadow-sm border border-gray-200">
+                <div className="flex items-center space-x-3">
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-gray-700 font-bold">{transactions.length} Transactions</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-8">
+            {transactions.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="relative inline-block mb-8">
+                  <div className="p-8 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full">
+                    <Wallet className="w-20 h-20 text-green-600" />
+                  </div>
+                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center">
+                    <Plus className="w-4 h-4 text-white" />
+                  </div>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">Ready to Go Green?</h3>
+                <p className="text-gray-600 mb-8 text-lg max-w-md mx-auto">
+                  Start your environmental impact journey with your first green investment.
+                </p>
+                <button
+                  onClick={() => setShowDepositModal(true)}
+                  className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 py-4 rounded-2xl font-bold hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                >
+                  <Leaf className="w-5 h-5 inline mr-2" />
+                  Start Green Investment
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {transactions.map((transaction, index) => (
+                  <div key={transaction.id || index} className="bg-gradient-to-r from-gray-50 to-green-50/30 p-6 rounded-2xl border border-gray-100 hover:shadow-md transition-all duration-300 hover:border-green-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-6">
+                        <div className={`p-3 rounded-xl shadow-sm ${
+                          transaction.type === 'DEPOSIT' ? 'bg-green-100 text-green-600' :
+                          transaction.type === 'WITHDRAWAL' ? 'bg-red-100 text-red-600' :
+                          'bg-blue-100 text-blue-600'
+                        }`}>
+                          {getTransactionIcon(transaction.type)}
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-4 mb-2">
+                            <span className={`font-bold text-lg ${getTransactionColor(transaction.type)}`}>
+                              {transaction.type}
+                            </span>
+                            <div className="flex items-center space-x-2">
+                              {getStatusIcon(transaction.status)}
+                              <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(transaction.status)}`}>
+                                {transaction.status}
+                              </span>
+                            </div>
+                          </div>
+                          <p className="text-gray-600 mb-2">
+                            {transaction.description || 'Green investment transaction'}
+                          </p>
+                          <div className="flex items-center space-x-4">
+                            <div className="flex items-center space-x-2">
+                              <Calendar className="w-4 h-4 text-gray-400" />
+                              <span className="text-sm text-gray-500">{formatDate(transaction.createdAt)}</span>
+                            </div>
+                            {transaction.type === 'DEPOSIT' && (
+                              <div className="flex items-center space-x-2">
+                                <Leaf className="w-4 h-4 text-green-500" />
+                                <span className="text-sm text-green-600 font-medium">Eco-friendly</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className={`text-2xl font-bold ${getTransactionColor(transaction.type)}`}>
+                          {transaction.type === 'DEPOSIT' ? '+' : '-'}
+                          {formatCurrency(transaction.amount)}
+                        </span>
+                        <p className="text-sm text-gray-500 mt-1">
+                          ≈ {((transaction.amount / 25) * 2.5).toFixed(1)} tons CO₂
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Modern Environmental Deposit Modal */}
+        {showDepositModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl transform transition-all overflow-hidden">
+              {/* Modern Modal Header */}
+              <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-8 text-white relative">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
+                <div className="relative z-10">
+                  <div className="flex items-center space-x-4 mb-4">
+                    <div className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl">
+                      <Leaf className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold">Green Investment</h3>
+                      <p className="text-green-200">Fund your eco portfolio</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-8">
+                <div className="space-y-6">
+                  {/* Amount Input */}
+                  <div>
+                    <label className="block text-sm font-bold text-gray-800 mb-3">
+                      Investment Amount (USD)
+                    </label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-600" />
+                      <input
+                        type="number"
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all text-lg font-semibold"
+                      />
+                    </div>
+                    {depositAmount && (
+                      <div className="mt-2 p-3 bg-green-50 rounded-xl border border-green-200">
+                        <div className="flex items-center space-x-2 text-green-700">
+                          <TreePine className="w-4 h-4" />
+                          <span className="text-sm font-medium">
+                            Environmental impact: ≈ {(parseFloat(depositAmount || 0) / 25 * 2.5).toFixed(1)} tons CO₂ offset
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Payment Method */}
+                  <div>
+                    <label className="block text-sm font-bold text-gray-800 mb-3">
+                      Payment Method
+                    </label>
+                    <select
+                      value={depositMethod}
+                      onChange={(e) => setDepositMethod(e.target.value)}
+                      className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all font-medium"
+                    >
+                      <option value="bank_transfer">🏦 Bank Transfer</option>
+                      <option value="credit_card">💳 Credit Card</option>
+                      <option value="vnpay">📱 VNPay Digital Wallet</option>
+                    </select>
+                  </div>
+
+                  {/* Quick Amount Selection */}
+                  <div>
+                    <p className="text-sm font-bold text-gray-800 mb-3">Popular amounts:</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { amount: 100, impact: '10 tons CO₂' },
+                        { amount: 500, impact: '50 tons CO₂' },
+                        { amount: 1000, impact: '100 tons CO₂' },
+                        { amount: 2500, impact: '250 tons CO₂' }
+                      ].map(({ amount, impact }) => (
+                        <button
+                          key={amount}
+                          onClick={() => setDepositAmount(amount.toString())}
+                          className="p-3 border-2 border-gray-200 rounded-xl hover:border-green-400 hover:bg-green-50 transition-all text-center group"
+                        >
+                          <div className="font-bold text-green-600 group-hover:text-green-700">
+                            ${amount}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">{impact}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Security Notice */}
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <h4 className="font-medium text-gray-800">Secure Transaction</h4>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Bank-level encryption • Instant processing • Environmental impact tracking
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex space-x-4 mt-8">
+                  <button
+                    onClick={() => {
+                      setShowDepositModal(false);
+                      setDepositAmount('');
+                    }}
+                    className="flex-1 py-4 px-6 border-2 border-gray-300 rounded-2xl font-semibold text-gray-700 hover:bg-gray-50 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeposit}
+                    disabled={depositing || !depositAmount}
+                    className="flex-1 py-4 px-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl font-semibold hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl"
+                  >
+                    {depositing ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        <span>Processing...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center space-x-2">
+                        <Leaf className="w-5 h-5" />
+                        <span>Invest Green</span>
+                      </div>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

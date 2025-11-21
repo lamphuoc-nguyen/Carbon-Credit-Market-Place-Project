@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Navbar_Buyer from '../../Components/BuyerComponents/Navbar-Buyer';
 import { buyerApi } from '../../api';
+import Navbar_Buyer from '../../Components/BuyerComponents/Navbar-Buyer';
 
-const MakerPlacePage = () => {
+const MakerPlacePage = ({ showNavbar = true }) => {
   const navigate = useNavigate();
   
   // Helper function to format price (hide .00 for whole numbers)
@@ -15,7 +15,9 @@ const MakerPlacePage = () => {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
- 
+  const [walletStatus, setWalletStatus] = useState('loading'); // 'loading', 'success', 'error'
+  const [walletError, setWalletError] = useState(null);
+
 
   // Pagination & Filters
   const [page, setPage] = useState(0);
@@ -33,12 +35,15 @@ const MakerPlacePage = () => {
   const fetchMarketplaceData = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setWalletStatus('loading');
+    setWalletError(null);
+
     try {
-      const [listingsData, walletData, statsData] = await Promise.all([
-        buyerApi.getMarketplaceListings(page, 15, sortBy), // Changed from 20 to 15
-        buyerApi.getMyWallet(),
-        buyerApi.getMarketplaceStats()
-      ]);
+      console.log('🔄 Fetching marketplace data...');
+
+      // Fetch marketplace listings first (essential)
+      const listingsData = await buyerApi.getMarketplaceListings(page, 15, sortBy);
+      console.log('✅ Marketplace listings loaded:', listingsData);
 
       let fetchedListings = listingsData.content || [];
       
@@ -63,19 +68,60 @@ const MakerPlacePage = () => {
       });
 
       setListings(fetchedListings);
-      setAllListings(fetchedListings); // Store sorted data
+      setAllListings(fetchedListings);
       setTotalPages(listingsData.totalPages || 0);
 
-      console.log('✅ Marketplace Data:', {
-        listings: listingsData,
-        totalElements: listingsData.totalElements,
-        wallet: walletData,
-        stats: statsData,
-        sortBy: sortBy
-      });
+      // Try to fetch additional data (non-essential)
+      try {
+        console.log('🔄 Fetching wallet and stats data...');
+        const [walletData, statsData] = await Promise.allSettled([
+          buyerApi.getMyWallet(),
+          buyerApi.getMarketplaceStats()
+        ]);
+
+        if (walletData.status === 'fulfilled') {
+          console.log('✅ Wallet data loaded:', walletData.value);
+          setWalletStatus('success');
+        } else {
+          console.warn('⚠️ Wallet data failed to load:', walletData.reason);
+          setWalletStatus('error');
+          setWalletError(walletData.reason?.response?.data?.message || walletData.reason?.message || 'Failed to load wallet');
+        }
+
+        if (statsData.status === 'fulfilled') {
+          console.log('✅ Stats data loaded:', statsData.value);
+        } else {
+          console.warn('⚠️ Stats data failed to load:', statsData.reason);
+        }
+      } catch (additionalErr) {
+        console.warn('⚠️ Additional data loading failed (non-critical):', additionalErr);
+        setWalletStatus('error');
+        setWalletError(additionalErr?.response?.data?.message || additionalErr?.message || 'Failed to load wallet');
+      }
+
+      console.log('✅ Marketplace page loaded successfully');
+
     } catch (err) {
-      console.error('❌ Error fetching marketplace:', err);
-      setError(err.message || 'Unable to load marketplace data');
+      console.error('❌ Critical error fetching marketplace:', {
+        message: err.message,
+        status: err.response?.status,
+        data: err.response?.data,
+        url: err.config?.url
+      });
+
+      let errorMessage = 'Unable to load marketplace data';
+
+      if (err.response?.status === 401) {
+        errorMessage = 'Authentication failed. Please login again.';
+      } else if (err.response?.status === 500) {
+        errorMessage = 'Server error. Please try again later.';
+      } else if (!err.response) {
+        errorMessage = 'Cannot connect to server. Please check if backend is running.';
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      }
+
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -258,9 +304,8 @@ const MakerPlacePage = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Navbar_Buyer />
-
-      <div className=" mx-auto px- sm:px-6 lg:px-8 py-6">       
+      {showNavbar && <Navbar_Buyer />}
+      <div className=" mx-auto px- sm:px-6 lg:px-8 py-6">
 
         {/* Main Layout: Sidebar + Listings */}
         <div className="flex flex-col lg:flex-row gap-4">
@@ -453,6 +498,23 @@ const MakerPlacePage = () => {
               )}
             </div>
             
+            {/* Wallet Status Notification */}
+            {walletStatus === 'error' && (
+              <div className="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-700 p-4 mb-6 rounded-r-lg">
+                <div className="flex items-center">
+                  <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd"/>
+                  </svg>
+                  <div>
+                    <p className="font-medium">Wallet data unavailable</p>
+                    <p className="text-sm text-yellow-600">
+                      {walletError || 'Unable to load wallet information, but you can still browse the marketplace.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Error Message */}
             {error && (
               <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-r-lg">
@@ -555,6 +617,11 @@ const MakerPlacePage = () => {
                         <p className="text-xs text-gray-500 mt-1">
                           For {listing.credit?.creditAmount || 0} tonnes
                         </p>
+                        {listing.credit?.creditAmount && (
+                          <p className="text-xs text-blue-600 font-semibold mt-1">
+                            ${formatPrice((listing.price || 0) / listing.credit.creditAmount)} per tonne
+                          </p>
+                        )}
                       </div>
                     </div>
 

@@ -13,7 +13,8 @@ import {
   Settings
 } from 'lucide-react';
 import { clearAuthData } from '../../utils/tokenUtils';
-import { userApi } from '../../api';
+import userDataFetcher from '../../api/userDataFetcher';
+import NotificationButton from '../NotificationButton'; // Add notification button
 
 export default function Navbar_Buyer() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -36,9 +37,10 @@ export default function Navbar_Buyer() {
         return;
       }
 
-      console.log('🔍 Fetching user profile...');
-      const userData = await userApi.getCurrentUser();
-      
+      console.log('🔍 Fetching user profile via centralized fetcher...');
+      const response = await userDataFetcher.getUserProfile();
+      const userData = response.data?.data || response.data;
+
       console.log('✅ User data received:', userData);
       setUser(userData);
     } catch (error) {
@@ -105,6 +107,9 @@ export default function Navbar_Buyer() {
 
           {/* User Profile Dropdown - Desktop */}
           <div className="hidden md:flex items-center gap-4">
+            {/* Notification Button */}
+            <NotificationButton />
+
             <div className="relative">
               <button
                 onClick={toggleProfileDropdown}

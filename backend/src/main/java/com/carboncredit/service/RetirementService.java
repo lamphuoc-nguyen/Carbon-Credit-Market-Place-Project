@@ -36,6 +36,7 @@ public class RetirementService {
     @Autowired private UserRepository userRepository;
     @Autowired private CertificateGenerationService certGenerationService;
     @Autowired private WalletService walletService;
+    @Autowired private NotificationService notificationService;
 
     @Transactional // (Đây là Giao dịch A)
     public RetirementTransaction initiateRetirement(RetirementRequestDTO request) {
@@ -102,6 +103,9 @@ public class RetirementService {
                 .createdAt(Instant.now())
                 .build();
         Certificate savedCert = certificateRepo.save(newCert);
+
+        // Send notification for retirement success
+        notificationService.notifyRetirementSuccess(buyer, savedCert.getId().toString());
 
         // ---- 6. Async PDF generation (Giữ nguyên) ----
         // Kích hoạt Giai đoạn 2 (Bất đồng bộ) CHỈ SAU KHI Giao dịch A commit thành công

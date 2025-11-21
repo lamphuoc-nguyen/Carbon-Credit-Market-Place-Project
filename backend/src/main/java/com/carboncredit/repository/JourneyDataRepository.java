@@ -64,4 +64,31 @@ public interface JourneyDataRepository extends JpaRepository<JourneyData, UUID> 
     @Query("SELECT COUNT(j) FROM JourneyData j WHERE j.verificationStatus = 'PENDING_VERIFICATION' " +
             "AND j.createdAt < :threshold")
     long countOverduePendingJourneys(LocalDateTime threshold);
+
+    /**
+     * Find existing journeys for duplicate detection
+     * Check for journeys with same user, vehicle, and similar time/distance within same day
+     */
+    @Query("SELECT j FROM JourneyData j WHERE j.user = :user " +
+            "AND j.vehicle = :vehicle " +
+            "AND CAST(j.startTime AS DATE) = CAST(:startTime AS DATE) " +
+            "AND j.distanceKm = :distance " +
+            "AND j.energyConsumedKwh = :energy")
+    List<JourneyData> findPotentialDuplicates(
+            User user,
+            Vehicle vehicle,
+            LocalDateTime startTime,
+            BigDecimal distance,
+            BigDecimal energy);
+
+    /**
+     * Find journeys for the same user and vehicle on the same date
+     */
+    @Query("SELECT j FROM JourneyData j WHERE j.user = :user " +
+            "AND j.vehicle = :vehicle " +
+            "AND CAST(j.startTime AS DATE) = CAST(:startTime AS DATE)")
+    List<JourneyData> findJourneysByUserVehicleAndDate(
+            User user,
+            Vehicle vehicle,
+            LocalDateTime startTime);
 }

@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -51,6 +52,32 @@ public class CreditListingController {
 
         } catch (Exception e) {
             log.error("Error creating listing: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    // Create a combined listing from multiple credits
+    @PostMapping("/create-combined")
+    public ResponseEntity<CreditListingDTO> createCombinedListing(
+            @RequestParam List<UUID> creditIds,
+            @RequestParam BigDecimal pricePerCredit,
+            Authentication authentication) {
+        try {
+            User user = userService.findByUsername(authentication.getName())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            log.info("Creating combined listing for {} credits by user {} at price {} per credit",
+                     creditIds.size(), user.getUsername(), pricePerCredit);
+
+            CreditListing combinedListing = creditListingService.createCombinedListing(creditIds, pricePerCredit, user);
+            CreditListingDTO dto = new CreditListingDTO(combinedListing);
+
+            log.info("Combined listing created successfully: {} for {} credits",
+                     combinedListing.getId(), creditIds.size());
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(dto);
+        } catch (Exception e) {
+            log.error("Error creating combined listing: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
         }
     }

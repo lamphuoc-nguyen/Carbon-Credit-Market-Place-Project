@@ -1,6 +1,8 @@
 
 package com.carboncredit.service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -67,8 +69,13 @@ public class TransactionService {
 
     // ==== TRANSACTION AND PROCESSING ================
 
-    // Initiates transaction for purchasing a carbon credit
+    // Initiates transaction for purchasing a carbon credit (full purchase)
     public Transaction initiatePurchase(UUID listingId, User buyer, String paymentMethodId) {
+        return initiatePurchase(listingId, buyer, paymentMethodId, null);
+    }
+
+    // Initiates transaction for purchasing a carbon credit with optional partial quantity
+    public Transaction initiatePurchase(UUID listingId, User buyer, String paymentMethodId, BigDecimal quantity) {
         CreditListing listing = creditListingRepository.findById(listingId)
                 .orElseThrow(() -> new RuntimeException("Listing not found"));
 
@@ -82,13 +89,41 @@ public class TransactionService {
         if (credit == null) {
             throw new RuntimeException("Listing has no associated carbon credit");
         }
+
+        // Calculate purchase amount based on quantity (if provided)
+        BigDecimal purchaseAmount;
+        BigDecimal purchaseQuantity;
+
+        if (quantity != null && quantity.compareTo(BigDecimal.ZERO) > 0) {
+            // Partial purchase
+            BigDecimal totalCredits = credit.getCreditAmount();
+            if (quantity.compareTo(totalCredits) > 0) {
+                throw new RuntimeException("Requested quantity exceeds available credits");
+            }
+
+            // Calculate proportional price: (quantity / totalCredits) * listingPrice
+            purchaseAmount = listing.getPrice().multiply(quantity).divide(totalCredits, 2, RoundingMode.HALF_UP);
+            purchaseQuantity = quantity;
+
+            log.info("Partial purchase initiated: {} out of {} credits for ${}", quantity, totalCredits, purchaseAmount);
+        } else {
+            // Full purchase
+            purchaseAmount = listing.getPrice();
+            purchaseQuantity = credit.getCreditAmount();
+
+            log.info("Full purchase initiated: {} credits for ${}", purchaseQuantity, purchaseAmount);
+        }
+
         Transaction transaction = new Transaction();
         transaction.setListing(listing);
-        transaction.setCredit(credit); // Set credit vào transaction
+        transaction.setCredit(credit);
         transaction.setBuyer(buyer);
-        transaction.setSeller(credit.getUser()); // Set seller từ owner của credit
-        transaction.setAmount(listing.getPrice()); // Lấy giá từ listing
+        transaction.setSeller(credit.getUser());
+        transaction.setAmount(purchaseAmount);
         transaction.setPaymentMethodId(paymentMethodId);
+
+        // Store the purchase quantity in transaction for later processing
+        transaction.setCreditAmount(purchaseQuantity);
 
         // Set payment method based on paymentMethodId
         if (paymentMethodId != null && paymentMethodId.toUpperCase().contains("VNPAY")) {
@@ -166,31 +201,69 @@ public class TransactionService {
         fullTransaction.setStatus(TransactionStatus.COMPLETED);
         fullTransaction.setCompletedAt(LocalDateTime.now());
 
-        // Update listing status
-        currentListing.setStatus(ListingStatus.CLOSED);
-        creditListingRepository.save(currentListing);
+        // Handle partial vs full purchase
+        BigDecimal purchasedAmount = fullTransaction.getCreditAmount();
+        BigDecimal originalCreditAmount = currentCredit.getCreditAmount();
 
-        // Transfer credit ownership to buyer
-        currentCredit.setUser(fullTransaction.getBuyer());
-        carbonCreditRepository.save(currentCredit);
+        if (purchasedAmount != null && purchasedAmount.compareTo(originalCreditAmount) < 0) {
+            // PARTIAL PURCHASE
+            log.info("🔄 Processing partial purchase: {} out of {} credits", purchasedAmount, originalCreditAmount);
+
+            // Create new credit for buyer with partial amount
+            CarbonCredit buyerCredit = new CarbonCredit();
+            buyerCredit.setUser(fullTransaction.getBuyer());
+            buyerCredit.setCreditAmount(purchasedAmount);
+            buyerCredit.setCo2ReducedKg(currentCredit.getCo2ReducedKg().multiply(purchasedAmount).divide(originalCreditAmount, 2, RoundingMode.HALF_UP));
+            buyerCredit.setCreatedAt(LocalDateTime.now());
+            buyerCredit.setStatus(CarbonCredit.CreditStatus.VERIFIED);
+            buyerCredit.setVerifiedAt(currentCredit.getVerifiedAt()); // Fixed: use verifiedAt instead of verificationDate
+            buyerCredit.setVerifiedBy(currentCredit.getVerifiedBy());
+            carbonCreditRepository.save(buyerCredit);
+
+            // Reduce original credit amount for seller
+            currentCredit.setCreditAmount(originalCreditAmount.subtract(purchasedAmount));
+            currentCredit.setCo2ReducedKg(currentCredit.getCo2ReducedKg().multiply(currentCredit.getCreditAmount()).divide(originalCreditAmount, 2, RoundingMode.HALF_UP));
+            carbonCreditRepository.save(currentCredit);
+
+            // Update listing price proportionally and keep it active
+            BigDecimal remainingRatio = currentCredit.getCreditAmount().divide(originalCreditAmount, 4, RoundingMode.HALF_UP);
+            currentListing.setPrice(currentListing.getPrice().multiply(remainingRatio));
+            currentListing.setStatus(ListingStatus.ACTIVE); // Keep listing active
+            creditListingRepository.save(currentListing);
+
+            log.info("✅ Partial purchase completed: Buyer received {} credits, seller has {} credits remaining",
+                     purchasedAmount, currentCredit.getCreditAmount());
+
+        } else {
+            // FULL PURCHASE (original logic)
+            log.info("📦 Processing full purchase: {} credits", originalCreditAmount);
+
+            // Transfer entire credit ownership to buyer
+            currentCredit.setUser(fullTransaction.getBuyer());
+            carbonCreditRepository.save(currentCredit);
+
+            // Close the listing completely
+            currentListing.setStatus(ListingStatus.CLOSED);
+            creditListingRepository.save(currentListing);
+
+            log.info("✅ Full purchase completed: Buyer received all {} credits", originalCreditAmount);
+        }
 
         // Update wallets based on payment method
-        // ✅ CHỈ TRỪ TIỀN WALLET KHI THANH TOÁN BẰNG WALLET
         if (fullTransaction.getPaymentMethod() == Transaction.PaymentMethod.WALLET) {
-            // Thanh toán bằng wallet - Trừ tiền từ wallet người mua
             log.info("💰 Payment via WALLET - Deducting {} from buyer's wallet", fullTransaction.getAmount());
             walletService.updateCashBalance(fullTransaction.getBuyer().getId(), fullTransaction.getAmount().negate());
         } else {
-            // Thanh toán bằng VNPay hoặc phương thức khác - Không trừ wallet
             log.info("💳 Payment via {} - No wallet deduction (already paid externally)",
                     fullTransaction.getPaymentMethod());
         }
 
-        // ✅ LUÔN CỘNG CREDIT CHO NGƯỜI MUA (bất kể phương thức thanh toán)
-        walletService.updateCreditBalance(fullTransaction.getBuyer().getId(), currentCredit.getCreditAmount());
-        log.info("✅ Added {} credits to buyer's wallet", currentCredit.getCreditAmount());
+        // Add purchased credits to buyer's wallet (use actual purchased amount)
+        BigDecimal creditsToAdd = purchasedAmount != null ? purchasedAmount : originalCreditAmount;
+        walletService.updateCreditBalance(fullTransaction.getBuyer().getId(), creditsToAdd);
+        log.info("✅ Added {} credits to buyer's wallet", creditsToAdd);
 
-        // ✅ LUÔN CỘNG TIỀN CHO NGƯỜI BÁN (bất kể phương thức thanh toán)
+        // Add payment amount to seller's wallet
         walletService.updateCashBalance(fullTransaction.getSeller().getId(), fullTransaction.getAmount());
         log.info("✅ Added {} cash to seller's wallet", fullTransaction.getAmount());
 
@@ -203,9 +276,22 @@ public class TransactionService {
                 completedTransaction.getBuyer().getId().toString(),
                 completedTransaction.getSeller().getId().toString());
 
-        // Send notification
-        notificationService.notifyTransactionCompleted(completedTransaction.getBuyer(),
-                completedTransaction.getSeller(), completedTransaction.getId().toString());
+        // Send notifications to both buyer and seller
+        String creditName = completedTransaction.getCredit() != null ?
+            completedTransaction.getCredit().getId().toString() : "credit";
+        String quantity = purchasedAmount != null ? purchasedAmount.toString() : originalCreditAmount.toString();
+
+        notificationService.notifyPurchaseSuccess(
+            completedTransaction.getBuyer(),
+            creditName,
+            quantity,
+            completedTransaction.getId().toString());
+
+        notificationService.notifyCreditSold(
+            completedTransaction.getSeller(),
+            creditName,
+            quantity,
+            completedTransaction.getId().toString());
 
         log.info("Transaction {} completed successfully", completedTransaction.getId());
         return completedTransaction;

@@ -14,7 +14,8 @@ import {
   ChevronDown,
   List
 } from 'lucide-react'
-import { userApi } from '../../api/userApi'
+import userDataFetcher from '../../api/userDataFetcher'
+import NotificationButton from '../NotificationButton' // Add notification button
 
 function Navbar() {
   const [user, setUser] = useState(null)
@@ -37,8 +38,9 @@ function Navbar() {
           return
         }
         
-        console.log('🔍 Token found, fetching user data...')
-        const userData = await userApi.getCurrentUser()
+        console.log('🔍 Fetching user data via centralized fetcher...')
+        const response = await userDataFetcher.getUserProfile()
+        const userData = response.data?.data || response.data
         console.log('✅ User data fetched:', userData)
         setUser(userData)
       } catch (error) {
@@ -114,6 +116,9 @@ function Navbar() {
 
           {/* User Profile Dropdown */}
           <div className="hidden md:flex items-center gap-4">
+            {/* Notification Button */}
+            <NotificationButton />
+
             <div className="relative">
               <button
                 onClick={toggleProfileDropdown}

@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -22,10 +23,11 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final WalletService walletService;
+    private final NotificationService notificationService; // 1. Inject NotificationService
 
     public User createUser(User user) {
         log.info("Creating user: {}", user.getUsername());
-        log.info("Password is null? {}", user.getPassword() == null);  // Debug
+        log.info("Password is null? {}", user.getPassword() == null);
 
         if (userRepository.existsByUsername(user.getUsername())) {
             throw new IllegalArgumentException("Username already exists: " + user.getUsername());
@@ -37,7 +39,7 @@ public class UserService {
 
         // Check for duplicate phone number
         if (user.getPhone() != null && !user.getPhone().trim().isEmpty() &&
-            userRepository.existsByPhone(user.getPhone())) {
+                userRepository.existsByPhone(user.getPhone())) {
             throw new IllegalArgumentException("Phone number already exists: " + user.getPhone());
         }
 
@@ -66,6 +68,14 @@ public class UserService {
         //Create a wallet for user
         walletService.createWalletForUser(savedUser);
         log.info("Wallet create for user {}: ", savedUser.getUsername());
+
+        // 2. Gửi thông báo Welcome
+        try {
+            notificationService.notifyWelcome(savedUser);
+        } catch (Exception e) {
+            log.error("Failed to send welcome notification", e);
+            // Không throw exception để tránh rollback việc tạo user chỉ vì lỗi noti
+        }
 
         return savedUser;
     }
@@ -181,11 +191,14 @@ public class UserService {
             existing.setPassword(userDetails.getPassword());
             existing.setPasswordHash(passwordEncoder.encode(userDetails.getPassword()));
         }
-        return userRepository.save(existing);
 
+        User savedUser = userRepository.save(existing);
+
+        // 3. Gửi thông báo Account Updated
+        notificationService.notifyAccountUpdated(savedUser);
+
+        return savedUser;
     }
-
-
 
     public void debugPrintUser(String username) {
         Optional<User> userOpt = userRepository.findByUsername(username);
@@ -208,6 +221,6 @@ public class UserService {
         if (userOpt.isEmpty()) {
             throw new IllegalArgumentException("User not found: " + username);
         }
-        return (UserDetails) userOpt.get();
+        return (UserDetails) userOpt.get(); // Cast này có thể gây lỗi nếu User không implements UserDetails
     }
 }
