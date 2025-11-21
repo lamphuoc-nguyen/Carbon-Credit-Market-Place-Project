@@ -880,34 +880,32 @@ const Marketplace = () => {
                   </div>
                 )}
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex justify-center items-center gap-3 mb-8">
-                    <button
-                      onClick={() => setPage(Math.max(0, page - 1))}
-                      disabled={page === 0}
-                      className="p-3 rounded-xl border-2 border-gray-300 hover:border-green-600 hover:bg-green-50 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-gray-300 disabled:hover:bg-transparent transition-all"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                      </svg>
-                    </button>
+                {/* Pagination - Modern Style */}
+                <div className="flex justify-center items-center gap-3 mb-8">
+                  <button
+                    onClick={() => setPage(Math.max(0, page - 1))}
+                    disabled={page === 0}
+                    className="p-3 rounded-xl border-2 border-gray-300 hover:border-green-600 hover:bg-green-50 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-gray-300 disabled:hover:bg-transparent transition-all"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
 
-                    <div className="px-6 py-3 bg-white rounded-xl border-2 border-gray-200 font-semibold text-gray-700">
-                      Page {page + 1} of {totalPages}
-                    </div>
-
-                    <button
-                      onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
-                      disabled={page >= totalPages - 1}
-                      className="p-3 rounded-xl border-2 border-gray-300 hover:border-green-600 hover:bg-green-50 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-gray-300 disabled:hover:bg-transparent transition-all"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
+                  <div className="px-6 py-3 bg-white rounded-xl border-2 border-gray-200 font-semibold text-gray-700">
+                    Page {page + 1} of {totalPages || 1}
                   </div>
-                )}
+
+                  <button
+                    onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+                    disabled={page >= totalPages - 1}
+                    className="p-3 rounded-xl border-2 border-gray-300 hover:border-green-600 hover:bg-green-50 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-gray-300 disabled:hover:bg-transparent transition-all"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
               </>
             )}
 

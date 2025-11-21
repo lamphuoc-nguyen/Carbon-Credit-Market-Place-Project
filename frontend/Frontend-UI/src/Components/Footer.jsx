@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 
 const Footer = () => {
     return (
+        <>
         <div className="bg-white flex items-center justify-between py-7 px-28 text-base border-t border-gray-300">
             <div>
                 <ul className="flex gap-10 text-gray-500 ">
@@ -18,9 +19,14 @@ const Footer = () => {
                     </Link>
                 </ul>
             </div>
-            <p className="text-gray-400 text-base">© 2025 Carbon Credit Marketplace. All rights reserved.</p>
-
+            
+            <div className="flex flex-col items-center gap-2">
+                <p className="text-gray-400 text-base">© 2025 Carbon Credit Marketplace. All rights reserved.</p>
+                
+            </div>
         </div>
+        
+        </>
     )
 };
 

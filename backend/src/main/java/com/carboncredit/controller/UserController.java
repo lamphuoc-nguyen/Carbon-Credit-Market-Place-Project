@@ -129,7 +129,6 @@ public class UserController {
      * @return Updated user data
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN') or #id == authentication.principal.id")
     public ResponseEntity<ApiResponse<UserDTO>> updateUser(
             @PathVariable UUID id,
             @Valid @RequestBody User userDetails,

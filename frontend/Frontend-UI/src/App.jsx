@@ -29,6 +29,7 @@ import Dashboard from './Components/CvaComponents/Dashboard';
 import ReviewJourneyDetail from './Components/CvaComponents/ReviewJourneyDetail';
 import VerifiedCredits from './Components/CvaComponents/VerifiedCredits';
 import Report from './Components/CvaComponents/Report';
+import ReportEV from './pages/EvPage/ReportEV';
 import DetailPage from './Components/CvaComponents/DetailPage';
 import TransferRequestManagement from './Components/CvaComponents/TransferRequestManagement';
 import ProtectedRoute from './Components/ProtectedRoute';
@@ -39,6 +40,8 @@ import UserManagement from './Components/AdminComponents/UserManagement';
 import Transactions from './Components/AdminComponents/Transactions';
 import WalletManagement from './Components/AdminComponents/WalletManagement';
 import PlatformReport from './Components/AdminComponents/PlatformReport';
+import Detail from './pages/EvPage/Detail';
+import DashboardPage from './pages/BuyerPage/DashboardPage';
 
 function App() {
   const location = useLocation();
@@ -60,6 +63,10 @@ function App() {
                      location.pathname === '/ev-dashboard/Listing' ||
                      location.pathname === '/ev-dashboard/profile' ||
                      location.pathname === '/ev-dashboard/marketplace' ||
+                     location.pathname === '/buyer/dashboard' ||
+                     location.pathname === '/ev-dashboard/report' ||
+                     location.pathname.startsWith('/ev-dashboard/detail/') ||
+                     location.pathname.startsWith('/marketplace/') ||
                      location.pathname.startsWith('/cva'); // Hide navbar for all CVA pages
 
   return (
@@ -80,17 +87,27 @@ function App() {
 
         {/* --- Buyer Routes (Accessible to both BUYER and EV_OWNER) --- */}
         <Route path="/buyer" element={
-          <ProtectedRoute allowedRoles={["BUYER", "EV_OWNER"]}>
+          <ProtectedRoute allowedRoles={["BUYER"]}>
             <BuyerPage />
           </ProtectedRoute>
         } />
+        <Route path="/buyer/dashboard" element={
+          <ProtectedRoute allowedRoles={["BUYER"]}>
+            <DashboardPage />
+          </ProtectedRoute>
+        } />
         <Route path="/marketplace/:listingId" element={
-          <ProtectedRoute allowedRoles={["BUYER", "EV_OWNER"]}>
+          <ProtectedRoute allowedRoles={["BUYER"]}>
             <Detailpage />
+          </ProtectedRoute>
+        } />  
+        <Route path="/ev-dashboard/report" element={
+          <ProtectedRoute requiredRole="EV_OWNER">
+            <ReportEV />
           </ProtectedRoute>
         } />
         <Route path="/marketplace" element={
-          <ProtectedRoute allowedRoles={["BUYER", "EV_OWNER"]}>
+          <ProtectedRoute allowedRoles={["BUYER"]}>
             <MakerPlacePage />
           </ProtectedRoute>
         } />
@@ -101,12 +118,12 @@ function App() {
           </ProtectedRoute>
         } />
         <Route path="/payment/success" element={
-          <ProtectedRoute allowedRoles={["BUYER", "EV_OWNER"]}>
+          <ProtectedRoute allowedRoles={["BUYER"]}>
             <PaymentSuccessPage />
           </ProtectedRoute>
         } />
         <Route path="/transaction-success" element={
-          <ProtectedRoute allowedRoles={["BUYER", "EV_OWNER"]}>
+          <ProtectedRoute allowedRoles={["BUYER"]}>
             <TransactionSuccessPage />
           </ProtectedRoute>
         } />
@@ -125,6 +142,11 @@ function App() {
         <Route path="/ev-dashboard" element={
           <ProtectedRoute requiredRole="EV_OWNER">
             <EvOwner />
+          </ProtectedRoute>
+        } />
+        <Route path="/ev-dashboard/detail/:listingId" element={
+          <ProtectedRoute requiredRole="EV_OWNER">
+            <Detail />
           </ProtectedRoute>
         } />
         <Route path="/ev-dashboard/profile" element={

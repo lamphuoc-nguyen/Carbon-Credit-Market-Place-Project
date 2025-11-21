@@ -38,9 +38,9 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                       shadow-xl z-50 transition-all duration-300 ease-in-out
                       ${isOpen ? 'w-64' : 'w-20'}`}
         >
-            <div className={`flex flex-col h-full overflow-hidden`}>
+            <div className={`flex flex-col h-full overflow-y-auto overflow-x-visible`}>
 
-                {/* 1. Header (Updated with NotificationButton) */}
+                {/* 1. Header */}
                 <div
                     className={`flex items-center h-16 border-b border-gray-100
                               ${isOpen ? 'justify-between p-4' : 'justify-center p-2'}`}
@@ -54,9 +54,6 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                         </div>
                     )}
                     <div className="flex items-center gap-2">
-                        {/* Notification Button */}
-                        <NotificationButton />
-
                         {/* Toggle Button */}
                         <button
                             onClick={() => setIsOpen(!isOpen)}
@@ -69,20 +66,24 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                 </div>
 
                 {/* 2. User Profile/Badge - UPDATED ICON */}
-                <div className={`p-4 border-b border-gray-100 flex items-center mb-4 ${!isOpen && 'justify-center'}`}>
-                    <div className={`p-2 rounded-full ${isOpen ? 'bg-blue-100' : 'bg-blue-100'}`}> {/* Changed color to blue */}
-                        {/* ✅ 2. USE SHIELD ICON HERE */}
-                        <Shield className={`h-6 w-6 ${isOpen ? 'text-blue-600' : 'text-blue-600'}`} />
-                    </div>
-                    {isOpen && (
-                        <div className="ml-3">
-                            <p className="font-semibold text-sm text-gray-800">CVA User</p>
-                            <div className="flex items-center mt-1 space-x-1">
-                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">cva</span>
-                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">Verified</span>
-                            </div>
+                <div className={`p-4 border-b border-gray-100 flex items-center justify-between mb-4`}>
+                    <div className="flex items-center">
+                        <div className={`p-2 rounded-full bg-blue-100`}>
+                            {/* ✅ 2. USE SHIELD ICON HERE */}
+                            <Shield className={`h-6 w-6 text-blue-600`} />
                         </div>
-                    )}
+                        {isOpen && (
+                            <div className="ml-3">
+                                <p className="font-semibold text-sm text-gray-800">CVA User</p>
+                                <div className="flex items-center mt-1 space-x-1">
+                                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">cva</span>
+                                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">Verified</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    {/* Notification Button next to user name */}
+                    <NotificationButton dropdownPosition="left" />
                 </div>
 
                 {/* 3. Navigation Items (Unchanged) */}

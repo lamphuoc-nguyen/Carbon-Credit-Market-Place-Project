@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar_Buyer from '../../Components/BuyerComponents/Navbar-Buyer';
+import Footer from '../../Components/Footer';
 import { buyerApi } from '../../api';
 
 const PaymentPage = () => {
@@ -852,6 +853,7 @@ const PaymentPage = () => {
           </div>
         </div>
       )}
+      <Footer />
     </div>
   );
 };
