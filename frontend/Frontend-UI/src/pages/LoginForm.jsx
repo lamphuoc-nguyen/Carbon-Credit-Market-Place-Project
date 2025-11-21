@@ -19,14 +19,16 @@ const LoginForm = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+
     const handleGoogleLogin = () => {
         console.log('Google OAuth2 login clicked');
-        window.location.href = 'http://localhost:8080/oauth2/authorization/google';
+        window.location.href = `${API_BASE_URL}/oauth2/authorization/google`;
     };
 
     const handleFacebookLogin = () => {
         console.log('GitHub OAuth2 login clicked');
-        window.location.href = 'http://localhost:8080/oauth2/authorization/github';
+        window.location.href = `${API_BASE_URL}/oauth2/authorization/github`;
     };
 
     useEffect(() => {
