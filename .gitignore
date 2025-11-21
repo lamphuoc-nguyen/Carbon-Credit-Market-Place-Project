@@ -33,3 +33,4 @@ yarn.lock
 # Documentation files (ignore all markdown files)
 *.md
 !README.md
+!.github/agents/*.agent.md
