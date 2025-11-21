@@ -26,4 +26,5 @@ public class Co2TransferRequestDTO {
     private String cvaNotes;
     private String rejectionReason;
     private List<UUID> journeyIds;
+    private List<JourneyDataDTO> journeyDetails;
 }

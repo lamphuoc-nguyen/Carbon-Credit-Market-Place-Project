@@ -35,6 +35,8 @@ public class RegisterRequest {
     @Pattern(regexp = "^[0-9]{10,15}$", message = "Phone must be 10-15 digits")
     private String phone;
 
+    private String province; // Vietnam province (optional)
+
     @NotBlank(message = "Role is required")
     @Pattern(regexp = "^(EV_OWNER|BUYER|CVA|ADMIN)$", message = "Invalid role. Must be: EV_OWNER, BUYER, CVA, or ADMIN")
     private String role;

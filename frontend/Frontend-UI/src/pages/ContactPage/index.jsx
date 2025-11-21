@@ -1,4 +1,6 @@
 import React, { useState } from 'react'
+import Navbar from '../../Components/Navbar'
+import Footer from '../../Components/Footer'
 import contactImage from '../../image/background-contact.jpg'
 
 const ContactPage = () => {
@@ -23,6 +25,8 @@ const ContactPage = () => {
   };
 
   return (
+    <>
+    
     <div className="min-h-screen bg-green-50">
       {/* Header with Background Image */}
       <div
@@ -260,6 +264,8 @@ const ContactPage = () => {
         </div>
       </div>
     </div>
+    
+    </>
   );
 }
 

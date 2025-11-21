@@ -1,4 +1,3 @@
-import React from 'react';
 import CallToAction from "../../Components/CallToAction";
 import Footer from "../../Components/Footer";
 import MainContent from "../../Components/MainContent";
@@ -6,23 +5,12 @@ import Navbar from "../../Components/Navbar";
 import ProjectsSection from "../../Components/ProjectsSection";
 import AboutSection from "../../Components/AboutSection";
 import SubContent from "../../Components/SubContent";
-import CreateTestNotification from "../../Components/CreateTestNotification";
-import { getValidToken } from "../../utils/tokenUtils";
+import React from "react";
 
 const HomePage = () => {
-    // Debug authentication status
-    React.useEffect(() => {
-        const token = getValidToken();
-        const user = localStorage.getItem('user') || sessionStorage.getItem('user');
-        console.log('HomePage - Auth Debug:', {
-            hasToken: !!token,
-            hasUser: !!user,
-            tokenSnippet: token ? token.substring(0, 20) + '...' : 'none'
-        });
-    }, []);
-
     return (
         <>
+            
             <div>
                 <MainContent />
             </div>
@@ -43,9 +31,7 @@ const HomePage = () => {
             <div>
                 <CallToAction />
             </div>
-
-            {/* Add test component for debugging notifications */}
-            <CreateTestNotification />
+            
         </>
     )
 

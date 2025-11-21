@@ -215,10 +215,13 @@ public class TransactionService {
             buyerCredit.setCreditAmount(purchasedAmount);
             buyerCredit.setCo2ReducedKg(currentCredit.getCo2ReducedKg().multiply(purchasedAmount).divide(originalCreditAmount, 2, RoundingMode.HALF_UP));
             buyerCredit.setCreatedAt(LocalDateTime.now());
-            buyerCredit.setStatus(CarbonCredit.CreditStatus.VERIFIED);
+            // UPDATE: Set status to SOLD for purchased credits (not VERIFIED)
+            buyerCredit.setStatus(CarbonCredit.CreditStatus.SOLD);
             buyerCredit.setVerifiedAt(currentCredit.getVerifiedAt()); // Fixed: use verifiedAt instead of verificationDate
             buyerCredit.setVerifiedBy(currentCredit.getVerifiedBy());
             carbonCreditRepository.save(buyerCredit);
+            log.info("✅ Created new SOLD credit {} for buyer {} ({} credits)",
+                     buyerCredit.getId(), fullTransaction.getBuyer().getEmail(), purchasedAmount);
 
             // Reduce original credit amount for seller
             currentCredit.setCreditAmount(originalCreditAmount.subtract(purchasedAmount));
@@ -240,7 +243,11 @@ public class TransactionService {
 
             // Transfer entire credit ownership to buyer
             currentCredit.setUser(fullTransaction.getBuyer());
+            // UPDATE: Set status to SOLD when credit is purchased
+            currentCredit.setStatus(CarbonCredit.CreditStatus.SOLD);
             carbonCreditRepository.save(currentCredit);
+            log.info("✅ Credit {} status updated to SOLD and transferred to buyer {}",
+                     currentCredit.getId(), fullTransaction.getBuyer().getEmail());
 
             // Close the listing completely
             currentListing.setStatus(ListingStatus.CLOSED);

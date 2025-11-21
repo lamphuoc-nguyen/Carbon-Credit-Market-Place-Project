@@ -643,9 +643,20 @@ const Marketplace = () => {
                           
                           {/* Seller Username as Title */}
                           {listing.credit?.owner?.username ? (
-                            <h3 className="text-lg font-bold text-gray-900 flex items-center">                 
-                              {listing.credit.owner.username}
-                            </h3>
+                            <div>
+                              <h3 className="text-lg font-bold text-gray-900 flex items-center">                 
+                                {listing.credit.owner.username}
+                              </h3>
+                              {listing.sellerLocation && (
+                                <p className="text-xs text-gray-600 mt-1 flex items-center gap-1">
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  </svg>
+                                  {listing.sellerLocation}
+                                </p>
+                              )}
+                            </div>
                           ) : (
                             <h3 className="text-lg font-bold text-gray-900 flex items-center">
                               Carbon Credit #{listing.id?.substring(0, 8)}
@@ -749,9 +760,20 @@ const Marketplace = () => {
                               <div className="flex-1">
                                 {/* Seller Username */}
                                 {listing.credit?.owner?.username ? (
-                                  <h3 className="text-xl font-bold text-gray-900 mb-2">
-                                    {listing.credit.owner.username}
-                                  </h3>
+                                  <div>
+                                    <h3 className="text-xl font-bold text-gray-900 mb-2">
+                                      {listing.credit.owner.username}
+                                    </h3>
+                                    {listing.sellerLocation && (
+                                      <p className="text-sm text-gray-600 mb-2 flex items-center gap-1">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                        {listing.sellerLocation}
+                                      </p>
+                                    )}
+                                  </div>
                                 ) : (
                                   <h3 className="text-xl font-bold text-gray-900 mb-2">
                                     Carbon Credit #{listing.id?.substring(0, 8)}
@@ -858,34 +880,32 @@ const Marketplace = () => {
                   </div>
                 )}
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex justify-center items-center gap-3 mb-8">
-                    <button
-                      onClick={() => setPage(Math.max(0, page - 1))}
-                      disabled={page === 0}
-                      className="p-3 rounded-xl border-2 border-gray-300 hover:border-green-600 hover:bg-green-50 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-gray-300 disabled:hover:bg-transparent transition-all"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                      </svg>
-                    </button>
+                {/* Pagination - Modern Style */}
+                <div className="flex justify-center items-center gap-3 mb-8">
+                  <button
+                    onClick={() => setPage(Math.max(0, page - 1))}
+                    disabled={page === 0}
+                    className="p-3 rounded-xl border-2 border-gray-300 hover:border-green-600 hover:bg-green-50 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-gray-300 disabled:hover:bg-transparent transition-all"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
 
-                    <div className="px-6 py-3 bg-white rounded-xl border-2 border-gray-200 font-semibold text-gray-700">
-                      Page {page + 1} of {totalPages}
-                    </div>
-
-                    <button
-                      onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
-                      disabled={page >= totalPages - 1}
-                      className="p-3 rounded-xl border-2 border-gray-300 hover:border-green-600 hover:bg-green-50 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-gray-300 disabled:hover:bg-transparent transition-all"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
+                  <div className="px-6 py-3 bg-white rounded-xl border-2 border-gray-200 font-semibold text-gray-700">
+                    Page {page + 1} of {totalPages || 1}
                   </div>
-                )}
+
+                  <button
+                    onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
+                    disabled={page >= totalPages - 1}
+                    className="p-3 rounded-xl border-2 border-gray-300 hover:border-green-600 hover:bg-green-50 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-gray-300 disabled:hover:bg-transparent transition-all"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
               </>
             )}
 

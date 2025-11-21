@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { buyerApi } from '../../api';
 import Navbar_Buyer from '../../Components/BuyerComponents/Navbar-Buyer';
+import Footer from '../../Components/Footer';
 
 const MakerPlacePage = ({ showNavbar = true }) => {
   const navigate = useNavigate();
@@ -26,6 +27,7 @@ const MakerPlacePage = ({ showNavbar = true }) => {
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [searchUsername, setSearchUsername] = useState('');
+  const [searchLocation, setSearchLocation] = useState('');
   const [listingTypeFilter, setListingTypeFilter] = useState('ALL'); // ALL, FIXED, AUCTION
   const [allListings, setAllListings] = useState([]); // Store all listings for filtering
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
@@ -181,6 +183,7 @@ const MakerPlacePage = ({ showNavbar = true }) => {
       
       // Reset other filters when price search is applied
       setSearchUsername('');
+      setSearchLocation('');
       setListingTypeFilter('ALL');
       setIsPriceSearchActive(true); // Mark that we're in price search mode
 
@@ -198,20 +201,28 @@ const MakerPlacePage = ({ showNavbar = true }) => {
     setMinPrice('');
     setMaxPrice('');
     setSearchUsername('');
+    setSearchLocation('');
     setListingTypeFilter('ALL');
     setIsPriceSearchActive(false); // Exit price search mode
     setPage(0);
     fetchMarketplaceData();
   };
 
-  // Apply all filters (username + listing type) with sorting
-  const applyFilters = (searchTerm = searchUsername, typeFilter = listingTypeFilter) => {
+  // Apply all filters (username + location + listing type) with sorting
+  const applyFilters = (searchTerm = searchUsername, locationTerm = searchLocation, typeFilter = listingTypeFilter) => {
     let filtered = [...allListings];
     
     // Filter by username
     if (searchTerm.trim()) {
       filtered = filtered.filter(listing => 
         listing.credit?.owner?.username?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Filter by location
+    if (locationTerm.trim()) {
+      filtered = filtered.filter(listing => 
+        listing.sellerLocation?.toLowerCase().includes(locationTerm.toLowerCase())
       );
     }
     
@@ -246,13 +257,19 @@ const MakerPlacePage = ({ showNavbar = true }) => {
   // Search by username
   const handleSearchByUsername = (searchTerm) => {
     setSearchUsername(searchTerm);
-    applyFilters(searchTerm, listingTypeFilter);
+    applyFilters(searchTerm, searchLocation, listingTypeFilter);
+  };
+
+  // Search by location
+  const handleSearchByLocation = (locationTerm) => {
+    setSearchLocation(locationTerm);
+    applyFilters(searchUsername, locationTerm, listingTypeFilter);
   };
 
   // Filter by listing type
   const handleListingTypeChange = (type) => {
     setListingTypeFilter(type);
-    applyFilters(searchUsername, type);
+    applyFilters(searchUsername, searchLocation, type);
   };
 
   // Re-apply filters when sortBy changes (for client-side filtered data)
@@ -262,7 +279,7 @@ const MakerPlacePage = ({ showNavbar = true }) => {
       handleSearchByPrice();
     } else {
       // Always re-apply client-side filters and sorting when sortBy changes
-      applyFilters(searchUsername, listingTypeFilter);
+      applyFilters(searchUsername, searchLocation, listingTypeFilter);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortBy]);
@@ -303,7 +320,17 @@ const MakerPlacePage = ({ showNavbar = true }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <>
+    <div 
+      className="min-h-screen bg-gray-100"
+      style={{
+        backgroundImage: "url('/src/image/marketbg.png')",
+        backgroundSize: '100% auto',
+        backgroundPosition: 'top center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed'
+      }}
+    >
       {showNavbar && <Navbar_Buyer />}
       <div className=" mx-auto px- sm:px-6 lg:px-8 py-6">
 
@@ -319,6 +346,38 @@ const MakerPlacePage = ({ showNavbar = true }) => {
                 </svg>
                 Filters
               </h3>
+
+              {/* Search by Location */}
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                  Search Location
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    value={searchLocation}
+                    onChange={(e) => handleSearchByLocation(e.target.value)}
+                    placeholder="Enter location..."
+                    className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                  />
+                  {searchLocation && (
+                    <button
+                      onClick={() => handleSearchByLocation('')}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
 
               {/* Sort */}
               <div className="mb-4">
@@ -491,9 +550,12 @@ const MakerPlacePage = ({ showNavbar = true }) => {
                 </div>
               </div>
 
-              {searchUsername && (
+              {(searchUsername || searchLocation) && (
                 <p className="mt-2 text-sm text-gray-600">
-                  {listings.length} result{listings.length !== 1 ? 's' : ''} found for "{searchUsername}"
+                  {listings.length} result{listings.length !== 1 ? 's' : ''} found
+                  {searchUsername && ` for seller "${searchUsername}"`}
+                  {searchUsername && searchLocation && ' and'}
+                  {searchLocation && ` in location "${searchLocation}"`}
                 </p>
               )}
             </div>
@@ -580,6 +642,17 @@ const MakerPlacePage = ({ showNavbar = true }) => {
                       <h3 className="text-lg font-bold text-gray-900 flex items-center">
                         Carbon Credit #{listing.id?.substring(0, 8)}
                       </h3>
+                    )}
+                    
+                    {/* Seller Location */}
+                    {listing.sellerLocation && (
+                      <div className="mt-2 flex items-center text-base text-gray-700">
+                        <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span className="font-semibold">{listing.sellerLocation}</span>
+                      </div>
                     )}
                   </div>
 
@@ -684,6 +757,17 @@ const MakerPlacePage = ({ showNavbar = true }) => {
                                   <h3 className="text-xl font-bold text-gray-900 mb-2">
                                     Carbon Credit #{listing.id?.substring(0, 8)}
                                   </h3>
+                                )}
+                                
+                                {/* Seller Location */}
+                                {listing.sellerLocation && (
+                                  <div className="flex items-center text-base text-gray-700 mb-2">
+                                    <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    <span className="font-semibold">{listing.sellerLocation}</span>
+                                  </div>
                                 )}
                                 
                                 {/* Listing ID */}
@@ -836,7 +920,10 @@ const MakerPlacePage = ({ showNavbar = true }) => {
           </main>
         </div>
       </div>
+      
     </div>
+    <Footer />
+    </>
   );
 };
 

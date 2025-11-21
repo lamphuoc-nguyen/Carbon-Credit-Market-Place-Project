@@ -1,9 +1,12 @@
 import axiosInstance from './axiosInstance';
 
 /**
- * 🛒 Buyer API - Marketplace Operations
- * API dành cho Buyer để mua và quản lý carbon credits trên marketplace
- * 
+ * 🛒 Buyer API - Carbon Credit Purchase Operations
+ * API dành cho Buyer để mua carbon credits trên marketplace
+ *
+ * ⚠️ LƯU Ý: Buyer chỉ mua, không bán carbon credits
+ * - Để bán carbon credits, sử dụng EV Owner role
+ *
  * ⚠️ BACKEND PAYMENT FLOW LIMITATIONS:
  * ==========================================
  * Backend hiện tại có 2 endpoints để mua:
@@ -465,7 +468,7 @@ export const buyerApi = {
     // ==================== TRANSACTION HISTORY ====================
 
     /**
-     * Xem tất cả giao dịch của buyer (mua + bán)
+     * Xem tất cả giao dịch mua của buyer
      * GET /transactions/my-transactions
      * @param {number} page - Số trang (default: 0)
      * @param {number} size - Kích thước trang (default: 10)
@@ -664,19 +667,53 @@ export const buyerApi = {
     /**
      * 🌿 Khởi tạo retirement (loại bỏ carbon credits vĩnh viễn)
      * POST /api/retirement/initiate
+     * 
+     * Flow đầy đủ theo backend:
+     * 1. Validate user là BUYER
+     * 2. Kiểm tra wallet credit balance
+     * 3. Trừ ngay credits từ wallet
+     * 4. Chọn và đánh dấu CarbonCredit entities là RETIRED (FIFO)
+     * 5. Tạo RetirementTransaction (status: COMPLETED)
+     * 6. Tạo Certificate (status: PENDING_GENERATION)
+     * 7. Gửi notification
+     * 8. Trigger async PDF generation
+     * 
      * @param {Object} retirementData - Dữ liệu retirement
      * @param {string} retirementData.userId - UUID của buyer
-     * @param {number} retirementData.amountToRetireKg - Số lượng credits muốn retire (kg)
+     * @param {number} retirementData.amountToRetireKg - Số lượng credits muốn retire (phải là số nguyên)
      * @param {string} retirementData.projectInfo - Thông tin dự án (optional)
      * @param {string} retirementData.retirementPurpose - Mục đích retire (optional)
-     * @returns {Promise<RetirementTransaction>} Retirement transaction với certificate đang được tạo
+     * @returns {Promise<Object>} Response: { retirement, message }
      */
     initiateRetirement: async (retirementData) => {
         try {
+            console.log('🌿 ========== INITIATING RETIREMENT ==========');
+            console.log('Retirement data:', retirementData);
+            
             const response = await axiosInstance.post('/api/retirement/initiate', retirementData);
+            
+            console.log('✅ Retirement initiated successfully:', response.data);
+            console.log('Certificate generation in progress...');
+            
             return response.data;
         } catch (error) {
-            console.error('❌ Lỗi khi khởi tạo retirement:', error);
+            console.error('❌ ========== RETIREMENT FAILED ==========');
+            console.error('Error:', error);
+            console.error('Error details:', error.response?.data);
+            
+            // Provide helpful error messages
+            if (error.response?.data?.error?.includes('Insufficient credits')) {
+                throw new Error('Insufficient credits in wallet. Please purchase more credits before retiring.');
+            } else if (error.response?.data?.error?.includes('Only buyers can retire')) {
+                throw new Error('Only BUYER role can retire carbon credits.');
+            } else if (error.response?.data?.error?.includes('whole number')) {
+                throw new Error('Credit count must be a whole number (no decimals).');
+            } else if (error.response?.status === 400) {
+                throw new Error(error.response.data?.error || 'Invalid retirement request.');
+            } else if (error.response?.status === 404) {
+                throw new Error('User not found.');
+            }
+            
             throw error;
         }
     },
@@ -689,10 +726,17 @@ export const buyerApi = {
      */
     getRetirementDetails: async (retirementId) => {
         try {
+            console.log('📄 Fetching retirement details:', retirementId);
             const response = await axiosInstance.get(`/api/retirement/${retirementId}`);
+            console.log('✅ Retirement details:', response.data);
             return response.data;
         } catch (error) {
             console.error(`❌ Lỗi khi lấy chi tiết retirement ${retirementId}:`, error);
+            
+            if (error.response?.status === 404) {
+                throw new Error('Retirement transaction not found.');
+            }
+            
             throw error;
         }
     },
@@ -707,9 +751,11 @@ export const buyerApi = {
      */
     getUserRetirementHistory: async (userId, page = 0, size = 10) => {
         try {
+            console.log('📋 Fetching retirement history for user:', userId);
             const response = await axiosInstance.get(`/api/retirement/user/${userId}`, {
                 params: { page, size }
             });
+            console.log(`✅ Found ${response.data.totalElements} retirement transactions`);
             return response.data;
         } catch (error) {
             console.error(`❌ Lỗi khi lấy lịch sử retirement của user ${userId}:`, error);
@@ -725,10 +771,17 @@ export const buyerApi = {
      */
     getRetirementCertificate: async (retirementId) => {
         try {
+            console.log('🎓 Fetching certificate for retirement:', retirementId);
             const response = await axiosInstance.get(`/api/retirement/${retirementId}/certificate`);
+            console.log('✅ Certificate status:', response.data.status);
             return response.data;
         } catch (error) {
             console.error(`❌ Lỗi khi lấy certificate cho retirement ${retirementId}:`, error);
+            
+            if (error.response?.status === 404) {
+                throw new Error('Certificate not found. It may still be generating.');
+            }
+            
             throw error;
         }
     },
@@ -743,12 +796,63 @@ export const buyerApi = {
      */
     getUserCertificates: async (userId, page = 0, size = 10) => {
         try {
+            console.log('📚 Fetching certificates for user:', userId);
             const response = await axiosInstance.get(`/api/retirement/certificates/user/${userId}`, {
                 params: { page, size }
             });
+            console.log(`✅ Found ${response.data.totalElements} certificates`);
             return response.data;
         } catch (error) {
             console.error(`❌ Lỗi khi lấy certificates của user ${userId}:`, error);
+            throw error;
+        }
+    },
+
+    /**
+     * 📥 Lấy download URL cho certificate PDF
+     * GET /api/retirement/{retirementId}/certificate/download
+     * 
+     * Backend sẽ tạo signed URL từ Google Cloud Storage
+     * URL có hiệu lực trong 1 giờ
+     * 
+     * @param {string} retirementId - UUID của retirement transaction
+     * @returns {Promise<Object>} { url, fileName, message }
+     */
+    getCertificateDownloadUrl: async (retirementId) => {
+        try {
+            console.log('📥 Generating download URL for retirement:', retirementId);
+            const response = await axiosInstance.get(`/api/retirement/${retirementId}/certificate/download`);
+            console.log('✅ Download URL generated. Valid for 1 hour.');
+            return response.data;
+        } catch (error) {
+            console.error(`❌ Lỗi khi lấy download URL cho retirement ${retirementId}:`, error);
+            
+            if (error.response?.status === 404) {
+                throw new Error('Certificate not found.');
+            } else if (error.response?.status === 400) {
+                const errorMsg = error.response.data?.error || 'Certificate is not ready for download';
+                throw new Error(errorMsg);
+            }
+            
+            throw error;
+        }
+    },
+
+    /**
+     * 📊 Lấy thống kê retirement của user
+     * GET /api/retirement/statistics/{userId}
+     * 
+     * @param {string} userId - UUID của user
+     * @returns {Promise<Object>} { totalRetired, completedCount, totalCount }
+     */
+    getRetirementStatistics: async (userId) => {
+        try {
+            console.log('📊 Fetching retirement statistics for user:', userId);
+            const response = await axiosInstance.get(`/api/retirement/statistics/${userId}`);
+            console.log('✅ Retirement stats:', response.data);
+            return response.data;
+        } catch (error) {
+            console.error(`❌ Lỗi khi lấy thống kê retirement của user ${userId}:`, error);
             throw error;
         }
     },
@@ -774,118 +878,6 @@ export const buyerApi = {
         }
     },
 
-    // ==================== MY LISTINGS (Nếu buyer cũng bán) ====================
-
-    /**
-     * Xem tất cả listings của tôi
-     * GET /credit-listings/my-listings
-     * @param {number} page - Số trang (default: 0)
-     * @param {number} size - Kích thước trang (default: 20)
-     * @returns {Promise} Page object với danh sách listings của tôi
-     */
-    getMyListings: async (page = 0, size = 20) => {
-        try {
-            const response = await axiosInstance.get('/credit-listings/my-listings', {
-                params: { page, size }
-            });
-            return response.data;
-        } catch (error) {
-            console.error('❌ Lỗi khi lấy danh sách listings của tôi:', error);
-            throw error;
-        }
-    },
-
-    /**
-     * Xem các listings đang active của tôi
-     * GET /credit-listings/my-active-listings
-     * @param {number} page - Số trang (default: 0)
-     * @param {number} size - Kích thước trang (default: 20)
-     * @returns {Promise} Page object với listings active
-     */
-    getMyActiveListings: async (page = 0, size = 20) => {
-        try {
-            const response = await axiosInstance.get('/credit-listings/my-active-listings', {
-                params: { page, size }
-            });
-            return response.data;
-        } catch (error) {
-            console.error('❌ Lỗi khi lấy listings active của tôi:', error);
-            throw error;
-        }
-    },
-
-    /**
-     * Tạo listing mới (nếu buyer có credits để bán)
-     * POST /credit-listings/create
-     * @param {string} creditId - UUID của carbon credit
-     * @param {number} price - Giá listing
-     * @returns {Promise} Listing đã tạo
-     */
-    createListing: async (creditId, price) => {
-        try {
-            const response = await axiosInstance.post('/credit-listings/create', null, {
-                params: { creditId, price }
-            });
-            return response.data;
-        } catch (error) {
-            console.error('❌ Lỗi khi tạo listing:', error);
-            throw error;
-        }
-    },
-
-    /**
-     * Cập nhật giá listing
-     * PUT /credit-listings/{listingId}/price
-     * @param {string} listingId - UUID của listing
-     * @param {number} newPrice - Giá mới
-     * @returns {Promise} Listing đã cập nhật
-     */
-    updateListingPrice: async (listingId, newPrice) => {
-        try {
-            const response = await axiosInstance.put(`/credit-listings/${listingId}/price`, null, {
-                params: { newPrice }
-            });
-            return response.data;
-        } catch (error) {
-            console.error(`❌ Lỗi khi cập nhật giá listing ${listingId}:`, error);
-            throw error;
-        }
-    },
-
-    /**
-     * Hủy listing
-     * DELETE /credit-listings/{listingId}
-     * @param {string} listingId - UUID của listing
-     * @returns {Promise} Listing đã hủy
-     */
-    cancelListing: async (listingId) => {
-        try {
-            const response = await axiosInstance.delete(`/credit-listings/${listingId}`);
-            return response.data;
-        } catch (error) {
-            console.error(`❌ Lỗi khi hủy listing ${listingId}:`, error);
-            throw error;
-        }
-    },
-
-    /**
-     * Xem lịch sử bán hàng (nếu buyer cũng là seller)
-     * GET /transactions/sales
-     * @param {number} page - Số trang (default: 0)
-     * @param {number} size - Kích thước trang (default: 10)
-     * @returns {Promise} Page object với lịch sử bán
-     */
-    getSalesHistory: async (page = 0, size = 10) => {
-        try {
-            const response = await axiosInstance.get('/transactions/sales', {
-                params: { page, size }
-            });
-            return response.data;
-        } catch (error) {
-            console.error('❌ Lỗi khi lấy lịch sử bán:', error);
-            throw error;
-        }
-    },
 
     /**
      * 💰 Mua listing với WALLET payment và số lượng cụ thể
@@ -955,6 +947,147 @@ export const buyerApi = {
             } else {
                 throw new Error(error.message || 'Failed to complete purchase. Please try again.');
             }
+        }
+    },
+
+    // ==================== PENDING TRANSACTION MANAGEMENT ====================
+
+    /**
+     * 🕐 Lấy tất cả giao dịch đang pending của user
+     * GET /transactions/my-transactions?status=PENDING
+     * @returns {Promise} Danh sách các transaction pending
+     */
+    getPendingTransactions: async () => {
+        try {
+            console.log('🔄 Fetching pending transactions...');
+            const response = await axiosInstance.get('/transactions/my-transactions', {
+                params: { status: 'PENDING', size: 50 } // Get all pending transactions
+            });
+
+            // Filter to only get PENDING transactions (double check)
+            const pendingTransactions = response.data.content?.filter(tx => tx.status === 'PENDING') || [];
+            console.log('✅ Found pending transactions:', pendingTransactions.length);
+
+            return pendingTransactions;
+        } catch (error) {
+            console.error('❌ Error fetching pending transactions:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * 🔄 Resume a pending VNPay transaction (regenerate payment URL)
+     * POST /transactions/{transactionId}/resume-payment
+     * @param {string} transactionId - UUID of the pending transaction
+     * @returns {Promise} New payment URL and updated transaction
+     */
+    resumeVNPayTransaction: async (transactionId) => {
+        try {
+            console.log('🔄 Resuming VNPay transaction:', transactionId);
+
+            // Get transaction details first to validate it's PENDING and VNPay
+            const transaction = await axiosInstance.get(`/transactions/${transactionId}`);
+
+            if (transaction.data.status !== 'PENDING') {
+                throw new Error('Transaction is not in pending status');
+            }
+
+            if (!transaction.data.paymentMethod ||
+                (!transaction.data.paymentMethod.includes('VNPAY') &&
+                 !transaction.data.paymentMethod.includes('BANK'))) {
+                throw new Error('Only VNPay transactions can be resumed');
+            }
+
+            // Try to regenerate VNPay URL - this might need a custom backend endpoint
+            // For now, we'll use the existing VNPay creation flow
+            const response = await axiosInstance.post('/transactions/purchase', {
+                listingId: transaction.data.listingId,
+                paymentMethodId: 'VNPAY_BANK_TRANSFER'
+            });
+
+            console.log('✅ VNPay transaction resumed:', response.data);
+            return response.data;
+
+        } catch (error) {
+            console.error('❌ Error resuming VNPay transaction:', error);
+
+            if (error.response?.status === 404) {
+                throw new Error('Transaction not found or expired');
+            } else if (error.response?.status === 400) {
+                throw new Error(error.response.data?.message || 'Cannot resume this transaction');
+            }
+
+            throw error;
+        }
+    },
+
+    /**
+     * ❌ Cancel a pending transaction permanently
+     * POST /transactions/{transactionId}/cancel
+     * @param {string} transactionId - UUID of the pending transaction
+     * @param {string} reason - Reason for cancellation
+     * @returns {Promise} Cancelled transaction details
+     */
+    cancelPendingTransaction: async (transactionId, reason = 'Cancelled by user') => {
+        try {
+            console.log('❌ Cancelling pending transaction:', transactionId, 'Reason:', reason);
+
+            const response = await axiosInstance.post(`/transactions/${transactionId}/cancel`, {
+                reason: reason
+            });
+
+            console.log('✅ Transaction cancelled successfully');
+            return response.data;
+
+        } catch (error) {
+            console.error('❌ Error cancelling transaction:', error);
+
+            if (error.response?.status === 404) {
+                throw new Error('Transaction not found');
+            } else if (error.response?.status === 400) {
+                throw new Error(error.response.data?.message || 'Cannot cancel this transaction');
+            }
+
+            throw error;
+        }
+    },
+
+    /**
+     * 🔄 Complete a pending wallet transaction
+     * POST /transactions/{transactionId}/complete
+     * @param {string} transactionId - UUID of the pending wallet transaction
+     * @returns {Promise} Completed transaction details
+     */
+    completePendingWalletTransaction: async (transactionId) => {
+        try {
+            console.log('💰 Completing pending wallet transaction:', transactionId);
+
+            // Get transaction details first to validate
+            const transaction = await axiosInstance.get(`/transactions/${transactionId}`);
+
+            if (transaction.data.status !== 'PENDING') {
+                throw new Error('Transaction is not in pending status');
+            }
+
+            if (!transaction.data.paymentMethod ||
+                !transaction.data.paymentMethod.includes('WALLET')) {
+                throw new Error('Only wallet transactions can be completed this way');
+            }
+
+            // Complete the transaction
+            const response = await axiosInstance.post(`/transactions/${transactionId}/complete`);
+
+            console.log('✅ Wallet transaction completed successfully');
+            return response.data;
+
+        } catch (error) {
+            console.error('❌ Error completing wallet transaction:', error);
+
+            if (error.response?.status === 400) {
+                throw new Error(error.response.data?.message || 'Insufficient wallet balance or invalid transaction');
+            }
+
+            throw error;
         }
     },
 };

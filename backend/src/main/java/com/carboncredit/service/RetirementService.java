@@ -24,69 +24,106 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
 
-
 @Service
 public class RetirementService {
 
     private static final Logger log = LoggerFactory.getLogger(RetirementService.class);
 
-    @Autowired private CarbonCreditRepository creditRepository;
-    @Autowired private RetirementRepository retirementRepo;
-    @Autowired private CertificateRepository certificateRepo;
-    @Autowired private UserRepository userRepository;
-    @Autowired private CertificateGenerationService certGenerationService;
-    @Autowired private WalletService walletService;
-    @Autowired private NotificationService notificationService;
+    @Autowired
+    private CarbonCreditRepository creditRepository;
+    @Autowired
+    private RetirementRepository retirementRepo;
+    @Autowired
+    private CertificateRepository certificateRepo;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private CertificateGenerationService certGenerationService;
+    @Autowired
+    private WalletService walletService;
+    @Autowired
+    private NotificationService notificationService;
 
-    @Transactional // (Đây là Giao dịch A)
+    @Transactional
     public RetirementTransaction initiateRetirement(RetirementRequestDTO request) {
         UUID userId = request.getUserId();
-        BigDecimal amountToRetireKg = request.getAmountToRetireKg();
+        BigDecimal creditCountToRetire = request.getAmountToRetireKg(); // This is actually credit count, not kg
 
-        log.info("Starting retirement phase 1 (Validation) for user {} with amount {} kg", userId, amountToRetireKg);
+        log.info("Starting retirement for user {} with {} credits", userId, creditCountToRetire);
         log.info("Project info: {}, Purpose: {}", request.getProjectInfo(), request.getRetirementPurpose());
 
-        // ---- 1. Validate buyer (Giữ nguyên) ----
+        // ---- 1. Validate buyer ----
         User buyer = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
-        // ... (Kiểm tra role và amount > 0) ...
 
-        // ---- 2. Find available credits (CHỈ KIỂM TRA, KHÔNG SỬA) ----
-        List<CarbonCredit> verifiableCredits = creditRepository.findByUserAndStatus(buyer, CarbonCredit.CreditStatus.VERIFIED);
-        List<CarbonCredit> purchasedCredits  = creditRepository.findByUserAndStatus(buyer, CarbonCredit.CreditStatus.SOLD);
+        // Validate user role (should be BUYER)
+        if (!buyer.getRole().equals(User.UserRole.BUYER)) {
+            throw new IllegalArgumentException("Only buyers can retire carbon credits");
+        }
+
+        // Validate amount - must be whole number since we're dealing with credit count
+        if (creditCountToRetire.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Credit count must be greater than 0");
+        }
+
+        if (creditCountToRetire.stripTrailingZeros().scale() > 0) {
+            throw new IllegalArgumentException("Credit count must be a whole number");
+        }
+
+        // ---- 2. Check wallet credit count (CORRECT APPROACH) ----
+        BigDecimal currentCreditBalance = walletService.getCreditBalance(userId);
+        log.info("Current wallet credit count: {} credits", currentCreditBalance);
+
+        if (currentCreditBalance.compareTo(creditCountToRetire) < 0) {
+            throw new InsufficientCreditsException(
+                    "Insufficient credits in wallet. Required: " + creditCountToRetire + " credits, Available: "
+                            + currentCreditBalance + " credits");
+        }
+
+        // ---- 3. IMMEDIATELY DEDUCT FROM WALLET CREDIT BALANCE ----
+        log.info("Deducting {} credits from wallet balance", creditCountToRetire);
+        walletService.updateCreditBalance(userId, creditCountToRetire.negate());
+
+        // ---- 4. SELECT AND RETIRE ACTUAL CREDITS ----
+        // Get available credits for retiring
+        List<CarbonCredit> verifiableCredits = creditRepository.findByUserAndStatus(buyer,
+                CarbonCredit.CreditStatus.VERIFIED);
+        List<CarbonCredit> purchasedCredits = creditRepository.findByUserAndStatus(buyer,
+                CarbonCredit.CreditStatus.SOLD);
         List<CarbonCredit> availableCredits = new ArrayList<>();
         availableCredits.addAll(verifiableCredits);
         availableCredits.addAll(purchasedCredits);
 
-        BigDecimal totalAvailable = availableCredits.stream()
-                .map(CarbonCredit::getCo2ReducedKg) // Dùng co2ReducedKg
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // Select exact number of credits to retire using FIFO
+        List<CarbonCredit> selectedCredits = selectCreditsForRetirement(availableCredits, creditCountToRetire);
 
-        log.info("Total available: {} kg from {} credits", totalAvailable, availableCredits.size());
+        // Mark selected credits as RETIRED
+        List<UUID> retiredCreditIds = new ArrayList<>();
+        BigDecimal totalCo2Retired = BigDecimal.ZERO; // Sum up the CO2 from retired credits
 
-        if (totalAvailable.compareTo(amountToRetireKg) < 0) {
-            throw new InsufficientCreditsException(
-                    "Insufficient credits. Required: " + amountToRetireKg + " kg, Available: " + totalAvailable + " kg");
+        for (CarbonCredit credit : selectedCredits) {
+            credit.setStatus(CarbonCredit.CreditStatus.RETIRED);
+            creditRepository.save(credit);
+            retiredCreditIds.add(credit.getId());
+            totalCo2Retired = totalCo2Retired.add(credit.getCo2ReducedKg());
+            log.info("Credit {} marked as RETIRED ({} kg CO2)", credit.getId(), credit.getCo2ReducedKg());
         }
 
-        // ---- 3. BỎ LOGIC TRỪ CREDIT ----
-        // (Toàn bộ logic 'selectCreditsForRetirement', 'credit.setStatus(RETIRED)',
-        // 'creditRepository.save(credit)', 'walletService.updateCreditBalance'
-        // ĐÃ BỊ XÓA KHỎI ĐÂY)
+        log.info("Total {} credits retired representing {} kg CO2", selectedCredits.size(), totalCo2Retired);
 
-        // ---- 4. Persist RetirementTransaction (PENDING) ----
+        // ---- 5. Create RetirementTransaction (COMPLETED) ----
         RetirementTransaction retirementTx = RetirementTransaction.builder()
                 .retiringUser(buyer)
-                .amountRetiredKg(amountToRetireKg) // Số lượng user YÊU CẦU
+                .amountRetiredKg(totalCo2Retired) // Store the actual CO2 amount from retired credits
                 .retirementDate(LocalDate.now())
-                .status(RetirementTransaction.RetirementStatus.PENDING) // Trạng thái chờ xử lý
-                .retiredCarbonCreditIds(new ArrayList<>()) // <<< QUAN TRỌNG: Danh sách ID ban đầu rỗng
+                .status(RetirementTransaction.RetirementStatus.COMPLETED) // Mark as COMPLETED since credits are already
+                                                                          // retired
+                .retiredCarbonCreditIds(retiredCreditIds) // Include the actual retired credit IDs
                 .build();
         RetirementTransaction savedRetirementTx = retirementRepo.save(retirementTx);
 
-        // ---- 5. Build & SAVE Certificate (PENDING) ----
-        String projectSourceInfo = String.format("Carbon Credits | Project: %s | Purpose: %s",
-                request.getProjectInfo(), request.getRetirementPurpose());
+        // ---- 6. Build & SAVE Certificate (PENDING_GENERATION) ----
+        String projectSourceInfo = extractProjectSourceInfo(selectedCredits, request);
 
         Certificate newCert = Certificate.builder()
                 .certificateCode(generateUniqueCertificateCode())
@@ -94,12 +131,12 @@ public class RetirementService {
                 .retirementTransaction(savedRetirementTx)
                 .buyerNameSnapshot(buyer.getFullName())
                 .buyerEmailSnapshot(buyer.getEmail())
-                .amountRetiredKg(amountToRetireKg)
-                .co2ReducedKg(amountToRetireKg) // Tạm thời đặt bằng số lượng yêu cầu
+                .amountRetiredKg(totalCo2Retired) // CO2 amount from the retired credits
+                .co2ReducedKg(totalCo2Retired) // Same as amount retired
                 .projectSourceInfo(projectSourceInfo)
                 .retirementDate(savedRetirementTx.getRetirementDate())
-                .issueDate(LocalDate.now()) // NEW: Set issue date when certificate is created
-                .status(Certificate.CertificateStatus.PENDING_GENERATION) // Trạng thái chờ
+                .issueDate(LocalDate.now())
+                .status(Certificate.CertificateStatus.PENDING_GENERATION) // PDF generation pending
                 .createdAt(Instant.now())
                 .build();
         Certificate savedCert = certificateRepo.save(newCert);
@@ -107,39 +144,61 @@ public class RetirementService {
         // Send notification for retirement success
         notificationService.notifyRetirementSuccess(buyer, savedCert.getId().toString());
 
-        // ---- 6. Async PDF generation (Giữ nguyên) ----
-        // Kích hoạt Giai đoạn 2 (Bất đồng bộ) CHỈ SAU KHI Giao dịch A commit thành công
+        // ---- 7. Trigger async PDF generation ----
         TransactionSynchronizationManager.registerSynchronization(
-                new org.springframework.transaction.support.TransactionSynchronizationAdapter() {
+                new org.springframework.transaction.support.TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
-                        log.info("Transaction A committed. Triggering async generation for cert ID: {}", savedCert.getId());
+                        log.info("Retirement transaction committed. Triggering async PDF generation for cert ID: {}",
+                                savedCert.getId());
                         certGenerationService.generateAndStoreCertificate(savedCert.getId());
                     }
-                }
-        );
+                });
 
-        // Giao dịch A kết thúc và commit
         return savedRetirementTx;
     }
 
-
     private List<CarbonCredit> selectCreditsForRetirement(List<CarbonCredit> available,
-                                                          BigDecimal targetKg) {
+            BigDecimal targetCreditCount) {
         List<CarbonCredit> selected = new ArrayList<>();
-        BigDecimal sum = BigDecimal.ZERO;
 
-        log.info("Selecting credits: target {} kg from {} available", targetKg, available.size());
+        log.info("Selecting {} credits for retirement from {} available credit entities", targetCreditCount,
+                available.size());
 
-        for (CarbonCredit c : available) {
-            selected.add(c);
-            sum = sum.add(c.getCo2ReducedKg());
+        // Sort by creation date for FIFO (First In First Out) - oldest credits retired
+        // first
+        available.sort(Comparator.comparing(CarbonCredit::getCreatedAt));
 
-            if (sum.compareTo(targetKg) >= 0) {
-                log.info("Target reached! {} credits, total {} kg", selected.size(), sum);
-                break;
-            }
+        // Calculate total available credit amount (sum of creditAmount fields)
+        BigDecimal totalAvailableCredits = available.stream()
+                .map(CarbonCredit::getCreditAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        log.info("Total available credit amount: {}", totalAvailableCredits);
+
+        if (totalAvailableCredits.compareTo(targetCreditCount) < 0) {
+            log.error("Not enough credits available. Required: {} credits, Available: {} credits",
+                    targetCreditCount, totalAvailableCredits);
+            throw new InsufficientCreditsException(
+                    String.format("Insufficient credits available for retirement. Required: %s, Available: %s",
+                            targetCreditCount, totalAvailableCredits));
         }
+
+        // Select credits using FIFO until we accumulate enough creditAmount
+        BigDecimal accumulatedCredits = BigDecimal.ZERO;
+        for (CarbonCredit credit : available) {
+            if (accumulatedCredits.compareTo(targetCreditCount) >= 0) {
+                break; // We have enough credits
+            }
+
+            selected.add(credit);
+            accumulatedCredits = accumulatedCredits.add(credit.getCreditAmount());
+            log.debug("Selected credit {} with amount {} (accumulated: {})",
+                    credit.getId(), credit.getCreditAmount(), accumulatedCredits);
+        }
+
+        log.info("Selected {} credit entities representing {} total credits for retirement",
+                selected.size(), accumulatedCredits);
         return selected;
     }
 
@@ -148,9 +207,12 @@ public class RetirementService {
                 UUID.randomUUID().toString().substring(0, 5).toUpperCase();
     }
 
-    /** Extract vehicle models (null-safe) and combine with user-provided project info */
+    /**
+     * Extract vehicle models (null-safe) and combine with user-provided project
+     * info
+     */
     private String extractProjectSourceInfo(List<CarbonCredit> credits,
-                                            RetirementRequestDTO request) {
+            RetirementRequestDTO request) {
         log.info("Extracting project source info from {} credits", credits.size());
 
         // ---- vehicle models -------------------------------------------------
@@ -178,12 +240,14 @@ public class RetirementService {
         }
 
         if (request.getProjectInfo() != null && !request.getProjectInfo().trim().isEmpty()) {
-            if (sb.length() > 0) sb.append(" | ");
+            if (!sb.isEmpty())
+                sb.append(" | ");
             sb.append("Project: ").append(request.getProjectInfo().trim());
         }
 
         if (request.getRetirementPurpose() != null && !request.getRetirementPurpose().trim().isEmpty()) {
-            if (sb.length() > 0) sb.append(" | ");
+            if (!sb.isEmpty())
+                sb.append(" | ");
             sb.append("Purpose: ").append(request.getRetirementPurpose().trim());
         }
 

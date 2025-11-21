@@ -12,6 +12,7 @@ import {
   Menu, 
   X,
   ChevronDown,
+  ClipboardMinus,
   List
 } from 'lucide-react'
 import userDataFetcher from '../../api/userDataFetcher'
@@ -65,6 +66,18 @@ function Navbar() {
     }
 
     fetchUser()
+    
+    // Listen for profile updates from Profile page
+    const handleProfileUpdate = () => {
+      console.log('🔄 Profile updated, refreshing navbar...')
+      fetchUser()
+    }
+    
+    window.addEventListener('userProfileUpdated', handleProfileUpdate)
+    
+    return () => {
+      window.removeEventListener('userProfileUpdated', handleProfileUpdate)
+    }
   }, [navigate])
 
   const handleLogout = () => {
@@ -180,6 +193,14 @@ function Navbar() {
                   >
                     <List size={16} />
                     Listing
+                  </Link>
+                  <Link
+                    to="/ev-dashboard/report"
+                    className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    onClick={() => setIsProfileDropdownOpen(false)}
+                  >
+                    <ClipboardMinus size={16} />
+                    Report
                   </Link>
                   <button
                     onClick={handleLogout}

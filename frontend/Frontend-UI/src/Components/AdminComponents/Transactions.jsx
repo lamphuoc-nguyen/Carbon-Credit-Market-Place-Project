@@ -10,6 +10,9 @@ import {
     ChevronRight,
     Eye
 } from 'lucide-react';
+import ConfirmationModal from '../ConfirmationModal';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // --- Helper Components ---
 
@@ -86,6 +89,8 @@ const TransactionManagement = () => {
     const [error, setError] = useState(null);
     const [page, setPage] = useState(0);
     const [totalPages, setTotalPages] = useState(0);
+    const [showModal, setShowModal] = useState(false);
+    const [modalConfig, setModalConfig] = useState({});
 
     // Helper định dạng ngày
     const formatDate = (dateString) => {
@@ -129,31 +134,43 @@ const TransactionManagement = () => {
     // --- Hàm xử lý Actions ---
 
     // "Phê duyệt" (Approve) một tranh chấp -> Hoàn thành giao dịch
-    const handleApprove = async (txId) => {
-        if (!window.confirm('Are you sure you want to approve and force-complete this disputed transaction?')) return;
-
-        try {
-            // Sử dụng API 'completeTransaction' để giải quyết tranh chấp
-            await transactionApi.completeTransaction(txId);
-            alert('Transaction approved and marked as COMPLETED.');
-            fetchData(); // Tải lại danh sách (giao dịch này sẽ biến mất khỏi list)
-        } catch (err) {
-            alert(`Failed to approve transaction: ${err.message}`);
-        }
+    const handleApprove = (txId) => {
+        setModalConfig({
+            title: 'Approve Transaction',
+            message: 'Are you sure you want to approve and force-complete this disputed transaction?',
+            confirmText: 'Approve',
+            isDangerous: false,
+            onConfirm: async () => {
+                try {
+                    await transactionApi.completeTransaction(txId);
+                    toast.success('Transaction approved and marked as COMPLETED.');
+                    fetchData();
+                } catch (err) {
+                    toast.error(`Failed to approve transaction: ${err.message}`);
+                }
+            }
+        });
+        setShowModal(true);
     };
 
     // "Hủy" (Cancel) một tranh chấp -> Hủy giao dịch
-    const handleCancel = async (txId) => {
-        if (!window.confirm('Are you sure you want to cancel this disputed transaction?')) return;
-
-        try {
-            // Sử dụng API 'cancelTransaction' để giải quyết tranh chấp
-            await transactionApi.cancelTransaction(txId);
-            alert('Transaction cancelled and marked as CANCELLED.');
-            fetchData(); // Tải lại danh sách (giao dịch này sẽ biến mất khỏi list)
-        } catch (err) {
-            alert(`Failed to cancel transaction: ${err.message}`);
-        }
+    const handleCancel = (txId) => {
+        setModalConfig({
+            title: 'Cancel Transaction',
+            message: 'Are you sure you want to cancel this disputed transaction?',
+            confirmText: 'Cancel Transaction',
+            isDangerous: true,
+            onConfirm: async () => {
+                try {
+                    await transactionApi.cancelTransaction(txId);
+                    toast.success('Transaction cancelled and marked as CANCELLED.');
+                    fetchData();
+                } catch (err) {
+                    toast.error(`Failed to cancel transaction: ${err.message}`);
+                }
+            }
+        });
+        setShowModal(true);
     };
 
 
@@ -241,6 +258,31 @@ const TransactionManagement = () => {
                     </div>
                 )}
             </div>
+            
+            {/* Confirmation Modal */}
+            <ConfirmationModal
+                isOpen={showModal}
+                onClose={() => setShowModal(false)}
+                onConfirm={modalConfig.onConfirm}
+                title={modalConfig.title}
+                message={modalConfig.message}
+                confirmText={modalConfig.confirmText}
+                isDangerous={modalConfig.isDangerous}
+            />
+            
+            {/* Toast Notifications */}
+            <ToastContainer 
+                position="bottom-right"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="light"
+            />
         </div>
     );
 };

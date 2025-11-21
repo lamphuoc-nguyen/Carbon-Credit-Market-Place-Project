@@ -43,7 +43,7 @@ public class CreditListingService {
 
     // ==================== LISTING CREATION ====================
 
-    public CreditListing createFixedPriceListing(UUID creditId, User owner, BigDecimal price) {
+    public CreditListing createFixedPriceListing(UUID creditId, User owner, BigDecimal price, String sellerLocation) {
         log.info("Creating fixed-price listing for credit {} by user {} at price {}",
                 creditId, owner.getUsername(), price);
 
@@ -66,6 +66,7 @@ public class CreditListingService {
         listing.setListingType(ListingType.FIXED);
         listing.setPrice(price);
         listing.setStatus(ListingStatus.ACTIVE);
+        listing.setSellerLocation(sellerLocation);
 
         // Update carbon credit status to LISTED
         credit.setStatus(CreditStatus.LISTED);
@@ -84,9 +85,14 @@ public class CreditListingService {
         return savedListing;
     }
 
+    // Overloaded method for backward compatibility
+    public CreditListing createFixedPriceListing(UUID creditId, User owner, BigDecimal price) {
+        return createFixedPriceListing(creditId, owner, price, null);
+    }
+
     // Create a combined listing from multiple credits
     @Transactional
-    public CreditListing createCombinedListing(List<UUID> creditIds, BigDecimal pricePerCredit, User owner) {
+    public CreditListing createCombinedListing(List<UUID> creditIds, BigDecimal pricePerCredit, User owner, String sellerLocation) {
         log.info("Creating combined listing for {} credits by user {} at {} per credit",
                  creditIds.size(), owner.getUsername(), pricePerCredit);
 
@@ -146,6 +152,7 @@ public class CreditListingService {
         listing.setListingType(CreditListing.ListingType.FIXED);
         listing.setPrice(totalPrice);
         listing.setStatus(CreditListing.ListingStatus.ACTIVE);
+        listing.setSellerLocation(sellerLocation);
 
         CreditListing savedListing = creditListingRepository.save(listing);
 
@@ -162,6 +169,11 @@ public class CreditListingService {
                  savedListing.getId(), totalCreditAmount, totalPrice);
 
         return savedListing;
+    }
+
+    // Overloaded method for backward compatibility
+    public CreditListing createCombinedListing(List<UUID> creditIds, BigDecimal pricePerCredit, User owner) {
+        return createCombinedListing(creditIds, pricePerCredit, owner, null);
     }
 
     // ==================== LISTING MANAGEMENT ====================

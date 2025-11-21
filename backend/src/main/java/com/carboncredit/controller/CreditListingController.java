@@ -39,13 +39,16 @@ public class CreditListingController {
 
     // create fixed-price listing
     @PostMapping("/create")
-    public ResponseEntity<CreditListingDTO> createListing(@RequestParam UUID creditId, @RequestParam BigDecimal price,
+    public ResponseEntity<CreditListingDTO> createListing(
+            @RequestParam UUID creditId, 
+            @RequestParam BigDecimal price,
+            @RequestParam(required = false) String sellerLocation,
             Authentication authentication) {
         try {
             User owner = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            CreditListing listing = creditListingService.createFixedPriceListing(creditId, owner, price);
+            CreditListing listing = creditListingService.createFixedPriceListing(creditId, owner, price, sellerLocation);
 
             log.info("Listing created successfully by user: {}", owner.getUsername());
             return ResponseEntity.status(HttpStatus.CREATED).body(new CreditListingDTO(listing)); // FIX: Convert to DTO
@@ -61,6 +64,7 @@ public class CreditListingController {
     public ResponseEntity<CreditListingDTO> createCombinedListing(
             @RequestParam List<UUID> creditIds,
             @RequestParam BigDecimal pricePerCredit,
+            @RequestParam(required = false) String sellerLocation,
             Authentication authentication) {
         try {
             User user = userService.findByUsername(authentication.getName())
@@ -69,7 +73,7 @@ public class CreditListingController {
             log.info("Creating combined listing for {} credits by user {} at price {} per credit",
                      creditIds.size(), user.getUsername(), pricePerCredit);
 
-            CreditListing combinedListing = creditListingService.createCombinedListing(creditIds, pricePerCredit, user);
+            CreditListing combinedListing = creditListingService.createCombinedListing(creditIds, pricePerCredit, user, sellerLocation);
             CreditListingDTO dto = new CreditListingDTO(combinedListing);
 
             log.info("Combined listing created successfully: {} for {} credits",

@@ -1,8 +1,12 @@
 import React from 'react'
+import Navbar from '../../Components/Navbar'
+import Footer from '../../Components/Footer'
 
 const AboutPage = () => {
   return (
-      <div className="min-h-screen bg-gray-50">        
+      <>
+      
+      <div className="min-h-screen bg-gray-50">
 
           {/* Hero Section */}
           <section id="home" className="bg-gradient-to-r from-green-600 to-cyan-700 text-white py-20">
@@ -182,6 +186,8 @@ const AboutPage = () => {
           </section>
          
       </div>
+      
+      </>
   )
 }
 

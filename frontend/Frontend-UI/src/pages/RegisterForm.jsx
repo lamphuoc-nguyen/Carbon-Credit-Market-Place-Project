@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaGoogle, FaFacebook, FaBriefcase, FaUser, FaEnvelope, FaPhone, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaGoogle, FaGithub, FaBriefcase, FaUser, FaEnvelope, FaPhone, FaLock, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { useState } from 'react';
 import { CircleCheckBig } from 'lucide-react';
 import backgroundImage from '../image/background.png';
@@ -25,14 +25,16 @@ const RegisterForm = () => {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+
     const handleGoogleLogin = () => {
         console.log('Google OAuth2 login clicked');
-        window.location.href = 'http://localhost:8080/oauth2/authorization/google';
+        window.location.href = `${API_BASE_URL}/oauth2/authorization/google`;
     };
 
     const handleFacebookLogin = () => {
         console.log('GitHub OAuth2 login clicked');
-        window.location.href = 'http://localhost:8080/oauth2/authorization/github';
+        window.location.href = `${API_BASE_URL}/oauth2/authorization/github`;
     };
 
     const handleChange = (e) => {
@@ -577,9 +579,9 @@ const RegisterForm = () => {
                                     <button
                                         type="button"
                                         onClick={handleFacebookLogin}
-                                        className="flex-1 flex items-center justify-center gap-1.5 bg-[#1877F2] text-white py-2 rounded hover:bg-[#166FE5] transition-colors duration-300"
+                                        className="flex-1 flex items-center justify-center gap-1.5 bg-[#2b3137] text-white py-2 rounded hover:bg-[#24292e] transition-colors duration-300"
                                     >
-                                        <FaFacebook className="text-sm" />
+                                        <FaGithub className="text-sm" />
                                         <span className="font-medium text-s">GitHub</span>
                                     </button>
                                 </div>

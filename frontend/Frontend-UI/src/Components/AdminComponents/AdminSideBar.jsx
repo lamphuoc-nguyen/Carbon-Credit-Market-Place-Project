@@ -43,7 +43,7 @@ const AdminSidebar = ({ isOpen, setIsOpen }) => {
         >
             <div className={`flex flex-col h-full overflow-hidden`}>
 
-                {/* 1. Header (Updated with NotificationButton) */}
+                {/* 1. Header */}
                 <div
                     className={`flex items-center h-16 border-b border-gray-100
                               ${isOpen ? 'justify-between p-4' : 'justify-center p-2'}`}
@@ -57,9 +57,6 @@ const AdminSidebar = ({ isOpen, setIsOpen }) => {
                         </div>
                     )}
                     <div className="flex items-center gap-2">
-                        {/* Notification Button */}
-                        <NotificationButton />
-
                         {/* Toggle Button */}
                         <button
                             onClick={() => setIsOpen(!isOpen)}
@@ -71,20 +68,24 @@ const AdminSidebar = ({ isOpen, setIsOpen }) => {
                     </div>
                 </div>
 
-                {/* 2. User Profile/Badge (Placeholder - Add your actual user info display here) */}
-                <div className={`p-4 border-b border-gray-100 flex items-center mb-4 ${!isOpen && 'justify-center'}`}>
-                    <div className={`p-2 rounded-full ${isOpen ? 'bg-orange-100' : 'bg-orange-100'}`}>
-                        <Settings className={`h-6 w-6 ${isOpen ? 'text-orange-600' : 'text-orange-600'}`} />
-                    </div>
-                    {isOpen && (
-                        <div className="ml-3">
-                            <p className="font-semibold text-sm text-gray-800">Admin User</p>
-                            <div className="flex items-center mt-1 space-x-1">
-                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">admin</span>
-                                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">Verified</span>
-                            </div>
+                {/* 2. User Profile/Badge */}
+                <div className={`p-4 border-b border-gray-100 flex items-center justify-between mb-4`}>
+                    <div className="flex items-center">
+                        <div className={`p-2 rounded-full bg-orange-100`}>
+                            <Settings className={`h-6 w-6 text-orange-600`} />
                         </div>
-                    )}
+                        {isOpen && (
+                            <div className="ml-3">
+                                <p className="font-semibold text-sm text-gray-800">Admin User</p>
+                                <div className="flex items-center mt-1 space-x-1">
+                                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">admin</span>
+                                    <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">Verified</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    {/* Notification Button next to user name */}
+                    <NotificationButton dropdownPosition="left" />
                 </div>
 
 

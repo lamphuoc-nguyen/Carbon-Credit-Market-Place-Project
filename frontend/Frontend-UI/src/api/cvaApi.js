@@ -1,141 +1,99 @@
 // src/api/cvaApi.js
 
-import axiosInstance from './axiosInstance'; // Import axios instance đã cấu hình
+import axiosInstance from './axiosInstance';
 
 /**
- * Xử lý lỗi và trích xuất dữ liệu từ ApiResponse
- * @param {Promise<object>} request - Lệnh gọi API (ví dụ: axiosInstance.get(...))
- * @returns {Promise<any>} - Chỉ trả về phần 'data' từ ApiResponse
+ * Helper: Xử lý lỗi và trích xuất dữ liệu từ ApiResponse
  */
 const handleRequest = async (request) => {
     try {
         const response = await request;
-        // Giả sử API của bạn luôn trả về cấu trúc { success: true, data: ... }
+        // Controller trả về ApiResponse dạng: { success: boolean, message: string, data: object }
         if (response.data && response.data.success) {
             return response.data.data;
         }
-        // Xử lý trường hợp success: false
         throw new Error(response.data.message || 'API request failed');
     } catch (error) {
         console.error('API Error:', error.response?.data || error.message);
-        // Ném lỗi để component có thể bắt và xử lý (ví dụ: setError state)
         throw error;
     }
 };
 
 /**
- * API service cho các chức năng của CVA (Carbon Verification Authority)
+ * API service cho CVA (Carbon Verification Authority)
+ * Base URL: /api/cva
  */
 export const cvaApi = {
-    /**
-     * Lấy tất cả các hành trình đang chờ duyệt
-     * GET /api/cva/pending-journeys
-     */
-    getPendingJourneys: () => {
-        // SỬA LỖI: Dùng axiosInstance
-        return handleRequest(axiosInstance.get('/api/cva/pending-journeys'));
-    },
+
+    // ================== QUẢN LÝ YÊU CẦU CHUYỂN ĐỔI (TRANSFER REQUESTS) ==================
 
     /**
-     * Lấy chi tiết một hành trình để xem xét
-     * GET /api/cva/journey/{id}
-     */
-    getJourneyForReview: (journeyId) => {
-        // SỬA LỖI: Dùng axiosInstance
-        return handleRequest(axiosInstance.get(`/api/cva/journey/${journeyId}`));
-    },
-
-    /**
-     * Duyệt một hành trình
-     * POST /api/cva/journey/{id}/approve
-     */
-    approveJourney: (journeyId, notes) => {
-        // SỬA LỖI: Dùng axiosInstance
-        return handleRequest(axiosInstance.post(
-            `/api/cva/journey/${journeyId}/approve`,
-            null, // Không có body
-            { params: { notes } } // Gửi 'notes' làm query param
-        ));
-    },
-
-    /**
-     * Từ chối một hành trình
-     * POST /api/cva/journey/{id}/reject
-     */
-    rejectJourney: (journeyId, reason) => {
-        // SỬA LỖI: Dùng axiosInstance
-        return handleRequest(axiosInstance.post(
-            `/api/cva/journey/${journeyId}/reject`,
-            null, // Không có body
-            { params: { reason } } // Gửi 'reason' làm query param
-        ));
-    },
-
-    /**
-     * Lấy thống kê của CVA hiện tại
-     * GET /api/cva/statistics
-     */
-    getCVAStatistics: () => {
-        // SỬA LỖI: Dùng axiosInstance
-        return handleRequest(axiosInstance.get('/api/cva/statistics'));
-    },
-
-    /**
-     * Lấy lịch sử các hành trình đã được CVA này xử lý
-     * GET /api/cva/my-verifications
-     */
-    getMyVerifications: () => {
-        // SỬA LỖI: Dùng axiosInstance
-        return handleRequest(axiosInstance.get('/api/cva/my-verifications'));
-    },
-
-    // ==================== CO2 TRANSFER REQUEST MANAGEMENT ====================
-
-    /**
-     * Lấy tất cả các yêu cầu chuyển đổi CO2 thành credit đang chờ duyệt
-     * GET /api/cva/pending-transfer-requests
-     * @returns {Promise<Co2TransferRequestDTO[]>}
+     * Lấy danh sách các yêu cầu chuyển đổi CO2 đang chờ duyệt
+     * Endpoint: GET /api/cva/pending-transfer-requests
      */
     getPendingTransferRequests: () => {
         return handleRequest(axiosInstance.get('/api/cva/pending-transfer-requests'));
     },
 
     /**
-     * Duyệt một yêu cầu chuyển đổi CO2 thành credit
-     * POST /api/cva/transfer-request/{requestId}/approve
-     * @param {string} requestId - ID của yêu cầu chuyển đổi
-     * @param {string} [notes] - Ghi chú từ CVA
-     * @returns {Promise<Co2TransferRequestDTO>}
+     * Duyệt yêu cầu chuyển đổi CO2 -> Credit
+     * Endpoint: POST /api/cva/transfer-request/{requestId}/approve
+     * @param {string} requestId - UUID của request
+     * @param {string} [notes] - Ghi chú (Optional, mặc định backend sẽ set là "Approved by CVA")
      */
     approveTransferRequest: (requestId, notes) => {
         return handleRequest(axiosInstance.post(
             `/api/cva/transfer-request/${requestId}/approve`,
-            null,
-            { params: { notes } }
+            null, // Body trống vì dùng @RequestParam
+            {
+                params: { notes } // Gửi dưới dạng query param: ?notes=...
+            }
         ));
     },
 
     /**
-     * Từ chối một yêu cầu chuyển đổi CO2 thành credit (với hoàn trả CO2)
-     * POST /api/cva/transfer-request/{requestId}/reject
-     * @param {string} requestId - ID của yêu cầu chuyển đổi
-     * @param {string} reason - Lý do từ chối
-     * @returns {Promise<Co2TransferRequestDTO>}
+     * Từ chối yêu cầu chuyển đổi (Hoàn trả CO2 cho user)
+     * Endpoint: POST /api/cva/transfer-request/{requestId}/reject
+     * @param {string} requestId - UUID của request
+     * @param {string} reason - Lý do từ chối (Bắt buộc)
      */
     rejectTransferRequest: (requestId, reason) => {
         return handleRequest(axiosInstance.post(
             `/api/cva/transfer-request/${requestId}/reject`,
-            null,
-            { params: { reason } }
+            null, // Body trống
+            {
+                params: { reason } // Gửi dưới dạng query param: ?reason=...
+            }
         ));
     },
 
     /**
-     * Lấy thống kê về các yêu cầu chuyển đổi CO2
-     * GET /api/cva/transfer-statistics
-     * @returns {Promise<object>}
+     * Lấy thống kê dashboard cho CVA
+     * Endpoint: GET /api/cva/transfer-statistics
      */
-    getTransferRequestStatistics: () => {
+    getTransferStatistics: () => {
         return handleRequest(axiosInstance.get('/api/cva/transfer-statistics'));
     },
+
+    // ================== QUẢN LÝ LỊCH SỬ & TÍN CHỈ (VERIFICATIONS & CREDITS) ==================
+
+    /**
+     * Lấy lịch sử các hành trình/yêu cầu đã được CVA hiện tại xác minh
+     * Endpoint: GET /api/cva/my-verifications
+     * @param {number} page - Trang số mấy (mặc định 0)
+     * @param {number} size - Số lượng item mỗi trang (mặc định 20)
+     */
+    getMyVerifications: (page = 0, size = 20) => {
+        return handleRequest(axiosInstance.get('/api/cva/my-verifications', {
+            params: { page, size }
+        }));
+    },
+
+    /**
+     * Lấy tất cả các Carbon Credit đã được xác minh trên hệ thống
+     * Endpoint: GET /api/cva/verified-credits
+     */
+    getVerifiedCredits: () => {
+        return handleRequest(axiosInstance.get('/api/cva/verified-credits'));
+    }
 };

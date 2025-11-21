@@ -20,6 +20,7 @@ public class CreditListingDTO {
     private BigDecimal minBid;
     private LocalDateTime auctionEndTime;
     private CreditListing.ListingStatus status;
+    private String sellerLocation;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -31,6 +32,7 @@ public class CreditListingDTO {
         this.minBid = listing.getMinBid();
         this.auctionEndTime = listing.getAuctionEndTime();
         this.status = listing.getStatus();
+        this.sellerLocation = listing.getSellerLocation();
         this.createdAt = listing.getCreatedAt();
         this.updatedAt = listing.getUpdatedAt();
     }
@@ -46,6 +48,7 @@ public class CreditListingDTO {
         this.minBid = listing.getMinBid();
         this.auctionEndTime = listing.getAuctionEndTime();
         this.status = listing.getStatus();
+        this.sellerLocation = listing.getSellerLocation();
         this.createdAt = listing.getCreatedAt();
         this.updatedAt = listing.getUpdatedAt();
     }
