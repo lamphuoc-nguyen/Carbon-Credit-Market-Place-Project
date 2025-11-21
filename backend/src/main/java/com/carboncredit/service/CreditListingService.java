@@ -43,7 +43,7 @@ public class CreditListingService {
 
     // ==================== LISTING CREATION ====================
 
-    public CreditListing createFixedPriceListing(UUID creditId, User owner, BigDecimal price) {
+    public CreditListing createFixedPriceListing(UUID creditId, User owner, BigDecimal price, String sellerLocation) {
         log.info("Creating fixed-price listing for credit {} by user {} at price {}",
                 creditId, owner.getUsername(), price);
 
@@ -66,6 +66,7 @@ public class CreditListingService {
         listing.setListingType(ListingType.FIXED);
         listing.setPrice(price);
         listing.setStatus(ListingStatus.ACTIVE);
+        listing.setSellerLocation(sellerLocation);
 
         // Update carbon credit status to LISTED
         credit.setStatus(CreditStatus.LISTED);
@@ -82,6 +83,11 @@ public class CreditListingService {
                 savedListing.getId(), creditId, price);
 
         return savedListing;
+    }
+
+    // Overloaded method for backward compatibility
+    public CreditListing createFixedPriceListing(UUID creditId, User owner, BigDecimal price) {
+        return createFixedPriceListing(creditId, owner, price, null);
     }
 
     // Create a combined listing from multiple credits
