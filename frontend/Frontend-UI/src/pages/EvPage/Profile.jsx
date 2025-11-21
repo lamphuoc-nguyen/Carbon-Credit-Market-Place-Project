@@ -1,8 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Camera, User, Mail, Phone, Save, X, Edit2, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import EvOwnerAPI from '../../api/EvOwnerAPI';
 import Navbar from '../../Components/EVComponents/Navbar';
+import Footer from '../../Components/Footer';
+import ConfirmationModal from '../../Components/ConfirmationModal';
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -11,7 +15,8 @@ const ProfilePage = () => {
   const [profileImage, setProfileImage] = useState(null);
   const [vehicles, setVehicles] = useState([]);
   const [showVehicleForm, setShowVehicleForm] = useState(false);
-  const [editingVehicle, setEditingVehicle] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [vehicleToDelete, setVehicleToDelete] = useState(null);
   const [vehicleFormData, setVehicleFormData] = useState({
     vin: '',
     model: '',
@@ -80,7 +85,7 @@ const ProfilePage = () => {
       } else {
         // For other errors, show error but don't redirect
         console.error('⚠️ API error, but not redirecting:', error);
-        alert(`Failed to load profile: ${error.response?.data?.message || error.message}`);
+        toast.error(`Failed to load profile: ${error.response?.data?.message || error.message}`);
       }
     } finally {
       setLoading(false);
@@ -116,12 +121,71 @@ const ProfilePage = () => {
 
   const handleCancel = () => {
     setFormData({ ...originalData });
+    setVehicleFormData({ vin: '', model: '', registrationDate: '' });
+    setShowVehicleForm(false);
     setIsEditing(false);
   };
 
   const handleSave = async () => {
     try {
-      // Only send fullName for update
+      // Validate full name
+      if (!formData.fullName || formData.fullName.trim() === '') {
+        toast.error('Name is required');
+        return;
+      }
+      
+      // Check if name contains only letters, spaces, and common name characters
+      const nameRegex = /^[a-zA-Z\s\-'.]+$/;
+      if (!nameRegex.test(formData.fullName)) {
+        toast.error('Name can only contain letters, spaces, hyphens, apostrophes, and periods');
+        return;
+      }
+      
+      // Check name length (2-50 characters)
+      const trimmedName = formData.fullName.trim();
+      if (trimmedName.length < 2 || trimmedName.length > 50) {
+        toast.error('Name must be between 2 and 50 characters');
+        return;
+      }
+      
+      // Validate phone number format
+      if (formData.phone && formData.phone.trim() !== '') {
+        // Remove all non-digit characters for validation
+        const digitsOnly = formData.phone.replace(/\D/g, '');
+        
+        // Check if phone number starts with 0
+        if (!digitsOnly.startsWith('0')) {
+          toast.error('Phone number must start with 0');
+          return;
+        }
+        
+        // Check if phone number has between 10-15 digits
+        if (digitsOnly.length < 10 || digitsOnly.length > 15) {
+          toast.error('Phone number must be between 10-15 digits');
+          return;
+        }
+        
+        // Check if phone number contains only valid characters (digits, spaces, hyphens, parentheses, plus)
+        const phoneRegex = /^[\d\s\-+()]+$/;
+        if (!phoneRegex.test(formData.phone)) {
+          toast.error('Phone number contains invalid characters');
+          return;
+        }
+      }
+      
+      // Validate vehicle registration date if form has data
+      if (vehicleFormData.vin && vehicleFormData.model && vehicleFormData.registrationDate) {
+        const registrationDate = new Date(vehicleFormData.registrationDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
+        
+        if (registrationDate > today) {
+          toast.error('Registration date cannot be in the future');
+          return;
+        }
+      }
+      
+      // Save profile data
       const updateData = {
         fullName: formData.fullName,
         email: formData.email,
@@ -130,12 +194,37 @@ const ProfilePage = () => {
       
       await EvOwnerAPI.user.updateProfile(formData.userId, updateData);
       
+      // Save or update vehicle if form has data
+      if (vehicleFormData.vin && vehicleFormData.model && vehicleFormData.registrationDate) {
+        if (vehicles.length === 0) {
+          // Create new vehicle
+          await EvOwnerAPI.vehicles.createVehicle({
+            userId: formData.userId,
+            vin: vehicleFormData.vin,
+            model: vehicleFormData.model,
+            registrationDate: vehicleFormData.registrationDate,
+            createdAt: new Date().toISOString()
+          });
+          
+          // Refresh vehicles list
+          await fetchMyVehicles();
+          
+          // Reset vehicle form
+          setVehicleFormData({ vin: '', model: '', registrationDate: '' });
+        }
+      }
+      
       setOriginalData({ ...formData });
       setIsEditing(false);
-      alert('Profile updated successfully!');
+      setShowVehicleForm(false);
+      
+      // Trigger event to refresh Navbar
+      window.dispatchEvent(new Event('userProfileUpdated'));
+      
+      toast.success('Profile updated successfully!');
     } catch (error) {
       console.error('Failed to update profile:', error);
-      alert('Failed to update profile. Please try again.');
+      toast.error(`Failed to update profile: ${error.response?.data?.message || error.message}`);
     }
   };
 
@@ -159,141 +248,338 @@ const ProfilePage = () => {
     });
   };
 
-  const handleCreateVehicle = async (e) => {
-    e.preventDefault();
-    
-    // Check if user already has a vehicle
-    if (vehicles.length >= 1) {
-      alert('You can only have one vehicle. Please delete your existing vehicle first.');
-      return;
-    }
+  const handleDeleteVehicle = (vehicleId) => {
+    setVehicleToDelete(vehicleId);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteVehicle = async () => {
+    if (!vehicleToDelete) return;
     
     try {
-      console.log('🚗 Creating vehicle...');
-      const vehicleData = {
-        userId: formData.userId,
-        vin: vehicleFormData.vin,
-        model: vehicleFormData.model,
-        registrationDate: vehicleFormData.registrationDate,
-        createdAt: new Date().toISOString() // Add current date/time
-      };
-      
-      await EvOwnerAPI.vehicles.createVehicle(vehicleData);
-      console.log('✅ Vehicle created successfully');
-      
-      // Reset form and close modal
-      setVehicleFormData({ vin: '', model: '', registrationDate: '' });
-      setShowVehicleForm(false);
+      console.log('🚗 Deleting vehicle...');
+      await EvOwnerAPI.vehicles.deleteVehicle(vehicleToDelete);
+      console.log('✅ Vehicle deleted successfully');
       
       // Refresh vehicles list
       await fetchMyVehicles();
       
-      alert('Vehicle created successfully!');
+      toast.success('Vehicle deleted successfully!');
     } catch (error) {
-      console.error('❌ Failed to create vehicle:', error);
-      alert(`Failed to create vehicle: ${error.response?.data?.message || error.message}`);
-    }
-  };
-
-  const handleEditVehicle = (vehicle) => {
-    setEditingVehicle(vehicle);
-    setVehicleFormData({
-      vin: vehicle.vin,
-      model: vehicle.model,
-      registrationDate: vehicle.registrationDate
-    });
-    setShowVehicleForm(true);
-  };
-
-  const handleUpdateVehicle = async (e) => {
-    e.preventDefault();
-    
-    try {
-      console.log('🚗 Updating vehicle...');
-      const vehicleData = {
-        vin: vehicleFormData.vin,
-        model: vehicleFormData.model,
-        registrationDate: vehicleFormData.registrationDate
-      };
-      
-      await EvOwnerAPI.vehicles.updateVehicle(editingVehicle.id, vehicleData);
-      console.log('✅ Vehicle updated successfully');
-      
-      // Reset form and close modal
-      setVehicleFormData({ vin: '', model: '', registrationDate: '' });
-      setEditingVehicle(null);
-      setShowVehicleForm(false);
-      
-      // Refresh vehicles list
-      await fetchMyVehicles();
-      
-      alert('Vehicle updated successfully!');
-    } catch (error) {
-      console.error('❌ Failed to update vehicle:', error);
-      alert(`Failed to update vehicle: ${error.response?.data?.message || error.message}`);
-    }
-  };
-
-  const handleDeleteVehicle = async (vehicleId) => {
-    if (window.confirm('Are you sure you want to delete this vehicle? This action cannot be undone.')) {
-      try {
-        console.log('🚗 Deleting vehicle...');
-        await EvOwnerAPI.vehicles.deleteVehicle(vehicleId);
-        console.log('✅ Vehicle deleted successfully');
-        
-        // Refresh vehicles list
-        await fetchMyVehicles();
-        
-        alert('Vehicle deleted successfully!');
-      } catch (error) {
-        console.error('❌ Failed to delete vehicle:', error);
-        alert(`Failed to delete vehicle: ${error.response?.data?.message || error.message}`);
-      }
+      console.error('❌ Failed to delete vehicle:', error);
+      toast.error(`Failed to delete vehicle: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setVehicleToDelete(null);
     }
   };
 
   return (
-    <><Navbar />
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-4">
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-gray-50 py-8 px-4">
       {loading ? (
-        <div className="max-w-4xl mx-auto flex items-center justify-center py-20">
+        <div className="max-w-5xl mx-auto flex items-center justify-center py-20">
           <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-green-500 border-t-transparent"></div>
             <p className="mt-4 text-gray-600">Loading profile...</p>
           </div>
         </div>
       ) : (
-        <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Profile Settings</h1>
-          <p className="text-gray-600 mt-2">Manage your account information and preferences</p>
-        </div>
+        <div className="max-w-5xl mx-auto">
+          {/* Header */}
+          <div className="mb-6">
+            <h1 className="text-2xl font-semibold text-gray-900">Public profile</h1>
+          </div>
 
-        {/* Main Card */}
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-          {/* Cover Image */}
-          <div className="h-32 bg-gradient-to-r from-blue-500 to-purple-600"></div>
+          {/* Profile Container */}
+          <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+            {/* Main Grid Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left Column - Form Fields */}
+              <div className="lg:col-span-2 space-y-6">
+            {/* Full Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Name
+              </label>
+              <input
+                type="text"
+                name="fullName"
+                value={formData.fullName}
+                onChange={handleInputChange}
+                disabled={!isEditing}
+                className={`w-full px-3 py-2 bg-white border rounded-md text-gray-900 text-sm transition-all ${
+                  isEditing
+                    ? 'border-gray-300 hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500'
+                    : 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
+                }`}
+                placeholder="Enter your name"
+              />
+              
+            </div>
 
-          {/* Profile Section */}
-          <div className="px-8 pb-8">
-            {/* Profile Picture */}
-            <div className="flex justify-between items-start -mt-16 mb-8">
-              <div className="relative">
-                <div className="w-32 h-32 rounded-full border-4 border-white bg-gray-200 overflow-hidden shadow-lg">
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Public email
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className={`flex-1 px-3 py-2 bg-white border rounded-md text-gray-900 text-sm transition-all ${
+                    isEditing
+                      ? 'border-gray-300 hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500'
+                      : 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
+                  }`}
+                  placeholder="Select a verified email"
+                />
+                {isEditing && (
+                  <button
+                    type="button"
+                    className="px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-md text-sm hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                  >
+                    <X size={16} className="inline" /> Remove
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                You can manage verified email addresses in your email settings.
+              </p>
+            </div>
+
+            {/* Phone */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
+                disabled={!isEditing}
+                className={`w-full px-3 py-2 bg-white border rounded-md text-gray-900 text-sm transition-all ${
+                  isEditing
+                    ? 'border-gray-300 hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500'
+                    : 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
+                }`}
+                placeholder="Enter your phone number"
+              />
+            </div>
+
+            {/* Username - Read only */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Username
+              </label>
+              <input
+                type="text"
+                name="username"
+                value={formData.username}
+                disabled
+                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-gray-500 text-sm cursor-not-allowed opacity-60"
+              />
+              <p className="text-xs text-gray-500 mt-2">Username cannot be changed</p>
+            </div>
+
+            {/* Role Badge */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Role
+              </label>
+              <div className="inline-flex items-center px-3 py-1.5 bg-green-50 border border-green-200 text-green-700 rounded-md text-sm font-medium">
+                {formData.role.replace('_', ' ')}
+              </div>
+            </div>
+
+            {/* Vehicle Management Section */}
+            <div className="pt-6 border-t border-gray-200">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">My Vehicles</h3>
+                <p className="text-sm text-gray-600 mt-1">Manage your registered electric vehicles (Limit: 1)</p>
+              </div>
+
+              {/* Vehicle Form */}
+              {(showVehicleForm || isEditing) && vehicles.length === 0 && (
+                <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3">
+                    Add New Vehicle
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        VIN <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="vin"
+                        value={vehicleFormData.vin}
+                        onChange={handleVehicleInputChange}
+                        required
+                        disabled={!isEditing}
+                        placeholder="e.g., 1HGBH41JXMN109186"
+                        className={`w-full px-3 py-2 border rounded-md text-gray-900 text-sm ${
+                          isEditing
+                            ? 'bg-white border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500'
+                            : 'bg-gray-50 border-gray-200 cursor-not-allowed'
+                        }`}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Model <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="model"
+                        value={vehicleFormData.model}
+                        onChange={handleVehicleInputChange}
+                        required
+                        disabled={!isEditing}
+                        placeholder="e.g., Tesla Model 3"
+                        className={`w-full px-3 py-2 border rounded-md text-gray-900 text-sm ${
+                          isEditing
+                            ? 'bg-white border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500'
+                            : 'bg-gray-50 border-gray-200 cursor-not-allowed'
+                        }`}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Registration Date <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        name="registrationDate"
+                        value={vehicleFormData.registrationDate}
+                        onChange={handleVehicleInputChange}
+                        max={new Date().toISOString().split('T')[0]}
+                        required
+                        disabled={!isEditing}
+                        className={`w-full px-3 py-2 border rounded-md text-gray-900 text-sm ${
+                          isEditing
+                            ? 'bg-white border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500'
+                            : 'bg-gray-50 border-gray-200 cursor-not-allowed'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Existing Vehicle Display */}
+              {vehicles.length > 0 && (
+                <div className="p-4 bg-white border border-gray-200 rounded-lg">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h4 className="font-semibold text-gray-900">{vehicles[0].model}</h4>
+                      <p className="text-sm text-gray-600 mt-1">VIN: {vehicles[0].vin}</p>
+                    </div>
+                    <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-semibold">
+                      Active
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-1 text-sm mt-3">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Registration Date:</span>
+                      <span className="font-medium text-gray-900">
+                        {new Date(vehicles[0].registrationDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                    {vehicles[0].createdAt && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Added:</span>
+                        <span className="font-medium text-gray-900">
+                          {new Date(vehicles[0].createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {isEditing && (
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                      <button
+                        onClick={() => handleDeleteVehicle(vehicles[0].id)}
+                        className="w-full px-3 py-2 bg-red-500 text-white text-sm rounded-md hover:bg-red-600 transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {vehicles.length === 0 && !showVehicleForm && !isEditing && (
+                <div className="text-center py-8 text-gray-500 border border-gray-200 rounded-lg bg-gray-50">
+                  <div className="text-4xl mb-2">🚗</div>
+                  <p className="text-sm font-medium">No vehicles registered yet</p>
+                  <p className="text-xs mt-1">Click Edit Profile to add your electric vehicle</p>
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-4 border-t border-gray-200">
+              {!isEditing ? (
+                <button
+                  onClick={handleEdit}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 transition-colors flex items-center gap-2"
+                >
+                  <Edit2 size={16} />
+                  Edit Profile
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={handleSave}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700 transition-colors flex items-center gap-2"
+                  >
+                    <Save size={16} />
+                    Save Changes
+                  </button>
+                  <button
+                    onClick={handleCancel}
+                    className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50 hover:border-gray-400 transition-colors flex items-center gap-2"
+                  >
+                    <X size={16} />
+                    Cancel
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column - Profile Picture */}
+          <div className="lg:col-span-1">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Profile picture
+              </label>
+              <div className="relative inline-block">
+                <div className="w-64 h-64 rounded-full overflow-hidden border-4 border-white shadow-lg bg-gradient-to-br from-blue-500 to-purple-600">
                   {profileImage ? (
                     <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-400 to-purple-500">
-                      <User className="w-16 h-16 text-white" />
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
+                      <User className="w-32 h-32 text-white" />
                     </div>
                   )}
                 </div>
                 <button
                   onClick={handleImageClick}
-                  className="absolute bottom-0 right-0 w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-blue-600 transition-colors"
+                  className="absolute bottom-4 right-4 p-3 bg-white border border-gray-300 rounded-full text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-colors shadow-lg flex items-center gap-2"
+                  title="Edit profile picture"
                 >
                   <Camera size={18} />
+                  <span className="text-sm font-medium">Edit</span>
                 </button>
                 <input
                   ref={fileInputRef}
@@ -303,317 +589,39 @@ const ProfilePage = () => {
                   className="hidden"
                 />
               </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3 mt-20">
-                {!isEditing ? (
-                  <button
-                    onClick={handleEdit}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
-                  >
-                    <Edit2 size={18} />
-                    Edit Profile
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      onClick={handleCancel}
-                      className="flex items-center gap-2 px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
-                    >
-                      <X size={18} />
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleSave}
-                      className="flex items-center gap-2 px-6 py-2.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium"
-                    >
-                      <Save size={18} />
-                      Save Changes
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Role Badge */}
-            <div className="mb-8">
-              <span className="inline-flex items-center px-4 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
-                {formData.role.replace('_', ' ')}
-              </span>
-            </div>
-
-            {/* Form Fields */}
-            <div className="space-y-6">
-              {/* Full Name */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Full Name
-                </label>
-                <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                    <User size={20} />
-                  </div>
-                  <input
-                    type="text"
-                    name="fullName"
-                    value={formData.fullName}
-                    onChange={handleInputChange}
-                    disabled={!isEditing}
-                    className={`w-full pl-12 pr-4 py-3 border rounded-lg text-gray-900 transition-all ${
-                      isEditing
-                        ? 'border-blue-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'
-                        : 'border-gray-200 bg-gray-50 cursor-not-allowed'
-                    }`}
-                  />
-                </div>
-              </div>
-
-              {/* Username */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Username
-                </label>
-                <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                    @
-                  </div>
-                  <input
-                    type="text"
-                    name="username"
-                    value={formData.username}
-                    disabled
-                    className="w-full pl-12 pr-4 py-3 border border-gray-200 bg-gray-50 rounded-lg text-gray-500 cursor-not-allowed"
-                  />
-                </div>
-                <p className="text-xs text-gray-500 mt-1">Username cannot be changed</p>
-              </div>
-
-              {/* Email & Phone Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Email */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                      <Mail size={20} />
-                    </div>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      disabled={!isEditing}
-                      className={`w-full pl-12 pr-4 py-3 border rounded-lg text-gray-900 transition-all ${
-                        isEditing
-                          ? 'border-blue-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'
-                          : 'border-gray-200 bg-gray-50 cursor-not-allowed'
-                      }`}
-                    />
-                  </div>
-                </div>
-
-                {/* Phone */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Phone Number
-                  </label>
-                  <div className="relative">
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
-                      <Phone size={20} />
-                    </div>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      disabled={!isEditing}
-                      className={`w-full pl-12 pr-4 py-3 border rounded-lg text-gray-900 transition-all ${
-                        isEditing
-                          ? 'border-blue-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500'
-                          : 'border-gray-200 bg-gray-50 cursor-not-allowed'
-                      }`}
-                    />
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
-        </div>
-
-        {/* Vehicle Management Section */}
-        <div className="mt-8 bg-white rounded-2xl shadow-lg p-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">My Vehicles</h2>
-              <p className="text-sm text-gray-600 mt-1">Manage your registered electric vehicles</p>
             </div>
-            {vehicles.length === 0 ? (
-              <button
-                onClick={() => setShowVehicleForm(!showVehicleForm)}
-                className="px-6 py-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
-              >
-                {showVehicleForm ? 'Cancel' : '+ Add Vehicle'}
-              </button>
-            ) : (
-              <div className="px-6 py-2.5 bg-gray-300 text-gray-600 rounded-lg font-medium cursor-not-allowed">
-                + Add Vehicle (Limit: 1)
-              </div>
-            )}
           </div>
-
-          {/* Vehicle Form */}
-          {showVehicleForm && (
-            <form onSubmit={editingVehicle ? handleUpdateVehicle : handleCreateVehicle} className="mb-6 p-6 bg-gray-50 rounded-lg border-2 border-blue-100">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                {editingVehicle ? 'Edit Vehicle' : 'Add New Vehicle'}
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                {/* VIN */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    VIN <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="vin"
-                    value={vehicleFormData.vin}
-                    onChange={handleVehicleInputChange}
-                    required
-                    placeholder="e.g., 1HGBH41JXMN109186"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* Model */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Model <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="model"
-                    value={vehicleFormData.model}
-                    onChange={handleVehicleInputChange}
-                    required
-                    placeholder="e.g., Tesla Model 3"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                {/* Registration Date */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Registration Date <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    name="registrationDate"
-                    value={vehicleFormData.registrationDate}
-                    onChange={handleVehicleInputChange}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowVehicleForm(false);
-                    setEditingVehicle(null);
-                    setVehicleFormData({ vin: '', model: '', registrationDate: '' });
-                  }}
-                  className="flex-1 px-4 py-3 text-gray-600 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-semibold"
-                >
-                  {editingVehicle ? 'Update Vehicle' : 'Create Vehicle'}
-                </button>
-              </div>
-            </form>
-          )}
-
-          {/* Vehicles List */}
-          {vehicles.length > 0 ? (
-            <div>
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-center gap-2 text-sm text-blue-700">
-                  <span className="font-medium">Vehicle Limit:</span>
-                  <span>{vehicles.length}/1</span>
-                  <span className="text-blue-600">• Maximum 1 vehicle allowed per user</span>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {vehicles.map((vehicle) => (
-                <div
-                  key={vehicle.id}
-                  className="p-5 bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg border border-blue-200 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-bold text-lg text-gray-900">{vehicle.model}</h3>
-                      <p className="text-sm text-gray-600 mt-1">VIN: {vehicle.vin}</p>
-                    </div>
-                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
-                      Active
-                    </span>
-                  </div>
-                  
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Registration Date:</span>
-                      <span className="font-medium text-gray-900">
-                        {new Date(vehicle.registrationDate).toLocaleDateString()}
-                      </span>
-                    </div>
-                    {vehicle.createdAt && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Added:</span>
-                        <span className="font-medium text-gray-900">
-                          {new Date(vehicle.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Action Buttons */}
-                  <div className="flex gap-2 mt-4">
-                    <button
-                      onClick={() => handleEditVehicle(vehicle)}
-                      className="flex-1 px-3 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteVehicle(vehicle.id)}
-                      className="flex-1 px-3 py-2 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-12 text-gray-500">
-              <div className="text-6xl mb-4">🚗</div>
-              <p className="text-lg font-medium">No vehicles registered yet</p>
-              <p className="text-sm mt-2">Add your first electric vehicle to get started</p>
-            </div>
-          )}
+          {/* End Profile Container */}
         </div>
-      </div>
       )}
-    </div>
+      </div>
+      
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={confirmDeleteVehicle}
+        title="Delete Vehicle"
+        message="Are you sure you want to delete this vehicle? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        isDangerous={true}
+      />
+      
+      <ToastContainer 
+        position="bottom-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        theme="light"
+      />
+      <Footer />
     </>
   );
 };

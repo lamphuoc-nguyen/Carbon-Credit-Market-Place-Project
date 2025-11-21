@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Store, Leaf, DollarSign, TrendingUp, AlertCircle, CheckCircle, ArrowRight, MapPin } from 'lucide-react';
 import EvOwnerAPI from '../../api/EvOwnerAPI';
 import Navbar from '../../Components/EVComponents/Navbar';
+import Footer from '../../Components/Footer';
 import { VIETNAM_PROVINCES } from '../../utils/vietnamProvinces';
 
 
@@ -283,70 +284,63 @@ const CreateListingPage = () => {
 
   return (
     <><Navbar />
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 py-8 px-4">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen bg-gray-50 py-6 px-4">
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Store className="text-green-600" size={36} />
-            Create Listing
-          </h1>
-          <p className="text-gray-600 mt-2">List your carbon credits for sale on the marketplace</p>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Create Listing</h1>
+          <p className="text-gray-600 mt-1">List your carbon credits for sale</p>
         </div>
 
         {/* Available Credits Banner */}
-        <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-2xl shadow-lg p-6 mb-8 text-white">
+        <div className="bg-white border border-gray-200 rounded-lg p-5 mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-green-100 text-sm font-medium mb-1">Available Carbon Credits</p>
-              <h2 className="text-4xl font-bold">{walletData.creditBalance.toFixed(2)}</h2>
-              <p className="text-green-100 text-sm mt-1">Credits ready to sell</p>
+              <p className="text-sm text-gray-500 mb-1">Available to Sell</p>
+              <h2 className="text-3xl font-bold text-green-600">{walletData.creditBalance.toFixed(2)}</h2>
+              <p className="text-sm text-gray-600 mt-0.5">carbon credits</p>
             </div>
-            <div className="p-4 bg-white bg-opacity-20 rounded-full">
-              <Leaf size={40} />
+            <div className="text-green-600">
+              <Leaf size={32} />
             </div>
           </div>
         </div>
 
         {/* Warning if no credits */}
         {walletData.creditBalance === 0 && (
-          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-r-lg">
-            <div className="flex items-start">
-              <AlertCircle className="text-yellow-400 mt-0.5 mr-3" size={20} />
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+            <div className="flex gap-3">
+              <AlertCircle className="text-yellow-600 flex-shrink-0" size={20} />
               <div>
-                <h3 className="text-yellow-800 font-semibold">No Carbon Credits Available</h3>
-                <p className="text-yellow-700 text-sm mt-1">
-                  You need to have verified carbon credits in your wallet before creating a listing. 
-                  Complete EV journeys and get them verified by CVA to earn carbon credits.
+                <h3 className="text-yellow-900 font-semibold text-sm">No Credits Available</h3>
+                <p className="text-yellow-800 text-sm mt-1">
+                  Complete EV journeys and get them verified to earn carbon credits.
                 </p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Warning if credits exist but none are listable */}
-       
-
         {/* Create Listing Form */}
-        <form onSubmit={handleCreateListing} className="bg-white rounded-2xl shadow-xl p-8 space-y-6">
-          <div className="mb-4">
-            <h2 className="text-xl font-bold text-gray-900">Create Combined Listing</h2>
+        <form onSubmit={handleCreateListing} className="bg-white border border-gray-200 rounded-lg p-6 space-y-6">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Listing Details</h2>
             <p className="text-sm text-gray-600 mt-1">
-              Select credits to combine into one marketplace lot. All selected credits will be sold together as a single listing.
+              Select credits to bundle together. All selected credits will be sold as one listing.
             </p>
           </div>
 
           {/* Select Carbon Credits */}
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <label className="block text-sm font-semibold text-gray-700">
-                Select Credits for Combined Lot <span className="text-red-500">*</span>
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-sm font-medium text-gray-700">
+                Select Credits <span className="text-red-600">*</span>
               </label>
-              <div className="flex space-x-2">
+              <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => setSelectedCredits(carbonCredits.map(c => c.id || c.creditId))}
-                  className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200"
+                  className="px-3 py-1.5 text-xs text-gray-700 border border-gray-300 rounded hover:bg-gray-50"
                   disabled={carbonCredits.length === 0}
                 >
                   Select All
@@ -354,21 +348,21 @@ const CreateListingPage = () => {
                 <button
                   type="button"
                   onClick={() => setSelectedCredits([])}
-                  className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                  className="px-3 py-1.5 text-xs text-gray-700 border border-gray-300 rounded hover:bg-gray-50"
                 >
-                  Clear All
+                  Clear
                 </button>
               </div>
             </div>
 
             {carbonCredits.length === 0 ? (
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                <Leaf className="mx-auto text-gray-400 mb-3" size={48} />
-                <p className="text-gray-600 font-medium">No credits available for listing</p>
-                <p className="text-sm text-gray-500 mt-1">You need verified carbon credits to create a listing</p>
+              <div className="border border-dashed border-gray-300 rounded-lg p-8 text-center">
+                <Leaf className="mx-auto text-gray-400 mb-2" size={40} />
+                <p className="text-gray-600 text-sm">No credits available</p>
+                <p className="text-xs text-gray-500 mt-1">Verified credits will appear here</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-3 max-h-80 overflow-y-auto border border-gray-200 rounded-lg p-4">
+              <div className="space-y-2 max-h-96 overflow-y-auto border border-gray-200 rounded-lg p-3">
                 {carbonCredits.map((credit) => {
                   const creditId = credit.id || credit.creditId;
                   const journeyId = credit.journeyId || credit.journey_id || 'N/A';
@@ -379,10 +373,10 @@ const CreateListingPage = () => {
                   return (
                     <div
                       key={creditId}
-                      className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      className={`p-3 rounded border cursor-pointer transition ${
                         isSelected 
-                          ? 'border-green-500 bg-green-50' 
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-green-600 bg-green-50' 
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
                       }`}
                       onClick={() => {
                         if (isSelected) {
@@ -393,25 +387,25 @@ const CreateListingPage = () => {
                       }}
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
+                        <div className="flex items-center gap-3">
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => {}} // Handled by div onClick
-                            className="w-4 h-4 text-green-600"
+                            className="w-4 h-4 text-green-600 rounded"
                           />
                           <div>
-                            <p className="font-medium text-gray-900">
-                              Credit #{creditId.substring(0, 8)}...
+                            <p className="text-sm font-medium text-gray-900">
+                              #{creditId.substring(0, 8)}
                             </p>
-                            <p className="text-sm text-gray-500">
-                              Journey: {journeyId.toString().substring(0, 8)}...
+                            <p className="text-xs text-gray-500">
+                              {journeyId.toString().substring(0, 8)}
                             </p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-semibold text-gray-900">{creditAmount} credits</p>
-                          <p className="text-sm text-green-600">{co2Reduced}kg CO₂</p>
+                          <p className="text-sm font-semibold text-gray-900">{creditAmount}</p>
+                          <p className="text-xs text-gray-600">{co2Reduced}kg</p>
                         </div>
                       </div>
                     </div>
@@ -431,138 +425,98 @@ const CreateListingPage = () => {
 
           {/* Price per Credit */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Price per Credit (USD) <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Price per Credit <span className="text-red-600">*</span>
             </label>
             <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">$</span>
               <input
                 type="number"
                 min="0.01"
                 step="0.01"
                 value={pricePerCredit}
                 onChange={(e) => setPricePerCredit(e.target.value)}
-                placeholder="e.g., 10.00"
+                placeholder="10.00"
                 required
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
               />
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Suggested price: $8.00 - $15.00 per credit
+            <p className="text-xs text-gray-500 mt-1.5">
+              Typical range: $8 - $15 per credit
             </p>
           </div>
 
           {/* Seller Location */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Seller Location (Optional)
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Location (Optional)
             </label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 z-10" size={20} />
-              <select
-                value={sellerLocation}
-                onChange={(e) => setSellerLocation(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent appearance-none bg-white"
-              >
-                {VIETNAM_PROVINCES.map((province) => (
-                  <option key={province.value} value={province.value}>
-                    {province.label}
-                  </option>
-                ))}
-              </select>
-              {/* Custom dropdown arrow */}
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                <svg className="w-5 h-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-              </div>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Add your location to help buyers find local carbon credits
+            <select
+              value={sellerLocation}
+              onChange={(e) => setSellerLocation(e.target.value)}
+              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white text-sm"
+            >
+              {VIETNAM_PROVINCES.map((province) => (
+                <option key={province.value} value={province.value}>
+                  {province.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1.5">
+              Help buyers find local credits
             </p>
           </div>
 
           {/* Total Price Display */}
           {totalPrice > 0 && selectedCredits.length > 0 && (
-            <div className="bg-gradient-to-r from-blue-50 to-green-50 border-2 border-blue-200 rounded-xl p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">Combined Lot Value</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold text-gray-900">${totalPrice.toFixed(2)}</span>
-                    <span className="text-sm text-gray-500">
-                      for {selectedCredits.reduce((sum, creditId) => {
-                        const credit = carbonCredits.find(c => (c.id || c.creditId) === creditId);
-                        return sum + (credit?.creditAmount || credit?.credit_amount || 0);
-                      }, 0)} credits (1 listing)
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-2 text-sm text-gray-600">
-                    <TrendingUp size={16} className="text-green-600" />
-                    <span>Price per credit: ${pricePerCredit || '0.00'}</span>
-                  </div>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="text-xs text-gray-600 mb-1">Total Value</p>
+                  <p className="text-2xl font-bold text-gray-900">${totalPrice.toFixed(2)}</p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {selectedCredits.reduce((sum, creditId) => {
+                      const credit = carbonCredits.find(c => (c.id || c.creditId) === creditId);
+                      return sum + (credit?.creditAmount || credit?.credit_amount || 0);
+                    }, 0)} credits × ${pricePerCredit || '0'}
+                  </p>
                 </div>
-                <div className="p-3 bg-green-100 rounded-full">
-                  <CheckCircle className="text-green-600" size={32} />
-                </div>
+                <CheckCircle className="text-green-600 flex-shrink-0" size={24} />
               </div>
             </div>
           )}
 
           {/* Listing Preview */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
-            <h3 className="font-semibold text-gray-900 mb-3">Listing Preview</h3>
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">Summary</h3>
 
-            {selectedCredits.length > 0 ? (
-              <div className="space-y-3">
-                <div className="pb-3 border-b border-gray-300">
-                  <p className="text-sm font-medium text-gray-700 mb-2">Selected Credits ({selectedCredits.length}):</p>
-                  <div className="grid grid-cols-1 gap-2 max-h-32 overflow-y-auto">
-                    {selectedCredits.map(creditId => {
-                      const credit = carbonCredits.find(c => (c.id || c.creditId) === creditId);
-                      if (!credit) return null;
-
-                      return (
-                        <div key={creditId} className="flex justify-between text-xs bg-white rounded p-2">
-                          <span className="text-gray-600">#{creditId.substring(0, 12)}...</span>
-                          <span className="font-medium text-gray-900">
-                            {credit.creditAmount || credit.credit_amount || 0} credits
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Total credits to sell:</span>
-                  <span className="font-medium text-gray-900">
-                    {selectedCredits.reduce((sum, creditId) => {
-                      const credit = carbonCredits.find(c => (c.id || c.creditId) === creditId);
-                      return sum + (credit?.creditAmount || credit?.credit_amount || 0);
-                    }, 0)} credits
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Total CO₂ impact:</span>
-                  <span className="font-medium text-green-600">
-                    {selectedCredits.reduce((sum, creditId) => {
-                      const credit = carbonCredits.find(c => (c.id || c.creditId) === creditId);
-                      return sum + (credit?.co2ReducedKg || credit?.co2_reduced_kg || 0);
-                    }, 0).toLocaleString()} kg
-                  </span>
-                </div>
+            <div className="space-y-2.5">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Credits selected</span>
+                <span className="font-medium text-gray-900">
+                  {selectedCredits.length > 0 ? selectedCredits.reduce((sum, creditId) => {
+                    const credit = carbonCredits.find(c => (c.id || c.creditId) === creditId);
+                    return sum + (credit?.creditAmount || credit?.credit_amount || 0);
+                  }, 0) : 0}
+                </span>
               </div>
-            ) : (
-              <p className="text-sm text-gray-500 py-4 text-center">No credits selected</p>
-            )}
-
-            <div className="flex justify-between text-sm pt-2 border-t border-gray-200">
-              <span className="text-gray-600">Price per credit:</span>
-              <span className="font-medium text-gray-900">${pricePerCredit || '0.00'}</span>
-            </div>
-            <div className="flex justify-between text-sm pt-2 border-t border-gray-300">
-              <span className="text-gray-900 font-semibold">Total price:</span>
-              <span className="font-bold text-green-600">${totalPrice.toFixed(2)}</span>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">CO₂ impact</span>
+                <span className="font-medium text-gray-900">
+                  {selectedCredits.length > 0 ? selectedCredits.reduce((sum, creditId) => {
+                    const credit = carbonCredits.find(c => (c.id || c.creditId) === creditId);
+                    return sum + (credit?.co2ReducedKg || credit?.co2_reduced_kg || 0);
+                  }, 0).toLocaleString() : 0} kg
+                </span>
+              </div>
+              <div className="flex justify-between text-sm pt-2 border-t border-gray-200">
+                <span className="text-gray-600">Price per credit</span>
+                <span className="font-medium text-gray-900">${pricePerCredit || '0.00'}</span>
+              </div>
+              <div className="flex justify-between pt-2 border-t border-gray-300">
+                <span className="text-sm font-semibold text-gray-900">Total</span>
+                <span className="font-bold text-gray-900">${totalPrice.toFixed(2)}</span>
+              </div>
             </div>
           </div>
 
@@ -570,65 +524,32 @@ const CreateListingPage = () => {
           <button
             type="submit"
             disabled={submitting || carbonCredits.length === 0 || selectedCredits.length === 0}
-            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg font-semibold text-lg hover:from-green-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl"
+            className="w-full px-4 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
             {submitting ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                Creating Listing...
-              </>
+              <span className="flex items-center justify-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                Creating...
+              </span>
             ) : (
-              <>
-                Create Listing
-                <ArrowRight size={20} />
-              </>
+              'Create Listing'
             )}
           </button>
 
           {/* Info Box */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="text-blue-600 mt-0.5 flex-shrink-0" size={20} />
-              <div className="text-sm text-blue-900">
-                <p className="font-semibold mb-1">Important Information:</p>
-                <ul className="list-disc list-inside space-y-1 text-blue-800">
-                  <li>Once listed, credits will be locked until sold or cancelled</li>
-                  <li>You can update the price or cancel the listing anytime</li>
-                  <li>Buyers will pay the total price you set</li>
-                  <li>Funds will be transferred to your wallet after successful sale</li>
-                </ul>
-              </div>
-            </div>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3.5">
+            <p className="text-sm font-medium text-blue-900 mb-2">Important</p>
+            <ul className="text-xs text-blue-800 space-y-1">
+              <li>• Credits are locked once listed</li>
+              <li>• Price can be updated anytime</li>
+              <li>• Cancel listing to unlock credits</li>
+              <li>• Funds transfer after sale</li>
+            </ul>
           </div>
         </form>
-
-        {/* Example Card */}
-        <div className="mt-6 bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-          <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <TrendingUp className="text-green-600" size={20} />
-            How Combined Listing Works
-          </h3>
-          <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-700">
-            <p className="mb-2">
-              <strong>Combined Lot System:</strong> All selected credits are combined into 1 marketplace listing.
-            </p>
-            <p className="mb-2">
-              <strong>Example scenario:</strong> You have 3 credits worth 10, 15, and 20 credits each.
-            </p>
-            <ul className="list-disc list-inside space-y-1 ml-2">
-              <li>Select all 3 credits using checkboxes or "Select All" button</li>
-              <li>Set price per credit: <strong>$12.00</strong></li>
-              <li>Total combined lot: <strong>(10 + 15 + 20) = 45 credits</strong></li>
-              <li>Total value: <strong>45 × $12 = $540.00</strong></li>
-              <li>Creates <strong>1 listing</strong> for 45 credits at $540</li>
-            </ul>
-            <p className="mt-3 text-green-600 font-medium">
-              ✓ Buyers purchase the entire lot of 45 credits for $540!
-            </p>
-          </div>
-        </div>
       </div>
     </div>
+    <Footer />
     </>
   );
 };

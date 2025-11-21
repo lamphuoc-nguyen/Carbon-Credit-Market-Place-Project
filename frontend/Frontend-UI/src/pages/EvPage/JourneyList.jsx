@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../../Components/EVComponents/Navbar'
+import Footer from '../../Components/Footer'
 import EvOwnerAPI from '../../api/EvOwnerAPI'
 import { Clock, Battery, Route, Calendar, Filter, Search, Upload, FileText, CheckCircle, XCircle, AlertCircle, Zap } from 'lucide-react'
 
@@ -97,14 +98,17 @@ function JourneyList() {
     if (normalizedStatus.includes('verified') && !normalizedStatus.includes('pending')) {
       return 'text-green-600 bg-green-100'
     }
-    if (normalizedStatus.includes('valid')) {
-      return 'text-blue-600 bg-blue-100' // New status for auto-approved journeys
+    if (normalizedStatus === 'valid' || normalizedStatus.includes('valid')) {
+      return 'text-green-600 bg-green-100' // Status for auto-approved journeys
+    }
+    if (normalizedStatus === 'invalid' || normalizedStatus.includes('invalid')) {
+      return 'text-red-600 bg-red-100' // Status for invalid journeys
     }
     if (normalizedStatus.includes('pending')) {
       return 'text-yellow-600 bg-yellow-100'
     }
     if (normalizedStatus.includes('rejected')) {
-      return 'text-red-600 bg-red-100'
+      return 'text-orange-600 bg-orange-100'
     }
     return 'text-gray-600 bg-gray-100'
   }
@@ -173,7 +177,7 @@ function JourneyList() {
       if (importResult.failed > 0) {
         setUploadStatus('warning')
         setUploadMessage(
-          `✅ Processed ${importResult.processed} rows: ${importResult.success} successful, ${importResult.failed} failed. ` +
+          `❌ Processed ${importResult.processed} rows: ${importResult.success} successful, ${importResult.failed} failed. ` +
           (importResult.errors && importResult.errors.length > 0 ?
             `Errors: ${importResult.errors.slice(0, 3).join(' | ')}` : '')
         )
@@ -223,7 +227,14 @@ function JourneyList() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50" 
+           style={{
+             backgroundImage: "url('/src/image/journeybg.png')",
+             backgroundSize: '100% auto',
+             backgroundPosition: 'top center',
+             backgroundRepeat: 'no-repeat',
+             backgroundAttachment: 'fixed'
+           }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
           <div className="mb-8">
@@ -268,9 +279,8 @@ function JourneyList() {
                   className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                 >
                   <option value="all">All Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="verified">Verified</option>
-                  <option value="rejected">Rejected</option>
+                  <option value="valid">Valid</option>
+                  <option value="invalid">Invalid</option>
                 </select>
               </div>
             </div>
@@ -346,14 +356,20 @@ function JourneyList() {
                           </div>
 
                           {journey.verificationNotes && (
-                            <div className="mt-2 p-2 bg-blue-50 rounded text-sm text-blue-700">
+                            <div className="mt-2 p-2 bg-yellow-50 rounded text-sm text-yellow-700">
                               <strong>Note:</strong> {journey.verificationNotes}
                             </div>
                           )}
 
                           {journey.rejectionReason && (
                             <div className="mt-2 p-2 bg-red-50 rounded text-sm text-red-700">
-                              <strong>Rejected:</strong> {journey.rejectionReason}
+                              <strong>Reason:</strong> {journey.rejectionReason}
+                            </div>
+                          )}
+                          
+                          {status.toLowerCase() === 'invalid' && journey.validationErrors && (
+                            <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                              <strong>Validation Errors:</strong> {journey.validationErrors}
                             </div>
                           )}
                         </div>
@@ -369,7 +385,7 @@ function JourneyList() {
 
       {/* CSV Upload Modal */}
       {showUploadModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
@@ -385,7 +401,6 @@ function JourneyList() {
               {/* Info about automatic vehicle selection */}
               <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-sm text-blue-800">
-                  <strong>Auto-Vehicle Selection:</strong> Your first registered vehicle will be automatically used for all CSV journey entries.
                   {vehicles.length > 0 ? (
                     <span className="block mt-1">
                       Using: <strong>{vehicles[0].model} - {vehicles[0].vin}</strong>
@@ -435,12 +450,15 @@ function JourneyList() {
 
               {uploadStatus && (
                 <div className="mb-4">
-                  <div className={`p-3 rounded-lg flex items-center gap-2 ${uploadStatus === 'success' ? 'bg-green-50 text-green-700' :
-                      uploadStatus === 'error' ? 'bg-red-50 text-red-700' :
-                        'bg-blue-50 text-blue-700'
-                    }`}>
+                  <div className={`p-3 rounded-lg flex items-center gap-2 ${
+                    uploadStatus === 'success' ? 'bg-green-500/50 text-white' :
+                    uploadStatus === 'error' ? 'bg-red-500/50 text-white' :
+                    uploadStatus === 'warning' ? 'bg-red-500/90 text-white' :
+                    'bg-blue-50 text-blue-700'
+                  }`}>
                     {uploadStatus === 'success' && <CheckCircle size={20} />}
                     {uploadStatus === 'error' && <XCircle size={20} />}
+                    {uploadStatus === 'warning' && <XCircle size={20} />}
                     {uploadStatus === 'uploading' && <AlertCircle size={20} className="animate-spin" />}
                     <span className="text-sm">{uploadMessage}</span>
                   </div>
@@ -477,6 +495,7 @@ function JourneyList() {
           </div>
         </div>
       )}
+      <Footer />
     </>
   )
 }

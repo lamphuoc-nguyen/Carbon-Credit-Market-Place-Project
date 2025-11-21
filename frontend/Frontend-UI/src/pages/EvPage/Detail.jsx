@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { MapPin, Calendar, Users, Leaf, Shield, ArrowLeft, ShoppingCart, Info, Award, Zap } from 'lucide-react';
-import Navbar_Buyer from '../../Components/BuyerComponents/Navbar-Buyer';
+import Navbar from '../../Components/EVComponents/Navbar';
 import Footer from '../../Components/Footer';
 import { buyerApi } from '../../api';
 
-const Detailpage = () => {
+const Detail = () => {
   const { listingId } = useParams();
   const navigate = useNavigate();
   
@@ -94,7 +94,7 @@ const Detailpage = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Navbar_Buyer />
+        <Navbar />
         <div className="flex flex-col items-center justify-center py-20">
           <div className="relative">
             <div className="w-16 h-16 border-4 border-green-200 rounded-full"></div>
@@ -109,7 +109,7 @@ const Detailpage = () => {
   if (error || !listing) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Navbar_Buyer />
+        <Navbar />
         <div className="max-w-4xl mx-auto px-4 py-12">
           <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-lg">
             <h3 className="text-lg font-semibold text-red-900 mb-2">Error</h3>
@@ -127,13 +127,14 @@ const Detailpage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar_Buyer />
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-gray-50">
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}
         <button
-          onClick={() => navigate('/marketplace')}
+          onClick={() => navigate('/ev-dashboard/marketplace')}
           className="flex items-center text-gray-600 hover:text-green-600 mb-6 transition"
         >
           <ArrowLeft className="w-5 h-5 mr-2" />
@@ -374,7 +375,7 @@ const Detailpage = () => {
                 </button>
                 
                 <button
-                  onClick={() => navigate('/marketplace')}
+                  onClick={() => navigate('/ev-dashboard/marketplace')}
                   className="w-full bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-3 px-4 rounded-lg font-semibold transition"
                 >
                   Browse More
@@ -500,9 +501,10 @@ const Detailpage = () => {
           </div>
         </div>
       )}
+      </div>
       <Footer />
-    </div>
+    </>
   );
 };
 
-export default Detailpage;
+export default Detail;

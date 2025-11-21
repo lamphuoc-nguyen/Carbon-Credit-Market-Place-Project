@@ -9,14 +9,16 @@ import {
     deleteNotification
 } from '../api/notificationApi';
 
-const NotificationButton = () => {
+const NotificationButton = ({ dropdownPosition = 'right' }) => {
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [buttonRect, setButtonRect] = useState(null);
     const dropdownRef = useRef(null);
+    const buttonRef = useRef(null);
 
     // Define callback functions first
     const fetchNotifications = useCallback(async () => {
@@ -261,16 +263,14 @@ const NotificationButton = () => {
 
     return (
         <div className="relative" ref={dropdownRef}>
-            {/* Debug Info (remove in production) */}
-            {import.meta.env.DEV && (
-                <div className="absolute -top-8 left-0 text-xs bg-yellow-200 px-1 rounded">
-                    Auth: {isAuthenticated ? 'Yes' : 'No'} | Count: {unreadCount}
-                </div>
-            )}
-
             {/* Notification Bell Button */}
             <button
-                onClick={toggleDropdown}
+                ref={buttonRef}
+                onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setButtonRect(rect);
+                    toggleDropdown();
+                }}
                 className="relative p-2 text-gray-600 hover:text-green-500 hover:bg-gray-100 rounded-full transition-all duration-200"
                 aria-label="Notifications"
             >
@@ -284,8 +284,15 @@ const NotificationButton = () => {
             </button>
 
             {/* Notification Dropdown */}
-            {isOpen && (
-                <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-2xl border border-gray-200 z-50 max-h-[600px] flex flex-col">
+            {isOpen && buttonRect && (
+                <div 
+                    className="fixed w-96 bg-white rounded-lg shadow-2xl border border-gray-200 z-[9999] max-h-[600px] flex flex-col"
+                    style={{
+                        top: `${buttonRect.bottom + 8}px`,
+                        left: dropdownPosition === 'left' ? `${buttonRect.left}px` : 'auto',
+                        right: dropdownPosition === 'right' ? `${window.innerWidth - buttonRect.right}px` : 'auto'
+                    }}
+                >
                     {/* Header */}
                     <div className="flex items-center justify-between p-4 border-b border-gray-200">
                         <h3 className="text-lg font-semibold text-gray-800">Notifications</h3>
@@ -380,20 +387,7 @@ const NotificationButton = () => {
                         )}
                     </div>
 
-                    {/* Footer */}
-                    {notifications.length > 0 && (
-                        <div className="p-3 border-t border-gray-200 text-center">
-                            <button
-                                onClick={() => {
-                                    setIsOpen(false);
-                                    // Navigate to notifications page if needed
-                                }}
-                                className="text-sm text-green-500 hover:text-green-600 font-medium"
-                            >
-                                View all notifications
-                            </button>
-                        </div>
-                    )}
+
                 </div>
             )}
         </div>

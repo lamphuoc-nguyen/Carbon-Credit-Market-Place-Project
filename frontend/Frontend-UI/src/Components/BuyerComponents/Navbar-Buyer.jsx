@@ -23,6 +23,8 @@ export default function Navbar_Buyer() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Clear cache to ensure fresh data for the current user
+    userDataFetcher.invalidateUserData();
     fetchUserProfile();
   }, []);
 
@@ -38,10 +40,19 @@ export default function Navbar_Buyer() {
       }
 
       console.log('🔍 Fetching user profile via centralized fetcher...');
-      const response = await userDataFetcher.getUserProfile();
+      // Force refresh to bypass cache and get current user data
+      const response = await userDataFetcher.refreshUserProfile();
       const userData = response.data?.data || response.data;
 
       console.log('✅ User data received:', userData);
+      
+      // Validate that the user role is BUYER
+      if (userData.role && userData.role !== 'BUYER') {
+        console.warn('⚠️ Wrong user role detected:', userData.role, '- Expected: BUYER');
+        // Clear invalid cached data
+        userDataFetcher.invalidateUserData();
+      }
+      
       setUser(userData);
     } catch (error) {
       console.error('❌ Failed to fetch user profile:', error);
@@ -133,7 +144,7 @@ export default function Navbar_Buyer() {
                     <p className="text-xs text-gray-500">{user?.email || 'buyer@example.com'}</p>
                   </div>
                   <Link
-                    to="/buyer"
+                    to="/buyer/dashboard"
                     className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                     onClick={() => setIsProfileDropdownOpen(false)}
                   >

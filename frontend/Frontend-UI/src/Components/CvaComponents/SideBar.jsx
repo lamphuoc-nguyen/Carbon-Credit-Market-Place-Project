@@ -37,7 +37,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                       shadow-xl z-50 transition-all duration-300 ease-in-out
                       ${isOpen ? 'w-64' : 'w-20'}`}
         >
-            <div className={`flex flex-col h-full overflow-hidden`}>
+            <div className={`flex flex-col h-full overflow-y-auto overflow-x-visible`}>
 
                 {/* 1. Header */}
                 <div
@@ -53,8 +53,6 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                         </div>
                     )}
                     <div className="flex items-center gap-2">
-                        {/* Đã xóa NotificationButton ở đây */}
-
                         {/* Toggle Button */}
                         <button
                             onClick={() => setIsOpen(!isOpen)}
@@ -66,11 +64,11 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                     </div>
                 </div>
 
-                {/* 2. User Profile/Badge - Đã cập nhật NotificationButton vào đây */}
-                <div className={`p-4 border-b border-gray-100 flex items-center mb-4 ${!isOpen ? 'justify-center' : 'justify-between'}`}>
-                    {/* User Info Group */}
+                {/* 2. User Profile/Badge - UPDATED ICON */}
+                <div className={`p-4 border-b border-gray-100 flex items-center justify-between mb-4`}>
                     <div className="flex items-center">
                         <div className={`p-2 rounded-full bg-blue-100`}>
+                            {/* ✅ 2. USE SHIELD ICON HERE */}
                             <Shield className={`h-6 w-6 text-blue-600`} />
                         </div>
                         {isOpen && (
@@ -83,13 +81,8 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                             </div>
                         )}
                     </div>
-
-                    {/* Notification Button - Chỉ hiện khi sidebar mở để tránh vỡ layout khi đóng */}
-                    {isOpen && (
-                        <div className="ml-2">
-                            <NotificationButton />
-                        </div>
-                    )}
+                    {/* Notification Button next to user name */}
+                    <NotificationButton dropdownPosition="left" />
                 </div>
 
                 {/* 3. Navigation Items */}

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { buyerApi } from '../../api';
 import Navbar from '../../Components/EVComponents/Navbar';
 import { getValidToken } from '../../utils/tokenUtils';
+import Footer from '../../Components/Footer';
 
 const MakerPlacePage = () => {
   const navigate = useNavigate();
@@ -155,17 +156,18 @@ const MakerPlacePage = () => {
     // Check if user is authenticated before allowing purchase
     if (!isAuthenticated) {
       console.log('User not authenticated, redirecting to login');
-      navigate('/login', { state: { from: `/marketplace/${listingId}` } });
+      navigate('/login', { state: { from: `/ev-dashboard/detail/${listingId}` } });
       return;
     }
     
-    navigate(`/marketplace/${listingId}`);
+    navigate(`/ev-dashboard/detail/${listingId}`);
   };
 
   return (
     <>
     <Navbar />
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 bg-cover bg-center bg-fixed" 
+         style={{backgroundImage: "url('/src/image/marketbg.png')"}}>
       <div className="mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Main Layout: Sidebar + Listings */}
         <div className="flex flex-col lg:flex-row gap-4">
@@ -378,6 +380,11 @@ const MakerPlacePage = () => {
             {/* Listings Grid - Carbonmark Style */}
             {!loading && paginatedListings.length > 0 && (
               <>
+                {/* Items Count Display */}
+                <div className="mb-4 text-sm text-gray-600">
+                  Showing {page * pageSize + 1}-{Math.min((page + 1) * pageSize, totalItems)} of {totalItems} items
+                </div>
+
                 {/* Grid View */}
                 {viewMode === 'grid' && (
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">
@@ -472,7 +479,7 @@ const MakerPlacePage = () => {
                             <button
                               onClick={() => handleViewDetails(listing.id)}
                               disabled={listing.status !== 'ACTIVE'}
-                              className="flex-1 bg-green-600 text-white py-3 px-4 rounded-xl font-semibold hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all"
+                              className="flex-1 bg-green-500 text-white py-3 px-4 rounded-xl font-semibold hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all"
                             >
                               Buy Now
                             </button>
@@ -630,8 +637,10 @@ const MakerPlacePage = () => {
                 )}
 
                 {/* Pagination - Modern Style */}
-                {totalPages > 1 && (
-                  <div className="flex justify-center items-center gap-3 mb-8">
+                <div className="mb-8">
+                  
+                  
+                  <div className="flex justify-center items-center gap-3">
                     <button
                       onClick={() => setPage(Math.max(0, page - 1))}
                       disabled={page === 0}
@@ -643,7 +652,7 @@ const MakerPlacePage = () => {
                     </button>
 
                     <div className="px-6 py-3 bg-white rounded-xl border-2 border-gray-200 font-semibold text-gray-700">
-                      Page {page + 1} of {totalPages}
+                      Page {page + 1} of {totalPages || 1}
                     </div>
 
                     <button
@@ -656,7 +665,7 @@ const MakerPlacePage = () => {
                       </svg>
                     </button>
                   </div>
-                )}
+                </div>
               </>
             )}
 
@@ -690,6 +699,7 @@ const MakerPlacePage = () => {
         </div>
       </div>
     </div>
+    <Footer />
     </>
   );
 };

@@ -10,7 +10,7 @@ import React from "react";
 const HomePage = () => {
     return (
         <>
-          
+            
             <div>
                 <MainContent />
             </div>

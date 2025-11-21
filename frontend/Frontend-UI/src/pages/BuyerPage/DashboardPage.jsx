@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar_Buyer from '../../Components/BuyerComponents/Navbar-Buyer';
+import Footer from '../../Components/Footer';
 import { buyerApi } from '../../api';
+import Navbar from '../../Components/Navbar';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -60,10 +62,12 @@ const DashboardPage = () => {
   }).slice(0, 3); // Show only 3 listings
 
   return (
+    <>
+    <Navbar_Buyer />
     <div className="min-h-screen bg-gray-50">
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
+        {/* Header */}  
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Buyer Dashboard</h1>
           <p className="text-gray-600 mt-1">Purchase carbon credits to offset your emissions</p>
@@ -335,7 +339,9 @@ const DashboardPage = () => {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
+    </>
   );
 };
 
