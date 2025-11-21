@@ -24,19 +24,25 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.*;
 
-
 @Service
 public class RetirementService {
 
     private static final Logger log = LoggerFactory.getLogger(RetirementService.class);
 
-    @Autowired private CarbonCreditRepository creditRepository;
-    @Autowired private RetirementRepository retirementRepo;
-    @Autowired private CertificateRepository certificateRepo;
-    @Autowired private UserRepository userRepository;
-    @Autowired private CertificateGenerationService certGenerationService;
-    @Autowired private WalletService walletService;
-    @Autowired private NotificationService notificationService;
+    @Autowired
+    private CarbonCreditRepository creditRepository;
+    @Autowired
+    private RetirementRepository retirementRepo;
+    @Autowired
+    private CertificateRepository certificateRepo;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private CertificateGenerationService certGenerationService;
+    @Autowired
+    private WalletService walletService;
+    @Autowired
+    private NotificationService notificationService;
 
     @Transactional
     public RetirementTransaction initiateRetirement(RetirementRequestDTO request) {
@@ -70,7 +76,8 @@ public class RetirementService {
 
         if (currentCreditBalance.compareTo(creditCountToRetire) < 0) {
             throw new InsufficientCreditsException(
-                    "Insufficient credits in wallet. Required: " + creditCountToRetire + " credits, Available: " + currentCreditBalance + " credits");
+                    "Insufficient credits in wallet. Required: " + creditCountToRetire + " credits, Available: "
+                            + currentCreditBalance + " credits");
         }
 
         // ---- 3. IMMEDIATELY DEDUCT FROM WALLET CREDIT BALANCE ----
@@ -79,8 +86,10 @@ public class RetirementService {
 
         // ---- 4. SELECT AND RETIRE ACTUAL CREDITS ----
         // Get available credits for retiring
-        List<CarbonCredit> verifiableCredits = creditRepository.findByUserAndStatus(buyer, CarbonCredit.CreditStatus.VERIFIED);
-        List<CarbonCredit> purchasedCredits = creditRepository.findByUserAndStatus(buyer, CarbonCredit.CreditStatus.SOLD);
+        List<CarbonCredit> verifiableCredits = creditRepository.findByUserAndStatus(buyer,
+                CarbonCredit.CreditStatus.VERIFIED);
+        List<CarbonCredit> purchasedCredits = creditRepository.findByUserAndStatus(buyer,
+                CarbonCredit.CreditStatus.SOLD);
         List<CarbonCredit> availableCredits = new ArrayList<>();
         availableCredits.addAll(verifiableCredits);
         availableCredits.addAll(purchasedCredits);
@@ -102,13 +111,13 @@ public class RetirementService {
 
         log.info("Total {} credits retired representing {} kg CO2", selectedCredits.size(), totalCo2Retired);
 
-
         // ---- 5. Create RetirementTransaction (COMPLETED) ----
         RetirementTransaction retirementTx = RetirementTransaction.builder()
                 .retiringUser(buyer)
                 .amountRetiredKg(totalCo2Retired) // Store the actual CO2 amount from retired credits
                 .retirementDate(LocalDate.now())
-                .status(RetirementTransaction.RetirementStatus.COMPLETED) // Mark as COMPLETED since credits are already retired
+                .status(RetirementTransaction.RetirementStatus.COMPLETED) // Mark as COMPLETED since credits are already
+                                                                          // retired
                 .retiredCarbonCreditIds(retiredCreditIds) // Include the actual retired credit IDs
                 .build();
         RetirementTransaction savedRetirementTx = retirementRepo.save(retirementTx);
@@ -140,41 +149,56 @@ public class RetirementService {
                 new org.springframework.transaction.support.TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
-                        log.info("Retirement transaction committed. Triggering async PDF generation for cert ID: {}", savedCert.getId());
+                        log.info("Retirement transaction committed. Triggering async PDF generation for cert ID: {}",
+                                savedCert.getId());
                         certGenerationService.generateAndStoreCertificate(savedCert.getId());
                     }
-                }
-        );
+                });
 
         return savedRetirementTx;
     }
 
-
     private List<CarbonCredit> selectCreditsForRetirement(List<CarbonCredit> available,
-                                                          BigDecimal targetCreditCount) {
+            BigDecimal targetCreditCount) {
         List<CarbonCredit> selected = new ArrayList<>();
 
-        log.info("Selecting {} credits for retirement from {} available", targetCreditCount, available.size());
+        log.info("Selecting {} credits for retirement from {} available credit entities", targetCreditCount,
+                available.size());
 
-        // Sort by creation date for FIFO (First In First Out) - oldest credits retired first
+        // Sort by creation date for FIFO (First In First Out) - oldest credits retired
+        // first
         available.sort(Comparator.comparing(CarbonCredit::getCreatedAt));
 
-        int creditsToSelect = targetCreditCount.intValue();
+        // Calculate total available credit amount (sum of creditAmount fields)
+        BigDecimal totalAvailableCredits = available.stream()
+                .map(CarbonCredit::getCreditAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        if (available.size() < creditsToSelect) {
+        log.info("Total available credit amount: {}", totalAvailableCredits);
+
+        if (totalAvailableCredits.compareTo(targetCreditCount) < 0) {
             log.error("Not enough credits available. Required: {} credits, Available: {} credits",
-                      creditsToSelect, available.size());
-            throw new InsufficientCreditsException("Insufficient credits available for retirement");
+                    targetCreditCount, totalAvailableCredits);
+            throw new InsufficientCreditsException(
+                    String.format("Insufficient credits available for retirement. Required: %s, Available: %s",
+                            targetCreditCount, totalAvailableCredits));
         }
 
-        // Select exact number of credits (FIFO)
-        for (int i = 0; i < creditsToSelect && i < available.size(); i++) {
-            CarbonCredit credit = available.get(i);
+        // Select credits using FIFO until we accumulate enough creditAmount
+        BigDecimal accumulatedCredits = BigDecimal.ZERO;
+        for (CarbonCredit credit : available) {
+            if (accumulatedCredits.compareTo(targetCreditCount) >= 0) {
+                break; // We have enough credits
+            }
+
             selected.add(credit);
-            log.debug("Selected credit {} for retirement ({} kg CO2)", credit.getId(), credit.getCo2ReducedKg());
+            accumulatedCredits = accumulatedCredits.add(credit.getCreditAmount());
+            log.debug("Selected credit {} with amount {} (accumulated: {})",
+                    credit.getId(), credit.getCreditAmount(), accumulatedCredits);
         }
 
-        log.info("Selected {} credits for retirement", selected.size());
+        log.info("Selected {} credit entities representing {} total credits for retirement",
+                selected.size(), accumulatedCredits);
         return selected;
     }
 
@@ -183,9 +207,12 @@ public class RetirementService {
                 UUID.randomUUID().toString().substring(0, 5).toUpperCase();
     }
 
-    /** Extract vehicle models (null-safe) and combine with user-provided project info */
+    /**
+     * Extract vehicle models (null-safe) and combine with user-provided project
+     * info
+     */
     private String extractProjectSourceInfo(List<CarbonCredit> credits,
-                                            RetirementRequestDTO request) {
+            RetirementRequestDTO request) {
         log.info("Extracting project source info from {} credits", credits.size());
 
         // ---- vehicle models -------------------------------------------------
@@ -213,12 +240,14 @@ public class RetirementService {
         }
 
         if (request.getProjectInfo() != null && !request.getProjectInfo().trim().isEmpty()) {
-            if (!sb.isEmpty()) sb.append(" | ");
+            if (!sb.isEmpty())
+                sb.append(" | ");
             sb.append("Project: ").append(request.getProjectInfo().trim());
         }
 
         if (request.getRetirementPurpose() != null && !request.getRetirementPurpose().trim().isEmpty()) {
-            if (!sb.isEmpty()) sb.append(" | ");
+            if (!sb.isEmpty())
+                sb.append(" | ");
             sb.append("Purpose: ").append(request.getRetirementPurpose().trim());
         }
 

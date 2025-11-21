@@ -9,7 +9,7 @@ import SubContent from "../../Components/SubContent";
 const HomePage = () => {
     return (
         <>
-            <Navbar />
+          
             <div>
                 <MainContent />
             </div>

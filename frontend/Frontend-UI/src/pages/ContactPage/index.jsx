@@ -26,7 +26,7 @@ const ContactPage = () => {
 
   return (
     <>
-    <Navbar />
+    
     <div className="min-h-screen bg-green-50">
       {/* Header with Background Image */}
       <div
