@@ -5,9 +5,6 @@ import './index.css'
 import App from './App.jsx'
 import { BrowserRouter } from 'react-router-dom'
 
-// Import debug utilities for console testing
-import './utils/debugUtils.js'
-
 
 createRoot(document.getElementById('root')).render(
 
