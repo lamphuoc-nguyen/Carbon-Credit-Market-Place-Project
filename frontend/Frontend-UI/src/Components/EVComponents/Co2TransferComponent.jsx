@@ -317,50 +317,25 @@ const Co2TransferComponent = ({ onTransferComplete }) => {
 
                         <div className="mb-4">
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                CO2 Amount (kg)
+                                Select CO2 Amount (kg)
                             </label>
 
-                            {/* Quick Select Buttons */}
-                            <div className="flex space-x-2 mb-3">
-                                <button
-                                    onClick={() => setTransferAmount(String(Math.floor(availableCo2 / 1000) * 1000))}
-                                    className="px-3 py-1 bg-green-100 text-green-700 rounded text-sm hover:bg-green-200"
-                                    disabled={availableCo2 < 1000}
-                                >
-                                    Max Integer ({Math.floor(availableCo2 / 1000) * 1000}kg)
-                                </button>
-                                {availableCo2 >= 2000 && (
-                                    <button
-                                        onClick={() => setTransferAmount('2000')}
-                                        className="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200"
-                                    >
-                                        2,000kg
-                                    </button>
-                                )}
-                                {availableCo2 >= 5000 && (
-                                    <button
-                                        onClick={() => setTransferAmount('5000')}
-                                        className="px-3 py-1 bg-purple-100 text-purple-700 rounded text-sm hover:bg-purple-200"
-                                    >
-                                        5,000kg
-                                    </button>
-                                )}
-                            </div>
-
-                            <input
-                                type="number"
-                                min="1000"
-                                max={Math.floor(availableCo2 / 1000) * 1000}
-                                step="1000"
+                            <select
                                 value={transferAmount}
-                                onChange={(e) => {
-                                    // Ensure only integer thousands
-                                    const value = Math.floor(parseFloat(e.target.value) / 1000) * 1000;
-                                    setTransferAmount(String(value || ''));
-                                }}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                                placeholder="Must be multiple of 1000"
-                            />
+                                onChange={(e) => setTransferAmount(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
+                            >
+                                <option value="">-- Select Amount --</option>
+                                {Array.from({ length: Math.floor(availableCo2 / 1000) }, (_, i) => {
+                                    const amount = (i + 1) * 1000;
+                                    return (
+                                        <option key={amount} value={amount}>
+                                            {amount.toLocaleString()} kg 
+                                        </option>
+                                    );
+                                })}
+                            </select>
+                            
                             <p className="text-xs text-gray-500 mt-1">
                                 Available: {availableCo2.toLocaleString()} kg • Maximum transferable: {Math.floor(availableCo2 / 1000) * 1000} kg
                             </p>
