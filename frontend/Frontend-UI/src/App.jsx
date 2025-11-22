@@ -112,7 +112,7 @@ function App() {
         } />
         <Route path="/marketplace-public" element={<Marketplace />} />
         <Route path="/payment" element={
-          <ProtectedRoute allowedRoles={["BUYER", "EV_OWNER"]}>
+          <ProtectedRoute allowedRoles={["BUYER"]}>
             <PaymentPage />
           </ProtectedRoute>
         } />
@@ -127,12 +127,12 @@ function App() {
           </ProtectedRoute>
         } />
         <Route path="/wallet" element={
-          <ProtectedRoute allowedRoles={["BUYER", "EV_OWNER"]}>
+          <ProtectedRoute allowedRoles={["BUYER"]}>
             <WalletPage />
           </ProtectedRoute>
         } />
         <Route path="/certificate" element={
-          <ProtectedRoute allowedRoles={["BUYER", "EV_OWNER"]}>
+          <ProtectedRoute allowedRoles={["BUYER"]}>
             <CertificatePage />
           </ProtectedRoute>
         } />
