@@ -316,20 +316,6 @@ const TransferHistory = () => {
                                             </div>
                                         </div>
 
-                                        {/* Action Button */}
-                                        <div className="flex items-center">
-                                            <button
-                                                onClick={() => navigate(`/cva/transfer-request/${req.id}`)}
-                                                className={`px-4 py-2 rounded-lg font-medium flex items-center justify-center transition-colors ${
-                                                    activeTab === 'approved'
-                                                        ? 'bg-green-600 text-white hover:bg-green-700'
-                                                        : 'bg-red-600 text-white hover:bg-red-700'
-                                                }`}
-                                            >
-                                                <Eye className="w-4 h-4 mr-2" />
-                                                View Details
-                                            </button>
-                                        </div>
                                     </div>
                                 </div>
                             ))}

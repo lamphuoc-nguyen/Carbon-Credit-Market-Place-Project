@@ -121,6 +121,24 @@ export const transactionApi = {
     // ==================== ADMIN ENDPOINTS ====================
 
     /**
+     * [Admin] Lấy tất cả giao dịch trong hệ thống
+     * Endpoint: GET /transactions/admin/all-transactions
+     * @param {number} page - Trang hiện tại (0-indexed)
+     * @param {number} size - Số lượng item mỗi trang
+     */
+    getAllTransactions: async (page = 0, size = 100) => {
+        try {
+            const response = await axiosInstance.get('/transactions/admin/all-transactions', {
+                params: { page, size }
+            });
+            return response.data; // Trả về Page<TransactionDTO>
+        } catch (error) {
+            console.error("Error fetching all transactions:", error);
+            throw error;
+        }
+    },
+
+    /**
      * [Admin] Lấy thống kê về các giao dịch
      * Endpoint: GET /transactions/admin/statistics
      * @param {string} [startDate] - ISO Date String

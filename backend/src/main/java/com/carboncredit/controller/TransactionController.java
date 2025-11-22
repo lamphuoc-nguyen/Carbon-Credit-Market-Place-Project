@@ -9,20 +9,16 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import org.springframework.security.core.Authentication;
-import com.carboncredit.entity.Dispute;
 import com.carboncredit.entity.Transaction;
 import com.carboncredit.entity.User;
-
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import com.carboncredit.dto.DisputeDTO;
-import com.carboncredit.dto.DisputeRequest;
+
 import com.carboncredit.dto.TransactionDTO;
 import com.carboncredit.service.TransactionService;
 import com.carboncredit.util.DTOMapper;
@@ -48,8 +44,8 @@ public class TransactionController {
 
     @PostMapping("/purchase")
     public ResponseEntity<Map<String, Object>> initiateTransaction(@RequestBody PurchaseRequest request,
-            Authentication authentication,
-            HttpServletRequest httpRequest) {
+                                                                   Authentication authentication,
+                                                                   HttpServletRequest httpRequest) {
         try {
             User buyer = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
@@ -68,15 +64,13 @@ public class TransactionController {
                         request.getListingId(),
                         buyer,
                         paymentMethodId,
-                        request.getQuantity()
-                );
+                        request.getQuantity());
             } else {
                 log.info("📦 Full purchase requested");
                 transaction = transactionService.initiatePurchase(
                         request.getListingId(),
                         buyer,
-                        paymentMethodId
-                );
+                        paymentMethodId);
             }
 
             log.info("✅ Transaction created with payment method: {}", transaction.getPaymentMethod());
@@ -115,7 +109,7 @@ public class TransactionController {
 
     @PostMapping("/{transactionId}/complete")
     public ResponseEntity<TransactionDTO> completeTransaction(@PathVariable UUID transactionId,
-            Authentication authentication) {
+                                                              Authentication authentication) {
         try {
             User user = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("user not found"));
@@ -157,7 +151,7 @@ public class TransactionController {
     // cancel a transaction (before completion
     @PostMapping("/{transactionId}/cancel")
     public ResponseEntity<TransactionDTO> cancelTransaction(@PathVariable UUID transactionId,
-            Authentication authentication) {
+                                                            Authentication authentication) {
         try {
             User user = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
@@ -177,7 +171,7 @@ public class TransactionController {
     // get specific transaction by Id
     @GetMapping("/{transactionId}")
     public ResponseEntity<TransactionDTO> getTransaction(@PathVariable UUID transactionId,
-            Authentication authentication) {
+                                                         Authentication authentication) {
         try {
             User user = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
@@ -207,8 +201,8 @@ public class TransactionController {
     // get user's transaction history (both purchases and sales)
     @GetMapping("/my-transactions")
     public ResponseEntity<Page<TransactionDTO>> getMyTransactions(@RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            Authentication authentication) {
+                                                                  @RequestParam(defaultValue = "10") int size,
+                                                                  Authentication authentication) {
 
         try {
             User user = userService.findByUsername(authentication.getName())
@@ -227,7 +221,7 @@ public class TransactionController {
     // get user's purchase history
     @GetMapping("/purchases")
     public ResponseEntity<Page<TransactionDTO>> getPurchaseHistory(@RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size, Authentication authentication) {
+                                                                   @RequestParam(defaultValue = "10") int size, Authentication authentication) {
         try {
             User buyer = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
@@ -241,7 +235,8 @@ public class TransactionController {
             return ResponseEntity.badRequest().build();
         }
     }
-  // Admin: get transaction status
+
+    // Admin: get transaction status
     @GetMapping("/admin/statistics")
     public ResponseEntity<Map<String, Object>> getTransactionStatistics(
             @RequestParam(required = false) String startDate, @RequestParam(required = false) String endDate,
@@ -269,9 +264,35 @@ public class TransactionController {
         }
     }
 
+    /**
+     * Admin: Get all transactions in the system
+     */
+    @GetMapping("/admin/all-transactions")
+    public ResponseEntity<Page<TransactionDTO>> getAllTransactions(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size,
+            Authentication authentication) {
+        try {
+            User user = userService.findByUsername(authentication.getName())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            // Check admin role
+            if (user.getRole() != User.UserRole.ADMIN) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+
+            Page<TransactionDTO> transactions = transactionService.getAllTransactionsForAdmin(page, size)
+                    .map(DTOMapper::toTransactionDTO);
+            return ResponseEntity.ok(transactions);
+        } catch (Exception e) {
+            log.error("Error fetching all transactions: {}", e.getMessage());
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
     @GetMapping("/{transactionId}/status")
     public ResponseEntity<Map<String, Object>> getTransactionStatus(@PathVariable UUID transactionId,
-            Authentication authentication) {
+                                                                    Authentication authentication) {
         try {
             User user = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));

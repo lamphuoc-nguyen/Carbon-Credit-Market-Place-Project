@@ -480,13 +480,17 @@ const MakerPlacePage = () => {
                                       <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Total Price</p>
                                       <div className="flex items-baseline gap-2">
                                           <p className="text-2xl font-bold text-green-600">
-                                              {/* Tính tổng giá: Giá/Tấn * Số lượng Tấn */}
-                                              ${formatPrice((listing.price || 0) * (listing.credit?.creditAmount || 0))}
+                                              ${formatPrice(listing.price || 0)}
                                           </p>
                                       </div>
                                       <p className="text-xs text-gray-500 mt-1">
-                                          ${formatPrice(listing.price)}/tonne × {listing.credit?.creditAmount || 0} tonnes
+                                          For {listing.credit?.creditAmount || 0} tonnes
                                       </p>
+                                      {listing.credit?.creditAmount && (
+                                          <p className="text-xs text-blue-600 font-semibold mt-1">
+                                              ${formatPrice((listing.price || 0) / listing.credit.creditAmount)} per tonne
+                                          </p>
+                                      )}
                                   </div>
                               </div>
 

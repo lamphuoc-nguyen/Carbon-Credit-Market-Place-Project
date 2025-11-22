@@ -231,7 +231,7 @@ const LoginForm = () => {
                         403: 'Account is locked or suspended',
                         404: 'User not found',
                         429: 'Too many login attempts. Please try again later.',
-                        500: 'Server error. Please try again later.',
+                        500: 'Invalid username or password',
                         503: 'Service temporarily unavailable'
                     };
 

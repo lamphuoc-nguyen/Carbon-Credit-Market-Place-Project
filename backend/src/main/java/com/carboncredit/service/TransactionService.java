@@ -309,23 +309,25 @@ public class TransactionService {
 
         if (listing != null && sellerCredit != null) {
             BigDecimal amountToRestore = transaction.getCreditAmount();
+            BigDecimal originalTotalCredits = sellerCredit.getCreditAmount().add(amountToRestore);
 
             // Restore Credit Amount to Seller
-            sellerCredit.setCreditAmount(sellerCredit.getCreditAmount().add(amountToRestore));
+            sellerCredit.setCreditAmount(originalTotalCredits);
             carbonCreditRepository.save(sellerCredit);
 
-//            BigDecimal restoredPrice = listing.getPrice().add(transaction.getAmount());
-//            listing.setPrice(restoredPrice);
+            BigDecimal restoredPrice = listing.getPrice().add(transaction.getAmount());
+            listing.setPrice(restoredPrice);
 
             // Restore Listing Status
             if (listing.getStatus() == ListingStatus.PENDING_TRANSACTION) {
-                // Nếu nó đang bị khóa (do tưởng là bán hết), mở lại thành ACTIVE
+                // If it was locked (thought to be sold out), reopen as ACTIVE
                 listing.setStatus(ListingStatus.ACTIVE);
                 log.warn("Listing {} unlocked. Status reverted from PENDING_TRANSACTION to ACTIVE.", listing.getId());
             }
 
             creditListingRepository.save(listing);
-            log.info("🔄 Restored {} credits to seller. Listing {} is now ACTIVE.", amountToRestore, listing.getId());
+            log.info("🔄 Restored {} credits to seller. Listing {} is now ACTIVE with restored price {}.",
+                    amountToRestore, listing.getId(), restoredPrice);
         }
 
         // Audit & Notify
@@ -484,28 +486,47 @@ public class TransactionService {
         Map<String, Object> stats = new HashMap<>();
         long totalTransactions = transactionRepository.countByDateRange(startDate, endDate);
         long completedTransactions = transactionRepository.countByStatusAndDateRange(TransactionStatus.COMPLETED, startDate, endDate);
+        long pendingTransactions = transactionRepository.countByStatusAndDateRange(TransactionStatus.PENDING, startDate, endDate);
+        long processingTransactions = transactionRepository.countByStatusAndDateRange(TransactionStatus.PROCESSING, startDate, endDate);
         long disputedTransactions = transactionRepository.countByStatusAndDateRange(TransactionStatus.DISPUTED, startDate, endDate);
         long cancelledTransactions = transactionRepository.countByStatusAndDateRange(TransactionStatus.CANCELLED, startDate, endDate);
 
+        // Revenue calculations - only from completed transactions
+        BigDecimal totalRevenue = transactionRepository.sumAmountByStatusAndDateRange(TransactionStatus.COMPLETED, startDate, endDate);
+        if (totalRevenue == null) totalRevenue = BigDecimal.ZERO;
+
+        Double averageTransactionValue = transactionRepository.averageAmountByDateRange(startDate, endDate);
+        if (averageTransactionValue == null) averageTransactionValue = 0.0;
+
+        // Put count statistics
         stats.put("totalTransactions", totalTransactions);
         stats.put("completedTransactions", completedTransactions);
+        stats.put("pendingTransactions", pendingTransactions);
+        stats.put("processingTransactions", processingTransactions);
         stats.put("disputedTransactions", disputedTransactions);
         stats.put("cancelledTransactions", cancelledTransactions);
 
+        // Put revenue statistics
+        stats.put("totalRevenue", totalRevenue);
+        stats.put("averageTransactionValue", averageTransactionValue);
+
+        // Calculate rates
         double successRate = totalTransactions > 0 ? (double) completedTransactions / totalTransactions * 100 : 0.0;
         stats.put("successRate", Math.round(successRate * 100.0) / 100.0);
 
         double disputeRate = totalTransactions > 0 ? (double) disputedTransactions / totalTransactions * 100 : 0.0;
         stats.put("disputeRate", Math.round(disputeRate * 100.0) / 100.0);
 
+        double pendingRate = totalTransactions > 0 ? (double) pendingTransactions / totalTransactions * 100 : 0.0;
+        stats.put("pendingRate", Math.round(pendingRate * 100.0) / 100.0);
+
         stats.put("dateRange", Map.of("startDate", startDate, "endDate", endDate));
         return stats;
     }
-
     @Transactional(readOnly = true)
-    public Page<Transaction> getTransactionsByDateRange(LocalDateTime startDate, LocalDateTime endDate, int page, int size) {
+    public Page<Transaction> getAllTransactionsForAdmin(int page, int size) {
         validationService.validatePageParameters(page, size);
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return transactionRepository.findByDateRange(startDate, endDate, pageable);
+        return transactionRepository.findAll(pageable);
     }
 }
