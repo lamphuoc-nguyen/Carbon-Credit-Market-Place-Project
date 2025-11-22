@@ -314,10 +314,8 @@ public class TransactionService {
             sellerCredit.setCreditAmount(sellerCredit.getCreditAmount().add(amountToRestore));
             carbonCreditRepository.save(sellerCredit);
 
-            // Restore Listing Price (if it was reduced during partial buy)
-            // Simple approach: Add transaction amount back to listing price
-            BigDecimal restoredPrice = listing.getPrice().add(transaction.getAmount());
-            listing.setPrice(restoredPrice);
+//            BigDecimal restoredPrice = listing.getPrice().add(transaction.getAmount());
+//            listing.setPrice(restoredPrice);
 
             // Restore Listing Status
             if (listing.getStatus() == ListingStatus.PENDING_TRANSACTION) {

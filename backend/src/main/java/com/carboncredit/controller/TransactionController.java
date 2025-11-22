@@ -54,7 +54,6 @@ public class TransactionController {
             User buyer = userService.findByUsername(authentication.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            // ✅ FIX: Sử dụng paymentMethodId từ request thay vì hardcode
             String paymentMethodId = request.getPaymentMethodId();
             if (paymentMethodId == null || paymentMethodId.isEmpty()) {
                 paymentMethodId = "VNPAY_PENDING"; // Default to VNPAY if not specified
@@ -62,7 +61,6 @@ public class TransactionController {
 
             log.info("💳 Creating transaction with payment method ID: {}", paymentMethodId);
 
-            // Check if quantity is specified for partial purchase
             Transaction transaction;
             if (request.getQuantity() != null) {
                 log.info("🔢 Partial purchase requested: {} credits", request.getQuantity());
@@ -70,14 +68,14 @@ public class TransactionController {
                         request.getListingId(),
                         buyer,
                         paymentMethodId,
-                        request.getQuantity() // Pass quantity for partial purchase
+                        request.getQuantity()
                 );
             } else {
                 log.info("📦 Full purchase requested");
                 transaction = transactionService.initiatePurchase(
                         request.getListingId(),
                         buyer,
-                        paymentMethodId // Full purchase (existing method)
+                        paymentMethodId
                 );
             }
 
@@ -87,7 +85,6 @@ public class TransactionController {
             response.put("transactionId", transaction.getId());
             response.put("paymentMethod", transaction.getPaymentMethod());
 
-            // ✅ Chỉ tạo VNPay URL nếu payment method là VNPAY
             if (transaction.getPaymentMethod() == Transaction.PaymentMethod.VNPAY) {
                 String ipAddress = getIpAddress(httpRequest);
                 String paymentUrl = vnPayService.createPaymentUrl(transaction, ipAddress);
@@ -116,7 +113,6 @@ public class TransactionController {
         return ipAddress;
     }
 
-    // Complete a transaction (process payment and finalize
     @PostMapping("/{transactionId}/complete")
     public ResponseEntity<TransactionDTO> completeTransaction(@PathVariable UUID transactionId,
             Authentication authentication) {
@@ -129,7 +125,6 @@ public class TransactionController {
                 return ResponseEntity.notFound().build();
             }
 
-            // check if user is authorized (buyer or seller)
             if (!transaction.getBuyer().getId().equals(user.getId())
                     && !transaction.getListing().getCredit().getUser().getId().equals(user.getId())) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
@@ -137,10 +132,8 @@ public class TransactionController {
 
             Transaction completedTransaction;
 
-            // ✅ FIX: Xử lý khác nhau cho WALLET và payment method khác
             if (transaction.getPaymentMethod() == Transaction.PaymentMethod.WALLET) {
-                // WALLET PAYMENT - Bỏ qua processPayment (mock payment service)
-                // Trực tiếp complete transaction → Backend tự động xử lý wallet
+
                 log.info("💰 WALLET payment - Directly completing transaction without external payment processing");
                 completedTransaction = transactionService.completeTransaction(transaction);
             } else {
@@ -248,69 +241,7 @@ public class TransactionController {
             return ResponseEntity.badRequest().build();
         }
     }
-
-    // get user's sales history
-    @GetMapping("/sales")
-    public ResponseEntity<Page<TransactionDTO>> getSalesHistory(@RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size, Authentication authentication) {
-        try {
-            User seller = userService.findByUsername(authentication.getName())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
-
-            Page<Transaction> sales = transactionService.getSalesHistory(seller, page, size);
-            Page<TransactionDTO> salesDTOs = DTOMapper.toTransactionDTOPage(sales);
-
-            return ResponseEntity.ok(salesDTOs);
-        } catch (Exception e) {
-            log.error("Error fetching sales history: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
-        }
-    }
-
-    // create a dispute for transaction
-    @PostMapping("/{transactionId}/dispute")
-    public ResponseEntity<DisputeDTO> createDispute(@PathVariable UUID transactionId,
-            @RequestBody DisputeRequest request,
-            Authentication authentication) {
-        try {
-            User user = userService.findByUsername(authentication.getName())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
-
-            Dispute dispute = transactionService.createDispute(transactionId, user, request.getReason());
-            DisputeDTO disputeDTO = DTOMapper.toDisputeDTO(dispute);
-
-            log.info("Dispute created for transaction {} by user {}", transactionId, user.getUsername());
-
-            return ResponseEntity.status(HttpStatus.CREATED).body(disputeDTO);
-        } catch (Exception e) {
-            log.error("Error creating dispute for transaction {}: {}", transactionId, e.getMessage());
-            return ResponseEntity.badRequest().build();
-        }
-    }
-
-    // Admin: Get all disputed transactions
-    @GetMapping("/admin/disputed")
-    public ResponseEntity<Page<TransactionDTO>> getDisputedTransactions(@RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size, Authentication authentication) {
-        try {
-            User user = userService.findByUsername(authentication.getName())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
-
-            // check admin role
-            if (user.getRole() != User.UserRole.ADMIN) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-            }
-
-            Page<Transaction> transactions = transactionService.getDisputedTransactions(page, size);
-            Page<TransactionDTO> transactionDTOs = DTOMapper.toTransactionDTOPage(transactions);
-            return ResponseEntity.ok(transactionDTOs);
-        } catch (Exception e) {
-            log.error("Error fetching disputed transactions: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
-        }
-    }
-
-    // Admin: get transaction status
+  // Admin: get transaction status
     @GetMapping("/admin/statistics")
     public ResponseEntity<Map<String, Object>> getTransactionStatistics(
             @RequestParam(required = false) String startDate, @RequestParam(required = false) String endDate,

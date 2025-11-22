@@ -27,22 +27,6 @@ const validateResponse = (response) => {
 export const vehicleApi = {
 
     // ==================== CORE CRUD OPERATIONS ====================
-
-    /**
-     * Tạo phương tiện mới
-     * Endpoint: POST /api/vehicles
-     * Body: { vin, model, registrationDate, ... }
-     */
-    createVehicle: async (vehicleData) => {
-        try {
-            const response = await axiosInstance.post('/api/vehicles', vehicleData);
-            return validateResponse(response);
-        } catch (error) {
-            console.error("Error creating vehicle:", error);
-            throw error;
-        }
-    },
-
     /**
      * Cập nhật thông tin phương tiện
      * Endpoint: PUT /api/vehicles/{id}
@@ -57,22 +41,6 @@ export const vehicleApi = {
             throw error;
         }
     },
-
-    /**
-     * Lấy chi tiết phương tiện theo ID
-     * Endpoint: GET /api/vehicles/{id}
-     */
-    getVehicleById: async (vehicleId) => {
-        if (!vehicleId) throw new Error('Vehicle ID is required');
-        try {
-            const response = await axiosInstance.get(`/api/vehicles/${vehicleId}`);
-            return validateResponse(response);
-        } catch (error) {
-            console.error(`Error fetching vehicle ${vehicleId}:`, error);
-            throw error;
-        }
-    },
-
     /**
      * Xóa phương tiện
      * Endpoint: DELETE /api/vehicles/{id}
@@ -87,24 +55,8 @@ export const vehicleApi = {
             throw error;
         }
     },
-
-    // ==================== USER SPECIFIC ====================
-
-    /**
-     * Lấy danh sách xe của người dùng đang đăng nhập
-     * Endpoint: GET /api/vehicles/my-vehicles
-     */
-    getMyVehicles: async () => {
-        try {
-            const response = await axiosInstance.get('/api/vehicles/my-vehicles');
-            return validateResponse(response);
-        } catch (error) {
-            console.error("Error fetching my vehicles:", error);
-            throw error;
-        }
-    },
-
-    // ==================== ADMIN / CVA OPERATIONS ====================
+// ==================== USER SPECIFIC ====================
+// ==================== ADMIN / CVA OPERATIONS ====================
 
     /**
      * Lấy danh sách TẤT CẢ xe trên hệ thống (Admin/CVA)
@@ -131,21 +83,6 @@ export const vehicleApi = {
             return validateResponse(response);
         } catch (error) {
             console.error(`Error fetching vehicles for user ${userId}:`, error);
-            throw error;
-        }
-    },
-
-    /**
-     * Tìm xe theo số VIN (Admin/CVA)
-     * Endpoint: GET /api/vehicles/vin/{vin}
-     */
-    getVehicleByVin: async (vin) => {
-        if (!vin) throw new Error('VIN is required');
-        try {
-            const response = await axiosInstance.get(`/api/vehicles/vin/${vin}`);
-            return validateResponse(response);
-        } catch (error) {
-            console.error(`Error fetching vehicle by VIN ${vin}:`, error);
             throw error;
         }
     }
