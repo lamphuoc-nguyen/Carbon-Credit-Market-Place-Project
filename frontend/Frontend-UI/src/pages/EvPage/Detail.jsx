@@ -18,7 +18,6 @@ const Detail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [purchaseAmount, setPurchaseAmount] = useState(1); // Amount buyer wants to buy
-  const [showAmountModal, setShowAmountModal] = useState(false);
 
   const fetchListingDetails = async () => {
     setLoading(true);
@@ -69,27 +68,6 @@ const Detail = () => {
     fetchListingDetails();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listingId]);
-
-  const handlePurchase = () => {
-    setShowAmountModal(true);
-  };
-
-  const handleConfirmPurchase = () => {
-    const creditAmount = listing.credit?.creditAmount || 0;
-    const pricePerTonne = listing.price / creditAmount; // Calculate price per tonne
-    const totalPrice = pricePerTonne * purchaseAmount;
-
-    // Navigate to payment page with buyer's selected amount
-    navigate('/payment', {
-      state: {
-        listing,
-        quantity: purchaseAmount, // Use buyer's selected amount
-        totalPrice: totalPrice
-      }
-    });
-
-    setShowAmountModal(false);
-  };
 
   if (loading) {
     return (
@@ -366,13 +344,17 @@ const Detail = () => {
               {/* Action Buttons */}
               <div className="space-y-3">
                 <button
-                  onClick={handlePurchase}
-                  disabled={listing.status !== 'ACTIVE'}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+                  disabled={true}
+                  className="w-full bg-gray-300 text-gray-500 py-3 px-4 rounded-lg font-semibold cursor-not-allowed transition flex items-center justify-center gap-2"
                 >
                   <ShoppingCart className="w-5 h-5" />
-                  {listing.status === 'ACTIVE' ? 'Purchase' : 'Not Available'}
+                  Purchase
                 </button>
+                
+                <p className="text-sm text-center text-yellow-600 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <Info className="w-4 h-4 inline mr-1" />
+                  Only buyers can purchase carbon credits
+                </p>
                 
                 <button
                   onClick={() => navigate('/ev-dashboard/marketplace')}
@@ -392,115 +374,6 @@ const Detail = () => {
           </div>
         </div>
       </div>
-
-      {/* Amount Selection Modal */}
-      {showAmountModal && (
-        <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
-            <div className="text-center mb-6">
-              <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center mx-auto mb-3">
-                <ShoppingCart className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-1">Select Amount</h3>
-              <p className="text-sm text-gray-600">Choose tonnes to purchase</p>
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Amount (tonnes)
-              </label>
-              <input
-                type="number"
-                min="1"
-                max={listing.credit?.creditAmount || 1}
-                step="1"
-                value={purchaseAmount}
-                onChange={(e) => setPurchaseAmount(Math.max(1, Math.min(parseInt(e.target.value) || 1, listing.credit?.creditAmount || 1)))}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg font-semibold text-center focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                placeholder="1"
-              />
-              <p className="text-xs text-gray-500 mt-1 text-center">
-                Available: {listing.credit?.creditAmount || 0} tonnes
-              </p>
-            </div>
-
-            {/* Quick Select */}
-            <div className="mb-4">
-              <p className="text-xs font-semibold text-gray-700 mb-2">Quick Select:</p>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  onClick={() => setPurchaseAmount(1)}
-                  className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold transition"
-                >
-                  1
-                </button>
-                <button
-                  onClick={() => setPurchaseAmount(Math.max(1, Math.floor((listing.credit?.creditAmount || 1) / 2)))}
-                  className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold transition"
-                >
-                  Half
-                </button>
-                <button
-                  onClick={() => setPurchaseAmount(listing.credit?.creditAmount || 1)}
-                  className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold transition"
-                >
-                  All
-                </button>
-              </div>
-            </div>
-
-            {/* Summary */}
-            <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
-              <h4 className="font-bold text-gray-900 mb-3 text-sm">Summary</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Amount:</span>
-                  <span className="font-bold text-gray-900">{purchaseAmount} tonnes</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Rate:</span>
-                  <span className="font-semibold text-gray-900">${formatPrice((listing.price || 0) / (listing.credit?.creditAmount || 1))}/tonne</span>
-                </div>
-                {listing.sellerLocation && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Location:</span>
-                    <span className="text-gray-900">
-                      {listing.sellerLocation.split('-').map(word =>
-                        word.charAt(0).toUpperCase() + word.slice(1)
-                      ).join(' ')}
-                    </span>
-                  </div>
-                )}
-                <div className="border-t border-green-300 my-2"></div>
-                <div className="flex justify-between">
-                  <span className="font-bold text-gray-900">Total:</span>
-                  <span className="font-bold text-green-600 text-lg">
-                    ${formatPrice(((listing.price || 0) / (listing.credit?.creditAmount || 1)) * purchaseAmount)}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowAmountModal(false);
-                  setPurchaseAmount(1);
-                }}
-                className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmPurchase}
-                className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition flex items-center justify-center gap-2"
-              >
-                Continue
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       </div>
       <Footer />
     </>

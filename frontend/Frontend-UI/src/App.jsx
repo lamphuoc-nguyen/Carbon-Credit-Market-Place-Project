@@ -29,7 +29,6 @@ import Dashboard from './Components/CvaComponents/Dashboard';
 import VerifiedCredits from './Components/CvaComponents/VerifiedCredits';
 import Report from './Components/CvaComponents/Report';
 import ReportEV from './pages/EvPage/ReportEV';
-import DetailPage from './Components/CvaComponents/DetailPage';
 import TransferRequestManagement from './Components/CvaComponents/TransferRequestManagement';
 import ProtectedRoute from './Components/ProtectedRoute';
 import Wallet from './pages/EvPage/Wallet';
@@ -41,6 +40,7 @@ import WalletManagement from './Components/AdminComponents/WalletManagement';
 import PlatformReport from './Components/AdminComponents/PlatformReport';
 import Detail from './pages/EvPage/Detail';
 import DashboardPage from './pages/BuyerPage/DashboardPage';
+import TransferRequestDetailPage from './pages/CvaPage/TransferRequestDetailPage';
 
 function App() {
   const location = useLocation();
@@ -112,7 +112,7 @@ function App() {
         } />
         <Route path="/marketplace-public" element={<Marketplace />} />
         <Route path="/payment" element={
-          <ProtectedRoute allowedRoles={["BUYER", "EV_OWNER"]}>
+          <ProtectedRoute allowedRoles={["BUYER"]}>
             <PaymentPage />
           </ProtectedRoute>
         } />
@@ -127,12 +127,12 @@ function App() {
           </ProtectedRoute>
         } />
         <Route path="/wallet" element={
-          <ProtectedRoute allowedRoles={["BUYER", "EV_OWNER"]}>
+          <ProtectedRoute allowedRoles={["BUYER"]}>
             <WalletPage />
           </ProtectedRoute>
         } />
         <Route path="/certificate" element={
-          <ProtectedRoute allowedRoles={["BUYER", "EV_OWNER"]}>
+          <ProtectedRoute allowedRoles={["BUYER"]}>
             <CertificatePage />
           </ProtectedRoute>
         } />

@@ -18,10 +18,13 @@ import {
   ShoppingCart,
   Recycle,
   TreePine,
-  Earth
+  Earth,
+  TrendingUp
 } from 'lucide-react';
 import Navbar_Buyer from '../../Components/BuyerComponents/Navbar-Buyer';
 import Footer from '../../Components/Footer';
+import RetirementModal from '../../Components/BuyerComponents/RetirementModal';
+import RetirementHistory from '../../Components/BuyerComponents/RetirementHistory';
 import { walletApi } from '../../api';
 
 const WalletPage = () => {
@@ -151,39 +154,13 @@ const WalletPage = () => {
   const getTransactionIcon = (type) => {
     switch (type) {
       case 'DEPOSIT':
-        return <ArrowDownRight className="w-5 h-5 text-green-600" />;
+        return <ArrowDownRight className="w-5 h-5" />;
       case 'WITHDRAWAL':
-        return <ArrowUpRight className="w-5 h-5 text-red-600" />;
+        return <ArrowUpRight className="w-5 h-5" />;
       case 'PURCHASE':
-        return <CreditCard className="w-5 h-5 text-blue-600" />;
+        return <CreditCard className="w-5 h-5" />;
       default:
-        return <Leaf className="w-5 h-5 text-gray-600" />;
-    }
-  };
-
-  const getTransactionColor = (type) => {
-    switch (type) {
-      case 'DEPOSIT':
-        return 'text-green-600';
-      case 'WITHDRAWAL':
-        return 'text-red-600';
-      case 'PURCHASE':
-        return 'text-blue-600';
-      default:
-        return 'text-gray-600';
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'COMPLETED':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'PENDING':
-        return <Clock className="w-4 h-4 text-yellow-500" />;
-      case 'FAILED':
-        return <XCircle className="w-4 h-4 text-red-500" />;
-      default:
-        return <Clock className="w-4 h-4 text-gray-500" />;
+        return <Leaf className="w-5 h-5" />;
     }
   };
 
@@ -204,7 +181,7 @@ const WalletPage = () => {
   if (error === 'NOT_LOGGED_IN') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow text-center max-w-md">
+        <div className="bg-white p-8 rounded-2xl shadow-lg text-center max-w-md">
           <Wallet className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Authentication Required</h2>
           <p className="text-gray-600 mb-6">Please login to access your wallet</p>
@@ -222,7 +199,7 @@ const WalletPage = () => {
   if (error === 'AUTHENTICATION_FAILED') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow text-center max-w-md">
+        <div className="bg-white p-8 rounded-2xl shadow-lg text-center max-w-md">
           <XCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Authentication Failed</h2>
           <p className="text-gray-600 mb-6">Your session has expired. Please login again.</p>
@@ -247,7 +224,7 @@ const WalletPage = () => {
               <div className="w-16 h-16 border-4 border-green-200 rounded-full"></div>
               <div className="w-16 h-16 border-4 border-green-600 rounded-full animate-spin border-t-transparent absolute top-0 left-0"></div>
             </div>
-            <p className="mt-4 text-gray-600">Loading wallet...</p>
+            <p className="mt-4 text-gray-600 font-medium">Loading your wallet...</p>
           </div>
         </div>
       </div>
@@ -255,10 +232,17 @@ const WalletPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50" 
+         style={{
+           backgroundImage: "url('/src/image/bg4.png')",
+           backgroundSize: '100% auto',
+           backgroundPosition: 'top center',
+           backgroundRepeat: 'no-repeat',
+           backgroundAttachment: 'fixed'
+         }}>
       <Navbar_Buyer />
 
-      {/* Header */}
+    {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
@@ -280,7 +264,7 @@ const WalletPage = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Balance Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {/* Cash Balance Card */}
           <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-all duration-300 hover:border-green-300">
             <div className="flex items-center justify-between mb-4">
@@ -308,19 +292,27 @@ const WalletPage = () => {
               <span className="text-xs text-green-600 font-medium">Active</span>
             </div>
 
-            <button
-              onClick={() => setShowDepositModal(true)}
-              className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-all duration-200 text-sm font-medium"
-            >
-              Deposit
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowDepositModal(true)}
+                className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-all duration-200 text-sm font-medium hover:scale-105 active:scale-95"
+              >
+                Deposit
+              </button>
+              <button
+                onClick={() => navigate('/marketplace')}
+                className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition-all duration-200 text-sm font-medium hover:scale-105 active:scale-95"
+              >
+                Marketplace
+              </button>
+            </div>
           </div>
 
           {/* Carbon Credits Card */}
           <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-all duration-300 hover:border-green-300">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2 bg-green-100 rounded-lg">
-                <TreePine className="w-6 h-6 text-green-600" />
+                <TrendingUp className="w-6 h-6 text-green-600" />
               </div>
               <div>
                 <h3 className="text-sm font-medium text-gray-600">Carbon Credits</h3>
@@ -328,12 +320,41 @@ const WalletPage = () => {
             </div>
 
             <p className="text-3xl font-bold text-gray-900 mb-1">
-              {(wallet?.creditBalance || 0).toFixed(2)}
+              {showBalance ? (wallet?.creditBalance || 0).toLocaleString() : '••••••'}
             </p>
             <p className="text-sm text-gray-600 mb-4">Credits</p>
 
             <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-              <p className="text-xs text-green-800">Available for trading</p>
+              <p className="text-xs text-green-800">Available for retirement & trading</p>
+            </div>
+          </div>
+
+          {/* Quick Actions Card */}
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-all duration-300 hover:border-green-300">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Wallet className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-gray-600">Quick Actions</h3>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <button
+                onClick={() => setShowRetirementModal(true)}
+                className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-all duration-200 text-sm font-medium hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+              >
+                <Recycle className="w-4 h-4" />
+                <span>Retire Credits</span>
+              </button>
+              <button
+                onClick={() => navigate('/marketplace')}
+                className="w-full bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition-all duration-200 text-sm font-medium hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+              >
+                <ShoppingCart className="w-4 h-4" />
+                <span>Browse Market</span>
+              </button>
             </div>
           </div>
         </div>
@@ -348,7 +369,7 @@ const WalletPage = () => {
                 <Earth className="w-5 h-5 text-green-600 group-hover:scale-110 transition-transform duration-300" />
                 <p className="text-sm text-gray-600">CO₂ Offset</p>
               </div>
-              <p className="text-2xl font-bold text-gray-900">{((wallet?.creditBalance || 0) * 2.5).toFixed(1)}</p>
+              <p className="text-2xl font-bold text-gray-900">{((wallet?.creditBalance || 0) * 2.5).toFixed(2)}</p>
               <p className="text-xs text-gray-500">Tons</p>
             </div>
 
@@ -376,12 +397,22 @@ const WalletPage = () => {
                 <p className="text-sm text-gray-600">Total Value</p>
               </div>
               <p className="text-2xl font-bold text-gray-900">
-                ${((wallet?.cashBalance || 0) + ((wallet?.creditBalance || 0) * 10)).toFixed(0)}
+                ${((wallet?.cashBalance || 0) + (wallet?.creditBalance || 0) * 25).toFixed(0)}
               </p>
               <p className="text-xs text-gray-500">USD</p>
             </div>
           </div>
         </div>
+
+        {/* Retirement History Section */}
+        {wallet && (
+          <div className="mb-12">
+            <RetirementHistory
+              userId={wallet.userId || wallet.user?.id}
+              onRefresh={fetchWalletData}
+            />
+          </div>
+        )}
 
         {/* Transaction History */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -420,17 +451,18 @@ const WalletPage = () => {
                         <div className={`p-2 rounded-lg ${
                           transaction.type === 'DEPOSIT' ? 'bg-green-100 text-green-600' :
                           transaction.type === 'WITHDRAWAL' ? 'bg-red-100 text-red-600' :
-                          'bg-blue-100 text-blue-600'
+                          transaction.type === 'PURCHASE' ? 'bg-blue-100 text-blue-600' :
+                          'bg-gray-100 text-gray-600'
                         }`}>
                           {getTransactionIcon(transaction.type)}
                         </div>
                         <div>
                           <div className="flex items-center gap-2 mb-1">
                             <span className="font-semibold text-gray-900">
-                              {transaction.type}
+                              {transaction.type?.replace('_', ' ') || 'Transaction'}
                             </span>
                             <span className={`px-2 py-0.5 text-xs font-medium rounded ${getStatusColor(transaction.status)}`}>
-                              {transaction.status}
+                              {transaction.status || 'Completed'}
                             </span>
                           </div>
                           <p className="text-sm text-gray-600">
@@ -442,8 +474,14 @@ const WalletPage = () => {
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className={`text-lg font-bold ${getTransactionColor(transaction.type)}`}>
-                          {transaction.type === 'DEPOSIT' ? '+' : '-'}
+                        <span className={`text-lg font-bold ${
+                          transaction.type === 'DEPOSIT' ? 'text-green-600' :
+                          transaction.type === 'WITHDRAWAL' ? 'text-red-600' :
+                          transaction.type === 'PURCHASE' ? 'text-blue-600' :
+                          'text-gray-900'
+                        }`}>
+                          {transaction.type === 'DEPOSIT' ? '+' :
+                           transaction.type === 'WITHDRAWAL' ? '-' : ''}
                           {formatCurrency(transaction.amount)}
                         </span>
                       </div>
@@ -457,83 +495,129 @@ const WalletPage = () => {
 
         {/* Deposit Modal */}
         {showDepositModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
-              <div className="text-center mb-6">
-                <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center mx-auto mb-3">
-                  <DollarSign className="w-6 h-6 text-white" />
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl transform transition-all overflow-hidden">
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-8 text-white relative">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
+                <div className="relative z-10">
+                  <div className="flex items-center space-x-4 mb-4">
+                    <div className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl">
+                      <TreePine className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-bold">Deposit Funds</h3>
+                      <p className="text-green-200">Add funds to your wallet</p>
+                    </div>
+                  </div>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-1">Deposit Funds</h3>
-                <p className="text-sm text-gray-600">Add funds to your wallet</p>
               </div>
 
-              <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Amount (USD)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={depositAmount}
-                  onChange={(e) => setDepositAmount(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg font-semibold text-center focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  placeholder="0.00"
-                />
-                <p className="text-xs text-gray-500 mt-1 text-center">
-                  Enter amount to deposit
-                </p>
-              </div>
+              <div className="p-8">
+                <div className="space-y-6">
+                  {/* Amount Input */}
+                  <div>
+                    <label className="block text-sm font-bold text-gray-800 mb-3">
+                      Investment Amount (USD)
+                    </label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-600" />
+                      <input
+                        type="number"
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all text-lg font-semibold"
+                      />
+                    </div>
+                  {depositAmount && (
+                    <div className="mt-2 p-3 bg-green-50 rounded-xl border border-green-200">
+                      <div className="flex items-center space-x-2 text-green-700">
+                        <Earth className="w-4 h-4" />
+                        <span className="text-sm font-medium">
+                          Ready to fund your carbon credit purchases
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  </div>
 
-              {/* Quick Select */}
-              <div className="mb-4">
-                <p className="text-xs font-semibold text-gray-700 mb-2">Quick Select:</p>
-                <div className="grid grid-cols-4 gap-2">
-                  {[50, 100, 250, 500].map((amount) => (
-                    <button
-                      key={amount}
-                      onClick={() => setDepositAmount(amount.toString())}
-                      className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold transition"
+                  {/* Payment Method */}
+                  <div>
+                    <label className="block text-sm font-bold text-gray-800 mb-3">
+                      Payment Method
+                    </label>
+                    <select
+                      value={depositMethod}
+                      onChange={(e) => setDepositMethod(e.target.value)}
+                      className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all font-medium"
                     >
-                      ${amount}
-                    </button>
-                  ))}
+                      <option value="bank_transfer">🏦 Bank Transfer</option>
+                      <option value="credit_card">💳 Credit Card</option>
+                      <option value="vnpay">📱 VNPay Digital Wallet</option>
+                    </select>
+                  </div>
+
+                  {/* Quick Amount Selection */}
+                  <div>
+                    <p className="text-sm font-bold text-gray-800 mb-3">Quick amounts:</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[100, 500, 1000, 2500].map((amount) => (
+                        <button
+                          key={amount}
+                          onClick={() => setDepositAmount(amount.toString())}
+                          className="p-3 border-2 border-gray-200 rounded-xl hover:border-green-400 hover:bg-green-50 transition-all text-center group"
+                        >
+                          <div className="font-bold text-green-600 group-hover:text-green-700">
+                            ${amount}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">Deposit</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Security Notice */}
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <h4 className="font-medium text-gray-800">Secure Deposit</h4>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Bank-level security • Instant processing • Wallet balance update
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              {/* Payment Method */}
-              <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Payment Method
-                </label>
-                <select
-                  value={depositMethod}
-                  onChange={(e) => setDepositMethod(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                >
-                  <option value="bank_transfer">Bank Transfer</option>
-                  <option value="credit_card">Credit Card</option>
-                  <option value="vnpay">VNPay</option>
-                </select>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowDepositModal(false);
-                    setDepositAmount('');
-                  }}
-                  className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDeposit}
-                  disabled={depositing || !depositAmount}
-                  className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {depositing ? 'Processing...' : 'Deposit'}
-                </button>
+                {/* Action Buttons */}
+                <div className="flex space-x-4 mt-8">
+                  <button
+                    onClick={() => {
+                      setShowDepositModal(false);
+                      setDepositAmount('');
+                    }}
+                    className="flex-1 py-4 px-6 border-2 border-gray-300 rounded-2xl font-semibold text-gray-700 hover:bg-gray-50 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeposit}
+                    disabled={depositing || !depositAmount}
+                    className="flex-1 py-4 px-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl font-semibold hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl"
+                  >
+                    {depositing ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        <span>Processing...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center space-x-2">
+                        <TreePine className="w-5 h-5" />
+                        <span>Deposit</span>
+                      </div>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
