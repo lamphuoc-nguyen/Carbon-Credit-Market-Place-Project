@@ -4,6 +4,8 @@ import {
     ArrowLeft, User, Calendar, CheckCircle, XCircle, Clock,
     Leaf, TrendingUp, MapPin, Car, Hash, AlertCircle
 } from 'lucide-react';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { cvaApi } from '../../api/cvaApi';
 import { vehicleApi } from '../../api/vehicleApi';
 import { userApi } from '../../api/userApi';
@@ -80,10 +82,11 @@ const TransferRequestDetailPage = () => {
         try {
             setProcessing(true);
             await cvaApi.approveTransferRequest(request.id, approvalNotes);
-            alert('Request approved successfully!');
-            navigate('/cva/transfer-requests');
+            navigate('/cva/transfer-requests', {
+                state: { successMessage: 'Request approved successfully!' }
+            });
         } catch (error) {
-            alert('Failed to approve: ' + error.message);
+            toast.error('Failed to approve: ' + error.message);
         } finally {
             setProcessing(false);
         }
@@ -91,16 +94,17 @@ const TransferRequestDetailPage = () => {
 
     const handleReject = async () => {
         if (!request || !rejectionReason.trim()) {
-            alert('Please provide a rejection reason');
+            toast.error('Please provide a rejection reason');
             return;
         }
         try {
             setProcessing(true);
             await cvaApi.rejectTransferRequest(request.id, rejectionReason);
-            alert('Request rejected successfully!');
-            navigate('/cva/transfer-requests');
+            navigate('/cva/transfer-requests', {
+                state: { successMessage: 'Request rejected successfully!' }
+            });
         } catch (error) {
-            alert('Failed to reject: ' + error.message);
+            toast.error('Failed to reject: ' + error.message);
         } finally {
             setProcessing(false);
         }
@@ -296,7 +300,7 @@ const TransferRequestDetailPage = () => {
 
             {/* Approval Modal */}
             {showApprovalModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="fixed inset-0 bg-black bg-black/50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl">
                         <h3 className="text-lg font-bold mb-4 text-gray-900 flex items-center gap-2">
                             <CheckCircle className="w-5 h-5 text-green-600" />
@@ -335,7 +339,7 @@ const TransferRequestDetailPage = () => {
 
             {/* Rejection Modal */}
             {showRejectionModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl">
                         <h3 className="text-lg font-bold mb-4 text-red-600 flex items-center gap-2">
                             <XCircle className="w-5 h-5" />

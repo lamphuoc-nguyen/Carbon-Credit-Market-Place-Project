@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Wallet, DollarSign, Leaf, TrendingUp, ArrowUpRight, ArrowDownRight, Calendar, CreditCard, ArrowRightLeft, RefreshCw, TreePine, Earth, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import EvOwnerAPI from '../../api/EvOwnerAPI';
 import userDataFetcher from '../../api/userDataFetcher';
 import Navbar from '../../Components/EVComponents/Navbar';
@@ -9,6 +11,7 @@ import Footer from '../../Components/Footer';
 
 const WalletPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [transactions, setTransactions] = useState([]);
@@ -26,6 +29,15 @@ const WalletPage = () => {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
+
+  // Handle navigation state messages
+  useEffect(() => {
+    if (location.state?.successMessage) {
+      toast.success(location.state.successMessage);
+      // Clear the state to prevent showing toast on refresh
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchWalletData();
@@ -65,7 +77,7 @@ const WalletPage = () => {
         console.warn('🔐 Authentication failed, redirecting to login');
         navigate('/login');
       } else {
-        alert('Failed to load wallet data. Please try again.');
+        toast.error('Failed to load wallet data. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -122,7 +134,7 @@ const WalletPage = () => {
 
   const handleDeposit = async () => {
     if (!depositAmount || parseFloat(depositAmount) <= 0) {
-      alert('Please enter a valid amount');
+      toast.error('Please enter a valid amount');
       return;
     }
 
@@ -133,24 +145,24 @@ const WalletPage = () => {
         paymentMethodId: 'default-payment-method'
       });
       
-      alert(`Successfully deposited $${depositAmount}!`);
+      toast.success(`Successfully deposited $${depositAmount}!`);
       setDepositAmount('');
       setShowDepositModal(false);
       await handleRefresh();
     } catch (error) {
       console.error('❌ Deposit failed:', error);
-      alert(`Failed to deposit: ${error.response?.data?.message || error.message}`);
+      toast.error(`Failed to deposit: ${error.response?.data?.message || error.message}`);
     }
   };
 
   const handleWithdraw = async () => {
     if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) {
-      alert('Please enter a valid amount');
+      toast.error('Please enter a valid amount');
       return;
     }
 
     if (parseFloat(withdrawAmount) > walletData.cashBalance) {
-      alert('Insufficient balance');
+      toast.error('Insufficient balance');
       return;
     }
 
@@ -161,13 +173,13 @@ const WalletPage = () => {
         bankAccountInfo: 'User bank account'
       });
       
-      alert(`Successfully withdrew $${withdrawAmount}!`);
+      toast.success(`Successfully withdrew $${withdrawAmount}!`);
       setWithdrawAmount('');
       setShowWithdrawModal(false);
       await handleRefresh();
     } catch (error) {
       console.error('❌ Withdrawal failed:', error);
-      alert(`Failed to withdraw: ${error.response?.data?.message || error.message}`);
+      toast.error(`Failed to withdraw: ${error.response?.data?.message || error.message}`);
     }
   };
 
@@ -185,6 +197,18 @@ const WalletPage = () => {
   return (
     <>
       <Navbar />
+      <ToastContainer
+        position="bottom-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        style={{ zIndex: 9999 }}
+      />
 
       <div className="min-h-screen bg-gray-50" 
            style={{

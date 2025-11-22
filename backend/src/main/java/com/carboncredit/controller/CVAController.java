@@ -168,6 +168,48 @@ public class CVAController {
     }
 
     /**
+     * Get all approved transfer requests
+     */
+    @GetMapping("/approved-transfer-requests")
+    @PreAuthorize("hasRole('CVA')")
+    public ResponseEntity<ApiResponse<List<Co2TransferRequestDTO>>> getApprovedTransferRequests() {
+        try {
+            List<Co2TransferRequestDTO> approvedRequests = cvaService.getApprovedTransferRequests();
+
+            log.info("Retrieved {} approved transfer requests", approvedRequests.size());
+
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Approved transfer requests retrieved successfully",
+                    approvedRequests));
+        } catch (Exception e) {
+            log.error("Error fetching approved transfer requests: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to fetch approved transfer requests: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get all rejected transfer requests
+     */
+    @GetMapping("/rejected-transfer-requests")
+    @PreAuthorize("hasRole('CVA')")
+    public ResponseEntity<ApiResponse<List<Co2TransferRequestDTO>>> getRejectedTransferRequests() {
+        try {
+            List<Co2TransferRequestDTO> rejectedRequests = cvaService.getRejectedTransferRequests();
+
+            log.info("Retrieved {} rejected transfer requests", rejectedRequests.size());
+
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Rejected transfer requests retrieved successfully",
+                    rejectedRequests));
+        } catch (Exception e) {
+            log.error("Error fetching rejected transfer requests: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Failed to fetch rejected transfer requests: " + e.getMessage()));
+        }
+    }
+
+    /**
      * Get all verifications done by the current CVA user
      */
     @GetMapping("/my-verifications")

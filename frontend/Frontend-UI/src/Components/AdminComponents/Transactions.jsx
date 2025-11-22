@@ -1,288 +1,386 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { transactionApi } from '../../api/transactionApi'; // Import API của bạn
-import {
-    FileText,
-    AlertTriangle,
-    CheckCircle,
-    XCircle,
-    RotateCcw,
-    ChevronLeft,
-    ChevronRight,
-    Eye
-} from 'lucide-react';
-import ConfirmationModal from '../ConfirmationModal';
+import React, { useState, useEffect } from 'react';
+import { transactionApi } from '../../api/transactionApi';
+import { Activity, RefreshCw, CheckCircle, XCircle, Clock, DollarSign } from 'lucide-react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-// --- Helper Components ---
-
-/**
- * 1. StatusBadge: Hiển thị trạng thái giao dịch
- */
-const StatusBadge = ({ status }) => {
-    let config = {
-        color: 'bg-gray-100 text-gray-700',
-        icon: FileText,
-        text: 'Unknown',
-    };
-    const upperStatus = status ? status.toUpperCase() : 'UNKNOWN';
-
-    switch (upperStatus) {
-        case 'COMPLETED':
-            config = { color: 'bg-green-100 text-green-700', icon: CheckCircle, text: 'Completed' };
-            break;
-        case 'PENDING':
-            config = { color: 'bg-yellow-100 text-yellow-700', icon: RotateCcw, text: 'Pending' };
-            break;
-        case 'CANCELLED':
-            config = { color: 'bg-red-100 text-red-700', icon: XCircle, text: 'Cancelled' };
-            break;
-        case 'DISPUTED':
-            config = { color: 'bg-orange-100 text-orange-700', icon: AlertTriangle, text: 'Disputed' };
-            break;
-    }
-    const Icon = config.icon;
-    return (
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
-            <Icon className="h-3.5 w-3.5" />
-            {config.text}
-        </span>
-    );
-};
-
-/**
- * 2. Pagination: Component phân trang
- */
-const Pagination = ({ page, totalPages, onPageChange }) => {
-    if (totalPages <= 1) return null;
-    return (
-        <div className="flex items-center justify-between mt-4">
-            <button
-                onClick={() => onPageChange(page - 1)}
-                disabled={page === 0}
-                className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
-            >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
-            </button>
-            <span className="text-sm text-gray-700">
-                Page <span className="font-medium">{page + 1}</span> of <span className="font-medium">{totalPages}</span>
-            </span>
-            <button
-                onClick={() => onPageChange(page + 1)}
-                disabled={page + 1 >= totalPages}
-                className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
-            >
-                Next
-                <ChevronRight className="h-4 w-4 ml-1" />
-            </button>
-        </div>
-    );
-};
-
-
-// --- MAIN COMPONENT ---
-
 const TransactionManagement = () => {
+    const [statistics, setStatistics] = useState(null);
     const [transactions, setTransactions] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [page, setPage] = useState(0);
-    const [totalPages, setTotalPages] = useState(0);
-    const [showModal, setShowModal] = useState(false);
-    const [modalConfig, setModalConfig] = useState({});
+    const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
 
-    // Helper định dạng ngày
-    const formatDate = (dateString) => {
-        if (!dateString) return 'N/A';
-        return new Date(dateString).toLocaleDateString('vi-VN', {
-            day: '2-digit', month: '2-digit', year: 'numeric',
-            hour: '2-digit', minute: '2-digit'
-        });
-    };
-
-    // Hàm tải dữ liệu (chỉ có thể tải các giao dịch bị tranh chấp)
-    const fetchData = useCallback(async () => {
+    // Fetch statistics
+    const fetchStatistics = async () => {
         setIsLoading(true);
-        setError(null);
         try {
-            // Chỉ gọi API duy nhất mà Admin có thể dùng để lấy list
-            const response = await transactionApi.getDisputedTransactions(page, 10);
-
-            setTransactions(response.content || []);
-            setTotalPages(response.totalPages || 0);
+            const response = await transactionApi.getTransactionStatistics();
+            if (response && typeof response === 'object') {
+                setStatistics(response);
+            }
         } catch (err) {
-            console.error("Failed to fetch disputed transactions:", err);
-            setError(err.message || `Failed to fetch transactions.`);
-            setTransactions([]);
-            setTotalPages(0);
+            console.error("Failed to fetch statistics:", err);
+            toast.error('Failed to load statistics');
         } finally {
             setIsLoading(false);
         }
-    }, [page]); // Tải lại khi 'page' thay đổi
+    };
 
-    // Effect để tải dữ liệu
+    // Fetch all transactions using admin endpoint
+    const fetchTransactions = async () => {
+        console.log('🔍 fetchTransactions called - using ADMIN endpoint');
+        setIsLoadingTransactions(true);
+        try {
+            console.log('🔍 Calling transactionApi.getAllTransactions...');
+            const response = await transactionApi.getAllTransactions(0, 100);
+            console.log('📦 Raw Transactions Response:', response);
+
+            // Handle ApiResponse wrapper format: { success, message, data }
+            let transactionsData = null;
+
+            if (response?.data) {
+                // If response has data property (ApiResponse format)
+                if (response.data.content) {
+                    // Paginated response
+                    transactionsData = response.data.content;
+                } else if (Array.isArray(response.data)) {
+                    // Direct array
+                    transactionsData = response.data;
+                } else {
+                    transactionsData = response.data;
+                }
+            } else if (response?.content) {
+                // Direct Page object
+                transactionsData = response.content;
+            } else if (Array.isArray(response)) {
+                // Direct array
+                transactionsData = response;
+            }
+
+            console.log('✅ Extracted transactions:', transactionsData);
+
+            if (transactionsData && Array.isArray(transactionsData)) {
+                setTransactions(transactionsData);
+                toast.success(`Loaded ${transactionsData.length} transactions`);
+            } else {
+                console.warn('⚠️ No valid transaction data found');
+                setTransactions([]);
+            }
+        } catch (err) {
+            console.error("❌ Failed to fetch transactions:", err);
+            console.error("❌ Error details:", err.response?.data);
+            toast.error('Failed to load transaction history');
+            setTransactions([]);
+        } finally {
+            setIsLoadingTransactions(false);
+        }
+    };
+
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        fetchStatistics();
+        fetchTransactions();
+    }, []);
 
-    // Hàm thay đổi trang
-    const handlePageChange = (newPage) => {
-        setPage(newPage);
-    };
+    // Log transactions state
+    useEffect(() => {
+        console.log('📊 Transactions state updated:', transactions);
+        console.log('📊 Number of transactions:', transactions.length);
+    }, [transactions]);
 
-    // --- Hàm xử lý Actions ---
+    // Parse data with improved calculations
+    const totalTransactions = Number(statistics?.totalTransactions || statistics?.total_transactions) || 0;
+    const completedTransactions = Number(statistics?.completedTransactions || statistics?.completed_transactions) || 0;
+    const pendingTransactions = Number(statistics?.pendingTransactions || statistics?.pending_transactions) || 0;
+    const processingTransactions = Number(statistics?.processingTransactions || statistics?.processing_transactions) || 0;
+    const disputedTransactions = Number(statistics?.disputedTransactions || statistics?.disputed_transactions) || 0;
+    const cancelledTransactions = Number(statistics?.cancelledTransactions || statistics?.cancelled_transactions) || 0;
 
-    // "Phê duyệt" (Approve) một tranh chấp -> Hoàn thành giao dịch
-    const handleApprove = (txId) => {
-        setModalConfig({
-            title: 'Approve Transaction',
-            message: 'Are you sure you want to approve and force-complete this disputed transaction?',
-            confirmText: 'Approve',
-            isDangerous: false,
-            onConfirm: async () => {
-                try {
-                    await transactionApi.completeTransaction(txId);
-                    toast.success('Transaction approved and marked as COMPLETED.');
-                    fetchData();
-                } catch (err) {
-                    toast.error(`Failed to approve transaction: ${err.message}`);
-                }
-            }
+    // Revenue calculations - handle both BigDecimal and number formats
+    const totalRevenue = Number(statistics?.totalRevenue || statistics?.total_revenue || 0);
+    const averageTransactionValue = Number(statistics?.averageTransactionValue || statistics?.average_transaction_value || 0);
+
+    // Calculate additional metrics from transaction data if backend values are 0
+    const calculatedRevenue = transactions.length > 0 && totalRevenue === 0
+        ? transactions
+            .filter(t => t.status === 'COMPLETED')
+            .reduce((sum, t) => sum + Number(t.amount || t.totalPrice || 0), 0)
+        : totalRevenue;
+
+    const calculatedAverage = transactions.length > 0 && averageTransactionValue === 0
+        ? calculatedRevenue / Math.max(completedTransactions, 1)
+        : averageTransactionValue;
+
+    // Format date
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        return date.toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
         });
-        setShowModal(true);
     };
 
-    // "Hủy" (Cancel) một tranh chấp -> Hủy giao dịch
-    const handleCancel = (txId) => {
-        setModalConfig({
-            title: 'Cancel Transaction',
-            message: 'Are you sure you want to cancel this disputed transaction?',
-            confirmText: 'Cancel Transaction',
-            isDangerous: true,
-            onConfirm: async () => {
-                try {
-                    await transactionApi.cancelTransaction(txId);
-                    toast.success('Transaction cancelled and marked as CANCELLED.');
-                    fetchData();
-                } catch (err) {
-                    toast.error(`Failed to cancel transaction: ${err.message}`);
-                }
-            }
-        });
-        setShowModal(true);
+    // Get status badge
+    const getStatusBadge = (status) => {
+        const statusConfig = {
+            'COMPLETED': { bg: 'bg-green-100', text: 'text-green-700', label: 'COMPLETED' },
+            'PENDING': { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'PENDING' },
+            'PROCESSING': { bg: 'bg-blue-100', text: 'text-blue-700', label: 'PROCESSING' },
+            'CANCELLED': { bg: 'bg-gray-100', text: 'text-gray-700', label: 'CANCELLED' },
+            'DISPUTED': { bg: 'bg-red-100', text: 'text-red-700', label: 'DISPUTED' }
+        };
+        const config = statusConfig[status] || statusConfig['PENDING'];
+        return (
+            <span className={`px-3 py-1 rounded text-xs font-semibold ${config.bg} ${config.text}`}>
+                {config.label}
+            </span>
+        );
     };
 
+    // Get payment method badge
+    const getPaymentBadge = (method) => {
+        const methodConfig = {
+            'WALLET': { bg: 'bg-purple-100', text: 'text-purple-700', label: 'WALLET' },
+            'VNPAY': { bg: 'bg-blue-100', text: 'text-blue-700', label: 'VNPAY' },
+            'MOMO': { bg: 'bg-pink-100', text: 'text-pink-700', label: 'MOMO' }
+        };
+        const config = methodConfig[method] || { bg: 'bg-gray-100', text: 'text-gray-700', label: method };
+        return (
+            <span className={`px-3 py-1 rounded text-xs font-semibold ${config.bg} ${config.text}`}>
+                {config.label}
+            </span>
+        );
+    };
 
     return (
-        <div className="p-6 bg-gray-50 min-h-screen">
+        <div className="p-6 space-y-6">
             {/* Header */}
-            <header className="mb-6">
-                <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
-                    <AlertTriangle className="h-8 w-8 text-orange-600" />
-                    Dispute Management
-                </h1>
-                <p className="text-gray-500 mt-1">
-                    Review, approve, or cancel disputed transactions.
-                </p>
-            </header>
-
-            {/* Bảng dữ liệu */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                {isLoading ? (
-                    <div className="p-6 text-center text-gray-500">Loading disputed transactions...</div>
-                ) : error ? (
-                    <div className="p-6 text-center text-red-500">Error: {error}</div>
-                ) : transactions.length === 0 ? (
-                    <div className="p-6 text-center text-gray-500">No disputed transactions found.</div>
-                ) : (
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Transaction ID</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date Disputed</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Seller</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Buyer</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {transactions.map((tx) => (
-                                <tr key={tx.id}>
-                                    <td className="px-6 py-4 whitespace-nowrap text-xs font-mono text-gray-500" title={tx.id}>
-                                        {tx.id.substring(0, 8)}...
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{formatDate(tx.createdAt)}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">{tx.listing?.credit?.user?.username || 'N/A'}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">{tx.buyer?.username || 'N/A'}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${(tx.totalPrice || 0).toLocaleString()}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        {/* Tất cả đều sẽ là DISPUTED */}
-                                        <StatusBadge status={tx.status} />
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-3">
-                                        {/* Hành động giải quyết tranh chấp */}
-                                        <button
-                                            onClick={() => handleApprove(tx.id)}
-                                            className="text-green-600 hover:text-green-800 p-1 rounded-full hover:bg-green-100"
-                                            title="Approve (Force Complete)"
-                                        >
-                                            <CheckCircle className="h-5 w-5" />
-                                        </button>
-                                        <button
-                                            onClick={() => handleCancel(tx.id)}
-                                            className="text-red-600 hover:text-red-800 p-1 rounded-full hover:bg-red-100"
-                                            title="Cancel Transaction"
-                                        >
-                                            <XCircle className="h-5 w-5" />
-                                        </button>
-                                        <button
-                                            className="text-gray-500 hover:text-gray-800 p-1 rounded-full hover:bg-gray-100"
-                                            title="View Details (Not Implemented)"
-                                        >
-                                            <Eye className="h-5 w-5" />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
-
-                {/* Pagination */}
-                {!isLoading && transactions.length > 0 && (
-                    <div className="p-4 border-t border-gray-200">
-                        <Pagination page={page} totalPages={totalPages} onPageChange={handlePageChange} />
-                    </div>
-                )}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900">Transaction Statistics</h1>
+                    <p className="text-sm text-gray-500 mt-1">Overview of platform transactions</p>
+                </div>
+                <button
+                    onClick={fetchStatistics}
+                    disabled={isLoading}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                >
+                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                    Refresh
+                </button>
             </div>
-            
-            {/* Confirmation Modal */}
-            <ConfirmationModal
-                isOpen={showModal}
-                onClose={() => setShowModal(false)}
-                onConfirm={modalConfig.onConfirm}
-                title={modalConfig.title}
-                message={modalConfig.message}
-                confirmText={modalConfig.confirmText}
-                isDangerous={modalConfig.isDangerous}
-            />
-            
-            {/* Toast Notifications */}
-            <ToastContainer 
-                position="bottom-right"
-                autoClose={3000}
-                hideProgressBar={false}
-                newestOnTop={false}
-                closeOnClick
-                rtl={false}
-                pauseOnFocusLoss
-                draggable
-                pauseOnHover
-                theme="light"
-            />
+
+            {isLoading ? (
+                <div className="flex items-center justify-center h-64">
+                    <RefreshCw className="h-8 w-8 text-blue-600 animate-spin" />
+                </div>
+            ) : !statistics ? (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center">
+                    <Activity className="h-12 w-12 text-yellow-500 mx-auto mb-3" />
+                    <p className="text-yellow-800 font-medium">No data available</p>
+                </div>
+            ) : (
+                <>
+                    {/* Main Stats Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Total Transactions */}
+                        <div className="bg-white border border-gray-200 rounded-lg p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-gray-600">Total Transactions</p>
+                                    <p className="text-3xl font-bold text-gray-900 mt-1">{totalTransactions.toLocaleString()}</p>
+                                </div>
+                                <Activity className="h-10 w-10 text-blue-600" />
+                            </div>
+                        </div>
+
+                        {/* Total Revenue */}
+                        <div className="bg-white border border-gray-200 rounded-lg p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-gray-600">Total Revenue</p>
+                                    <p className="text-3xl font-bold text-green-600 mt-1">
+                                        ${calculatedRevenue.toLocaleString('en-US', {
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2
+                                        })}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        From {completedTransactions} completed transactions
+                                    </p>
+                                </div>
+                                <DollarSign className="h-10 w-10 text-green-600" />
+                            </div>
+                        </div>
+
+                        {/* Average Value */}
+                        <div className="bg-white border border-gray-200 rounded-lg p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm text-gray-600">Average Transaction Value</p>
+                                    <p className="text-3xl font-bold text-purple-600 mt-1">
+                                        ${calculatedAverage.toLocaleString('en-US', {
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2
+                                        })}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Average per completed transaction
+                                    </p>
+                                </div>
+                                <DollarSign className="h-10 w-10 text-purple-600" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Status Breakdown */}
+                    <div className="bg-white border border-gray-200 rounded-lg p-6">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-4">Transaction Status Breakdown</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {/* Completed */}
+                            <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg">
+                                <CheckCircle className="h-8 w-8 text-green-600 flex-shrink-0" />
+                                <div>
+                                    <p className="text-sm text-green-700">Completed</p>
+                                    <p className="text-2xl font-bold text-green-900">{completedTransactions.toLocaleString()}</p>
+                                    <p className="text-xs text-green-600 mt-1">
+                                        {totalTransactions > 0 ? ((completedTransactions / totalTransactions) * 100).toFixed(1) : 0}% success
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Pending */}
+                            <div className="flex items-center gap-3 p-4 bg-yellow-50 rounded-lg">
+                                <Clock className="h-8 w-8 text-yellow-600 flex-shrink-0" />
+                                <div>
+                                    <p className="text-sm text-yellow-700">Pending</p>
+                                    <p className="text-2xl font-bold text-yellow-900">{pendingTransactions.toLocaleString()}</p>
+                                    <p className="text-xs text-yellow-600 mt-1">
+                                        {totalTransactions > 0 ? ((pendingTransactions / totalTransactions) * 100).toFixed(1) : 0}% pending
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Processing */}
+                            <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg">
+                                <Activity className="h-8 w-8 text-blue-600 flex-shrink-0" />
+                                <div>
+                                    <p className="text-sm text-blue-700">Processing</p>
+                                    <p className="text-2xl font-bold text-blue-900">{processingTransactions.toLocaleString()}</p>
+                                    <p className="text-xs text-blue-600 mt-1">
+                                        {totalTransactions > 0 ? ((processingTransactions / totalTransactions) * 100).toFixed(1) : 0}% processing
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Cancelled */}
+                            <div className="flex items-center gap-3 p-4 bg-red-50 rounded-lg">
+                                <XCircle className="h-8 w-8 text-red-600 flex-shrink-0" />
+                                <div>
+                                    <p className="text-sm text-red-700">Cancelled</p>
+                                    <p className="text-2xl font-bold text-red-900">{cancelledTransactions.toLocaleString()}</p>
+                                    <p className="text-xs text-red-600 mt-1">
+                                        {totalTransactions > 0 ? ((cancelledTransactions / totalTransactions) * 100).toFixed(1) : 0}% failed
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Disputed (only show if there are disputed transactions) */}
+                            {disputedTransactions > 0 && (
+                                <div className="flex items-center gap-3 p-4 bg-orange-50 rounded-lg lg:col-span-4">
+                                    <XCircle className="h-8 w-8 text-orange-600 flex-shrink-0" />
+                                    <div>
+                                        <p className="text-sm text-orange-700">⚠️ Disputed - Needs Review</p>
+                                        <p className="text-2xl font-bold text-orange-900">{disputedTransactions.toLocaleString()}</p>
+                                        <p className="text-xs text-orange-600 mt-1">
+                                            {totalTransactions > 0 ? ((disputedTransactions / totalTransactions) * 100).toFixed(1) : 0}% disputed - requires admin attention
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Transaction History List */}
+                    <div className="bg-white border border-gray-200 rounded-lg p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h2 className="text-lg font-semibold text-gray-900">Transaction History</h2>
+                                <p className="text-sm text-gray-500">{transactions.length} transactions</p>
+                            </div>
+                            <button
+                                onClick={fetchTransactions}
+                                disabled={isLoadingTransactions}
+                                className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                            >
+                                <RefreshCw className={`h-4 w-4 ${isLoadingTransactions ? 'animate-spin' : ''}`} />
+                                Refresh
+                            </button>
+                        </div>
+
+                        {isLoadingTransactions ? (
+                            <div className="text-center py-8">
+                                <RefreshCw className="h-6 w-6 text-blue-600 animate-spin mx-auto" />
+                                <p className="text-sm text-gray-500 mt-2">Loading transactions...</p>
+                            </div>
+                        ) : transactions.length === 0 ? (
+                            <div className="text-center py-12 text-gray-500">
+                                <Activity className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                                <p className="font-medium mb-1">No transactions found</p>
+                                <p className="text-sm">
+                                    {totalTransactions > 0
+                                        ? 'Transactions exist but may not be accessible with current permissions'
+                                        : 'No transactions have been created yet'}
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {transactions.map((transaction) => (
+                                    <div
+                                        key={transaction.id}
+                                        className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex items-start gap-3 flex-1">
+                                                {/* Icon */}
+                                                <div className="bg-gray-100 rounded-full p-2 mt-1">
+                                                    <Activity className="h-5 w-5 text-gray-600" />
+                                                </div>
+
+                                                {/* Transaction Info */}
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <h3 className="font-semibold text-gray-900">Transaction</h3>
+                                                        {getStatusBadge(transaction.status)}
+                                                        {getPaymentBadge(transaction.paymentMethod)}
+                                                    </div>
+                                                    <p className="text-sm text-gray-600 mb-1">Transaction</p>
+                                                    <p className="text-xs text-gray-500">
+                                                        {formatDate(transaction.createdAt)}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* Amount */}
+                                            <div className="text-right">
+                                                <p className="text-xl font-bold text-gray-900">
+                                                    ${Number(transaction.totalPrice || transaction.amount || 0).toFixed(2)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </>
+            )}
+
+            <ToastContainer position="bottom-right" autoClose={3000} />
         </div>
     );
 };

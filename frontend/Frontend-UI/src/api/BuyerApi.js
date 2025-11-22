@@ -1,36 +1,5 @@
 import axiosInstance from './axiosInstance';
 
-/**
- * 🛒 Buyer API - Carbon Credit Purchase Operations
- * API dành cho Buyer để mua carbon credits trên marketplace
- *
- * ⚠️ LƯU Ý: Buyer chỉ mua, không bán carbon credits
- * - Để bán carbon credits, sử dụng EV Owner role
- *
- * ⚠️ BACKEND PAYMENT FLOW LIMITATIONS:
- * ==========================================
- * Backend hiện tại có 2 endpoints để mua:
- * 
- * 1. POST /transactions/purchase (Chỉ dùng cho VNPAY)
- *    - Backend HARDCODE "VNPAY_PENDING", bỏ qua paymentMethodId từ request
- *    - Tạo transaction và trả về VNPay payment URL
- *    - Flow: Create transaction → Redirect to VNPay → VNPay callback → Complete transaction
- * 
- * 2. POST /credit-listings/{listingId}/purchase (Legacy, không xử lý wallet)
- *    - Chỉ đóng listing và chuyển credit ownership
- *    - KHÔNG tạo transaction
- *    - KHÔNG trừ tiền buyer wallet
- *    - KHÔNG cộng tiền seller wallet
- * 
- * 💡 GIẢI PHÁP:
- * - VNPAY payment: Dùng initiatePurchaseTransaction() → redirect to paymentUrl
- * - WALLET payment: Dùng purchaseListingWithWallet() (có warning về backend limitation)
- * 
- * 🔧 KHUYẾN NGHỊ:
- * Backend cần được sửa để:
- * - POST /transactions/purchase chấp nhận paymentMethodId từ request
- * - Xử lý WALLET payment trong transaction flow với wallet deduction
- */
 export const buyerApi = {
     // ==================== MARKETPLACE BROWSING ====================
 
@@ -90,107 +59,9 @@ export const buyerApi = {
             throw error;
         }
     },
-
-    // ==================== CARBON CREDITS INFO ====================
-
+// ==================== CARBON CREDITS INFO ====================
     /**
-     * Xem tất cả carbon credits có sẵn
-     * GET /carbon-credits
-     * @returns {Promise} Danh sách carbon credits
-     */
-    getAvailableCredits: async () => {
-        try {
-            const response = await axiosInstance.get('/carbon-credits');
-            return response.data;
-        } catch (error) {
-            console.error('❌ Lỗi khi lấy danh sách credits:', error);
-            throw error;
-        }
-    },
 
-    /**
-     * Xem chi tiết carbon credit theo ID
-     * GET /carbon-credits/{creditId}
-     * @param {string} creditId - UUID của carbon credit
-     * @returns {Promise} Chi tiết carbon credit
-     */
-    getCreditDetails: async (creditId) => {
-        try {
-            const response = await axiosInstance.get(`/carbon-credits/${creditId}`);
-            return response.data;
-        } catch (error) {
-            console.error(`❌ Lỗi khi lấy chi tiết credit ${creditId}:`, error);
-            throw error;
-        }
-    },
-
-    // ==================== PURCHASE OPERATIONS ====================
-
-    /**
-     * 💰 Thanh toán bằng WALLET - Sử dụng transaction có sẵn
-     * POST /transactions/{transactionId}/complete
-     * 
-     * Flow hoàn chỉnh với backend xử lý wallet:
-     * 1. Tạo transaction trước với initiatePurchaseTransaction() hoặc trực tiếp từ backend
-     * 2. Kiểm tra số dư wallet
-     * 3. Gọi API này để complete transaction
-     * 4. Backend sẽ tự động:
-     *    - Trừ tiền wallet của buyer (nếu paymentMethod = WALLET)
-     *    - Cộng tiền vào wallet của seller
-     *    - Cộng credit vào wallet của buyer
-     *    - Đóng listing và chuyển ownership
-     * 
-     * ⚠️ LÀM THẾ NÀO ĐỂ TẠO WALLET TRANSACTION:
-     * Backend initiatePurchase() hiện tại set payment method dựa vào paymentMethodId:
-     * - Nếu paymentMethodId chứa "VNPAY" → PaymentMethod.VNPAY
-     * - Nếu paymentMethodId chứa "BANK" → PaymentMethod.BANK_TRANSFER
-     * - Còn lại → PaymentMethod.WALLET
-     * 
-     * Vì vậy, để tạo WALLET transaction:
-     * 1. Gọi initiatePurchaseTransaction(listingId, "WALLET") hoặc "WALLET_PAY"
-     * 2. Sau đó gọi payWithWallet(transactionId)
-     * 
-     * @param {string} transactionId - UUID của transaction đã tạo
-     * @returns {Promise<Transaction>} Transaction đã hoàn thành
-     */
-    payWithWallet: async (transactionId) => {
-        try {
-            console.log('💰 ========== WALLET PAYMENT FLOW ==========');
-            console.log('Transaction ID:', transactionId);
-            
-            // Complete transaction - backend sẽ xử lý wallet nếu paymentMethod = WALLET
-            const response = await axiosInstance.post(`/transactions/${transactionId}/complete`);
-            
-            console.log('✅ Payment completed successfully:', response.data);
-            return response.data;
-        } catch (error) {
-            console.error('❌ Wallet payment failed:', error);
-            console.error('Error details:', error.response?.data);
-            
-            // Provide helpful error messages
-            if (error.response?.data?.message?.includes('Insufficient')) {
-                throw new Error('Insufficient wallet balance. Please deposit more funds.');
-            } else if (error.response?.status === 403) {
-                throw new Error('Unauthorized. You are not authorized to complete this transaction.');
-            } else if (error.response?.status === 404) {
-                throw new Error('Transaction not found.');
-            } else if (error.response?.status === 400) {
-                const errorMsg = error.response.data?.message || 'Invalid transaction state';
-                throw new Error(errorMsg);
-            } else {
-                const errorMsg = error.response?.data?.message || error.message || 'Payment failed';
-                throw new Error(errorMsg);
-            }
-        }
-    },
-
-    /**
-     * 💰 Mua listing với WALLET payment - Flow hoàn chỉnh từ đầu đến cuối
-     * 
-     * Flow tự động:
-     * 1. Kiểm tra số dư wallet
-     * 2. Tạo transaction với paymentMethod = WALLET
-     * 3. Complete transaction (backend tự động xử lý wallet)
      * 
      * @param {string} listingId - UUID của listing cần mua
      * @returns {Promise<Transaction>} Transaction đã hoàn thành
@@ -257,127 +128,6 @@ export const buyerApi = {
             }
         }
     },
-
-    /**
-     * 💰 Mua listing với WALLET payment - TẠO TRANSACTION HOÀN CHỈNH (LEGACY)
-     * 
-     * @deprecated Sử dụng purchaseWithWallet() thay thế - có xử lý wallet đầy đủ
-     * 
-     * Flow này tạo transaction VNPay (do backend hardcode) nhưng SAU ĐÓ
-     * cancel transaction đó và gọi purchase listing trực tiếp.
-     * 
-     * Lý do: Backend /transactions/purchase LUÔN tạo VNPay transaction,
-     * không thể tạo WALLET transaction qua endpoint này.
-     * 
-     * Flow:
-     * 1. Check wallet balance
-     * 2. Purchase listing trực tiếp (đóng listing, chuyển credit)
-     * 3. Tạo "mock transaction" object để frontend có thể hiển thị
-     * 
-     * ⚠️ CHÚ Ý: 
-     * - Listing sẽ được đóng ✅
-     * - Credit sẽ được chuyển ✅
-     * - NHƯNG wallet KHÔNG tự động xử lý ❌
-     * - Transaction chỉ là object mock, không lưu trong DB ❌
-     * 
-     * @param {string} listingId - UUID của listing cần mua
-     * @param {number} amount - Số tiền cần trả
-     * @returns {Promise<Object>} Mock transaction object + listing data
-     */
-    purchaseListingWithWallet: async (listingId, amount) => {
-        try {
-            console.log('💰 ========== WALLET PURCHASE FLOW ==========');
-            console.log('Listing ID:', listingId);
-            console.log('Amount:', amount);
-            
-            // Step 1: Check balance
-            console.log('📊 Step 1: Checking wallet balance...');
-            const balanceCheck = await axiosInstance.get('/api/wallets/balance-check', {
-                params: { amount, balanceType: 'CASH' }
-            });
-            
-            if (!balanceCheck.data) {
-                throw new Error('Insufficient balance in wallet. Please deposit more funds.');
-            }
-            console.log('✅ Balance check passed');
-            
-            // Step 2: Get wallet info để biết buyer ID
-            console.log('👤 Step 2: Getting wallet info...');
-            const walletInfo = await axiosInstance.get('/api/wallets/my-wallet');
-            console.log('✅ Wallet info:', walletInfo.data);
-            
-            // Step 3: Purchase listing trực tiếp
-            console.log('🛒 Step 3: Purchasing listing...');
-            const purchaseResponse = await axiosInstance.post(`/credit-listings/${listingId}/purchase`);
-            console.log('✅ Listing purchased successfully');
-            console.log('Listing data:', purchaseResponse.data);
-            
-            // Step 4: Tạo mock transaction ID
-            const mockTransactionId = `WALLET-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-            console.log('📝 Created mock transaction ID:', mockTransactionId);
-            
-            // Step 5: Return mock transaction object
-            const mockTransaction = {
-                // Mock transaction info
-                id: mockTransactionId,
-                transactionId: mockTransactionId,
-                status: 'COMPLETED',
-                paymentMethod: 'WALLET',
-                amount: amount,
-                completedAt: new Date().toISOString(),
-                createdAt: new Date().toISOString(),
-                
-                // Buyer/Seller info
-                buyerId: walletInfo.data.userId,
-                buyerUsername: walletInfo.data.username,
-                sellerId: purchaseResponse.data.credit?.user?.id || purchaseResponse.data.credit?.ownerId,
-                sellerUsername: purchaseResponse.data.credit?.user?.username || purchaseResponse.data.credit?.ownerUsername,
-                
-                // Listing/Credit info
-                listing: purchaseResponse.data,
-                credit: purchaseResponse.data.credit,
-                listingId: listingId,
-                creditId: purchaseResponse.data.credit?.id,
-                
-                // Additional info
-                success: true,
-                warning: '⚠️ Mock Transaction - Not saved in database',
-                note: 'Backend limitation: /transactions/purchase endpoint only supports VNPay. ' +
-                      'Listing closed and credit transferred successfully, but transaction not recorded in system.',
-                      
-                // Recommendations
-                recommendations: [
-                    '✅ Listing has been closed',
-                    '✅ Credit ownership transferred',
-                    '⚠️ Wallet balances NOT automatically updated',
-                    '💡 Contact admin if wallet balance is incorrect',
-                    '🔧 Backend needs fix to support WALLET transactions properly'
-                ]
-            };
-            
-            console.log('✅ ========== PURCHASE COMPLETED ==========');
-            console.log('Mock Transaction:', mockTransaction);
-            
-            return mockTransaction;
-            
-        } catch (error) {
-            console.error('❌ ========== PURCHASE FAILED ==========');
-            console.error('Error:', error);
-            console.error('Error details:', error.response?.data);
-            
-            // Provide helpful error messages
-            if (error.message?.includes('Insufficient balance')) {
-                throw new Error('Insufficient wallet balance. Please deposit more funds before purchasing.');
-            } else if (error.response?.status === 404) {
-                throw new Error('Listing not found or no longer available.');
-            } else if (error.response?.status === 400) {
-                throw new Error(error.response.data?.message || 'Invalid purchase request.');
-            } else {
-                throw new Error(error.message || 'Failed to complete purchase. Please try again.');
-            }
-        }
-    },
-
     /**
      * Mua một listing trên marketplace (legacy method - không xử lý wallet)
      * POST /credit-listings/{listingId}/purchase
@@ -409,18 +159,20 @@ export const buyerApi = {
      * @param {string} paymentMethodId - Phương thức thanh toán (hiện tại backend ignore field này)
      * @returns {Promise<Object>} Response: { transactionId, paymentUrl }
      */
-    initiatePurchaseTransaction: async (listingId, paymentMethodId = 'VNPAY', quantity = null) => {
+    initiatePurchaseTransaction: async (listingId, methodId, purchaseQuantity) => {
         try {
             console.log('💳 Initiating purchase transaction...');
+
+            // Xây dựng request body với tên trường chính xác
             const requestBody = {
-                listingId,
-                paymentMethodId
+                listingId: listingId,
+                paymentMethodId: methodId, // ✅ Đặt tên trường paymentMethodId (string)
             };
 
-            // Add quantity if specified for partial purchase
-            if (quantity !== null && quantity !== undefined) {
-                requestBody.quantity = quantity;
-                console.log(`🔢 Partial purchase: ${quantity} credits`);
+            // ✅ Đặt tên trường quantity (number)
+            if (purchaseQuantity !== null && purchaseQuantity !== undefined) {
+                requestBody.quantity = purchaseQuantity;
+                console.log(`🔢 Partial purchase: ${purchaseQuantity} credits`);
             }
 
             const response = await axiosInstance.post('/transactions/purchase', requestBody);
@@ -432,22 +184,12 @@ export const buyerApi = {
             throw error;
         }
     },
-
     /**
      * Hoàn thành giao dịch mua
      * POST /transactions/{transactionId}/complete
      * @param {string} transactionId - UUID của transaction
      * @returns {Promise} Transaction đã hoàn thành
      */
-    completeTransaction: async (transactionId) => {
-        try {
-            const response = await axiosInstance.post(`/transactions/${transactionId}/complete`);
-            return response.data;
-        } catch (error) {
-            console.error(`❌ Lỗi khi hoàn thành giao dịch ${transactionId}:`, error);
-            throw error;
-        }
-    },
 
     /**
      * Hủy giao dịch mua
@@ -455,56 +197,8 @@ export const buyerApi = {
      * @param {string} transactionId - UUID của transaction
      * @returns {Promise} Transaction đã hủy
      */
-    cancelTransaction: async (transactionId) => {
-        try {
-            const response = await axiosInstance.post(`/transactions/${transactionId}/cancel`);
-            return response.data;
-        } catch (error) {
-            console.error(`❌ Lỗi khi hủy giao dịch ${transactionId}:`, error);
-            throw error;
-        }
-    },
 
     // ==================== TRANSACTION HISTORY ====================
-
-    /**
-     * Xem tất cả giao dịch mua của buyer
-     * GET /transactions/my-transactions
-     * @param {number} page - Số trang (default: 0)
-     * @param {number} size - Kích thước trang (default: 10)
-     * @returns {Promise} Page object với danh sách transactions
-     */
-    getMyTransactions: async (page = 0, size = 10) => {
-        try {
-            const response = await axiosInstance.get('/transactions/my-transactions', {
-                params: { page, size }
-            });
-            return response.data;
-        } catch (error) {
-            console.error('❌ Lỗi khi lấy lịch sử giao dịch:', error);
-            throw error;
-        }
-    },
-
-    /**
-     * Xem lịch sử mua hàng
-     * GET /transactions/purchases
-     * @param {number} page - Số trang (default: 0)
-     * @param {number} size - Kích thước trang (default: 10)
-     * @returns {Promise} Page object với lịch sử mua
-     */
-    getPurchaseHistory: async (page = 0, size = 10) => {
-        try {
-            const response = await axiosInstance.get('/transactions/purchases', {
-                params: { page, size }
-            });
-            return response.data;
-        } catch (error) {
-            console.error('❌ Lỗi khi lấy lịch sử mua:', error);
-            throw error;
-        }
-    },
-
     /**
      * Xem chi tiết giao dịch theo ID
      * GET /transactions/{transactionId}
@@ -544,28 +238,7 @@ export const buyerApi = {
             throw error;
         }
     },
-
-    /**
-     * 📄 Lấy thông tin certificate từ transaction (để hiển thị)
-     * GET /transactions/{transactionId}
-     * 
-     * Note: Backend chưa có certificate entity cho purchase transaction,
-     * nên sử dụng transaction data để hiển thị như certificate
-     * 
-     * @param {string} transactionId - UUID của transaction
-     * @returns {Promise<Transaction>} Transaction data với đầy đủ thông tin để hiển thị certificate
-     */
-    getTransactionCertificate: async (transactionId) => {
-        try {
-            const response = await axiosInstance.get(`/transactions/${transactionId}`);
-            return response.data;
-        } catch (error) {
-            console.error(`❌ Lỗi khi lấy certificate từ transaction ${transactionId}:`, error);
-            throw error;
-        }
-    },
-
-    // ==================== WALLET OPERATIONS ====================
+// ==================== WALLET OPERATIONS ====================
 
     /**
      * Xem thông tin ví của buyer
@@ -600,83 +273,12 @@ export const buyerApi = {
             throw error;
         }
     },
-
-    /**
-     * Nạp tiền vào ví
-     * POST /api/wallets/deposit
-     * @param {number} amount - Số tiền nạp
-     * @param {string} paymentMethodId - ID phương thức thanh toán
-     * @returns {Promise} Wallet đã cập nhật
-     */
-    depositFunds: async (amount, paymentMethodId) => {
-        try {
-            const response = await axiosInstance.post('/api/wallets/deposit', {
-                amount,
-                paymentMethodId
-            });
-            return response.data;
-        } catch (error) {
-            console.error('❌ Lỗi khi nạp tiền:', error);
-            throw error;
-        }
-    },
-
-    /**
-     * Rút tiền từ ví
-     * POST /api/wallets/withdraw
-     * @param {number} amount - Số tiền rút
-     * @param {string} bankAccountInfo - Thông tin tài khoản ngân hàng
-     * @returns {Promise} Wallet đã cập nhật
-     */
-    withdrawFunds: async (amount, bankAccountInfo) => {
-        try {
-            const response = await axiosInstance.post('/api/wallets/withdraw', {
-                amount,
-                bankAccountInfo
-            });
-            return response.data;
-        } catch (error) {
-            console.error('❌ Lỗi khi rút tiền:', error);
-            throw error;
-        }
-    },
-
-    /**
-     * Xem lịch sử giao dịch ví
-     * GET /api/wallets/transactions
-     * @param {number} page - Số trang (default: 0)
-     * @param {number} size - Kích thước trang (default: 10)
-     * @returns {Promise} Page object với lịch sử giao dịch ví
-     */
-    getWalletTransactions: async (page = 0, size = 10) => {
-        try {
-            const response = await axiosInstance.get('/api/wallets/transactions', {
-                params: { page, size }
-            });
-            return response.data;
-        } catch (error) {
-            console.error('❌ Lỗi khi lấy lịch sử giao dịch ví:', error);
-            throw error;
-        }
-    },
-
-    // ==================== DISPUTE MANAGEMENT ====================
+// ==================== DISPUTE MANAGEMENT ====================
 
     // ==================== RETIREMENT & CERTIFICATE OPERATIONS ====================
 
     /**
-     * 🌿 Khởi tạo retirement (loại bỏ carbon credits vĩnh viễn)
-     * POST /api/retirement/initiate
-     * 
-     * Flow đầy đủ theo backend:
-     * 1. Validate user là BUYER
-     * 2. Kiểm tra wallet credit balance
-     * 3. Trừ ngay credits từ wallet
-     * 4. Chọn và đánh dấu CarbonCredit entities là RETIRED (FIFO)
-     * 5. Tạo RetirementTransaction (status: COMPLETED)
-     * 6. Tạo Certificate (status: PENDING_GENERATION)
-     * 7. Gửi notification
-     * 8. Trigger async PDF generation
+
      * 
      * @param {Object} retirementData - Dữ liệu retirement
      * @param {string} retirementData.userId - UUID của buyer
@@ -717,30 +319,6 @@ export const buyerApi = {
             throw error;
         }
     },
-
-    /**
-     * 📄 Lấy chi tiết retirement transaction
-     * GET /api/retirement/{retirementId}
-     * @param {string} retirementId - UUID của retirement transaction
-     * @returns {Promise<RetirementTransaction>} Chi tiết retirement transaction
-     */
-    getRetirementDetails: async (retirementId) => {
-        try {
-            console.log('📄 Fetching retirement details:', retirementId);
-            const response = await axiosInstance.get(`/api/retirement/${retirementId}`);
-            console.log('✅ Retirement details:', response.data);
-            return response.data;
-        } catch (error) {
-            console.error(`❌ Lỗi khi lấy chi tiết retirement ${retirementId}:`, error);
-            
-            if (error.response?.status === 404) {
-                throw new Error('Retirement transaction not found.');
-            }
-            
-            throw error;
-        }
-    },
-
     /**
      * 📋 Lấy lịch sử retirement của user
      * GET /api/retirement/user/{userId}
@@ -785,29 +363,6 @@ export const buyerApi = {
             throw error;
         }
     },
-
-    /**
-     * 📚 Lấy tất cả certificates của user
-     * GET /api/retirement/certificates/user/{userId}
-     * @param {string} userId - UUID của user
-     * @param {number} page - Số trang (default: 0)
-     * @param {number} size - Kích thước trang (default: 10)
-     * @returns {Promise} Page object với danh sách certificates
-     */
-    getUserCertificates: async (userId, page = 0, size = 10) => {
-        try {
-            console.log('📚 Fetching certificates for user:', userId);
-            const response = await axiosInstance.get(`/api/retirement/certificates/user/${userId}`, {
-                params: { page, size }
-            });
-            console.log(`✅ Found ${response.data.totalElements} certificates`);
-            return response.data;
-        } catch (error) {
-            console.error(`❌ Lỗi khi lấy certificates của user ${userId}:`, error);
-            throw error;
-        }
-    },
-
     /**
      * 📥 Lấy download URL cho certificate PDF
      * GET /api/retirement/{retirementId}/certificate/download
@@ -837,27 +392,7 @@ export const buyerApi = {
             throw error;
         }
     },
-
-    /**
-     * 📊 Lấy thống kê retirement của user
-     * GET /api/retirement/statistics/{userId}
-     * 
-     * @param {string} userId - UUID của user
-     * @returns {Promise<Object>} { totalRetired, completedCount, totalCount }
-     */
-    getRetirementStatistics: async (userId) => {
-        try {
-            console.log('📊 Fetching retirement statistics for user:', userId);
-            const response = await axiosInstance.get(`/api/retirement/statistics/${userId}`);
-            console.log('✅ Retirement stats:', response.data);
-            return response.data;
-        } catch (error) {
-            console.error(`❌ Lỗi khi lấy thống kê retirement của user ${userId}:`, error);
-            throw error;
-        }
-    },
-
-    // ==================== DISPUTE MANAGEMENT ====================
+// ==================== DISPUTE MANAGEMENT ====================
 
     /**
      * Tạo khiếu nại cho giao dịch

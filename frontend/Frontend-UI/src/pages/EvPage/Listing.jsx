@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Store, Leaf, DollarSign, TrendingUp, AlertCircle, CheckCircle, ArrowRight, MapPin } from 'lucide-react';
+import { Leaf, AlertCircle, CheckCircle } from 'lucide-react';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import EvOwnerAPI from '../../api/EvOwnerAPI';
 import Navbar from '../../Components/EVComponents/Navbar';
 import Footer from '../../Components/Footer';
+import { getValidToken } from '../../utils/tokenUtils';
 import { VIETNAM_PROVINCES } from '../../utils/vietnamProvinces';
 
 
@@ -237,8 +240,6 @@ const CreateListingPage = () => {
 
       console.log('✅ Combined listing created successfully:', response.data);
 
-      alert(`✅ Successfully created combined listing!\n${totalCreditsToSell} credits at $${priceValue} per credit\nTotal value: $${(totalCreditsToSell * priceValue).toFixed(2)}`);
-
       // Reset form
       setSelectedCredits([]);
       setPricePerCredit('');
@@ -249,12 +250,11 @@ const CreateListingPage = () => {
       await fetchWalletData();
       await fetchCarbonCredits();
       
-      // Navigate to EV dashboard marketplace instead of buyer marketplace
+      // Navigate to EV dashboard marketplace with success toast
       navigate('/ev-dashboard', {
         state: {
-          message: `Successfully created combined listing with ${totalCreditsToSell} credits!`,
-          newListing: true,
-          tab: 'marketplace' // Hint to show marketplace tab
+          showSuccessToast: true,
+          message: `Successfully created listing with ${totalCreditsToSell} credits at $${priceValue} per credit! Total value: $${(totalCreditsToSell * priceValue).toFixed(2)}`
         }
       });
 
@@ -265,7 +265,7 @@ const CreateListingPage = () => {
         response: error.response?.data,
         status: error.response?.status
       });
-      alert(`Failed to create combined listing: ${error.response?.data?.message || error.message}`);
+      toast.error(`Failed to create listing: ${error.response?.data?.message || error.message}`);
     } finally {
       setSubmitting(false);
     }
@@ -365,7 +365,6 @@ const CreateListingPage = () => {
               <div className="space-y-2 max-h-96 overflow-y-auto border border-gray-200 rounded-lg p-3">
                 {carbonCredits.map((credit) => {
                   const creditId = credit.id || credit.creditId;
-                  const journeyId = credit.journeyId || credit.journey_id || 'N/A';
                   const creditAmount = credit.creditAmount || credit.credit_amount || 0;
                   const co2Reduced = credit.co2ReducedKg || credit.co2_reduced_kg || 0;
                   const isSelected = selectedCredits.includes(creditId);
@@ -398,9 +397,7 @@ const CreateListingPage = () => {
                             <p className="text-sm font-medium text-gray-900">
                               #{creditId.substring(0, 8)}
                             </p>
-                            <p className="text-xs text-gray-500">
-                              {journeyId.toString().substring(0, 8)}
-                            </p>
+                            
                           </div>
                         </div>
                         <div className="text-right">

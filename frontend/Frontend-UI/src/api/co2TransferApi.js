@@ -42,23 +42,4 @@ export const co2TransferApi = {
     getMyTransferRequests: () => {
         return handleRequest(axiosInstance.get('/api/co2-transfer/my-requests'));
     },
-
-    /**
-     * Get transfer request statistics for the current user
-     * GET /api/co2-transfer/stats
-     * @returns {Promise<object>} - Transfer statistics
-     */
-    getTransferRequestStats: () => {
-        return handleRequest(axiosInstance.get('/api/co2-transfer/stats'));
-    },
-
-    /**
-     * Cancel a pending transfer request (if implemented in backend)
-     * DELETE /api/co2-transfer/{requestId}
-     * @param {string} requestId - Transfer request ID
-     * @returns {Promise<string>} - Cancellation confirmation
-     */
-    cancelTransferRequest: (requestId) => {
-        return handleRequest(axiosInstance.delete(`/api/co2-transfer/${requestId}`));
-    },
 };

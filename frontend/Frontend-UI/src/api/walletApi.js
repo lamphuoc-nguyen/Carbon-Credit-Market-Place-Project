@@ -14,21 +14,6 @@ export const walletApi = {
         const response = await axiosInstance.get('/api/wallets/my-wallet');
         return response.data; // Trả về WalletResponse
     },
-
-    /**
-     * Kiểm tra số dư (tiền mặt hoặc credit) có đủ không
-     * GET /api/wallets/balance-check
-     * @param {number | string} amount - Số tiền cần kiểm tra
-     * @param {'CASH' | 'CREDIT'} [balanceType='CASH'] - Loại số dư
-     * @returns {Promise<boolean>} True nếu đủ, False nếu không đủ
-     */
-    checkSufficientBalance: async (amount, balanceType = 'CASH') => {
-        const response = await axiosInstance.get('/api/wallets/balance-check', {
-            params: { amount, balanceType }
-        });
-        return response.data; // Trả về boolean
-    },
-
     /**
      * Nạp tiền vào ví (từ ngân hàng)
      * POST /api/wallets/deposit
@@ -44,23 +29,6 @@ export const walletApi = {
         const response = await axiosInstance.post('/api/wallets/deposit', depositData);
         return response.data; // Trả về WalletResponse
     },
-
-    /**
-     * Rút tiền từ ví (về ngân hàng)
-     * POST /api/wallets/withdraw
-     * @param {object} withdrawData - Dữ liệu rút tiền (WithdrawRequest)
-     * @param {number | string} withdrawData.amount - Số tiền
-     * @param {string} withdrawData.bankAccountInfo - Thông tin tài khoản ngân hàng
-     * @returns {Promise<WalletResponse>} Dữ liệu ví đã cập nhật
-     */
-    withdrawFunds: async (withdrawData) => {
-        if (!withdrawData || withdrawData.amount === undefined || !withdrawData.bankAccountInfo) {
-            throw new Error('Amount and bankAccountInfo are required for withdrawal.');
-        }
-        const response = await axiosInstance.post('/api/wallets/withdraw', withdrawData);
-        return response.data; // Trả về WalletResponse
-    },
-
     /**
      * Lấy lịch sử giao dịch của ví (từ TransactionService)
      * GET /api/wallets/transactions
@@ -161,32 +129,5 @@ export const walletApi = {
         const walletData = wallet.data || wallet;
 
         return walletData?.co2PendingTransfer || 0; // Defaults to 0 if field doesn't exist
-    },
-
-    /**
-     * Lấy tổng số dư CO2 (bao gồm cả đang khóa)
-     */
-    getTotalCo2Balance: async () => {
-        const response = await axiosInstance.get('/api/wallets/my-wallet');
-        const wallet = response.data;
-
-        // Handle different response structures
-        const walletData = wallet.data || wallet;
-
-        return walletData?.co2ReducedKg || 0;
-    },
-
-    /**
-     * Kiểm tra xem có đủ CO2 để tạo yêu cầu chuyển đổi không
-     * @param {number} amount - Số lượng CO2 cần kiểm tra (kg)
-     * @returns {Promise<boolean>}
-     */
-    checkSufficientCo2: async (amount) => {
-        const response = await axiosInstance.get('/api/wallets/my-wallet');
-        const wallet = response.data;
-        const total = wallet.data?.co2ReducedKg || 0;
-        const pending = wallet.data?.co2PendingTransfer || 0;
-        const availableCo2 = total - pending;
-        return availableCo2 >= amount;
     },
 };

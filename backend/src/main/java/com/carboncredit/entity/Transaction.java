@@ -64,14 +64,11 @@ public class Transaction {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
-//    @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-//    private List<Certificate> certificates;
-
     @OneToMany(mappedBy = "transaction", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Dispute> disputes;
 
     public enum TransactionStatus {
-        PENDING, COMPLETED, CANCELLED, DISPUTED
+        PENDING, PROCESSING, COMPLETED, CANCELLED, DISPUTED
     }
     public enum PaymentMethod {
         CREDIT_CARD,

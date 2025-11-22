@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     ArrowRightLeft, Calendar, CheckCircle, XCircle, Clock,
     Leaf, TrendingUp, Eye
 } from 'lucide-react';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { cvaApi } from '../../api/cvaApi';
 
 const TransferRequestManagement = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [loading, setLoading] = useState(true);
     const [pendingRequests, setPendingRequests] = useState([]);
     const [statistics, setStatistics] = useState({});
@@ -15,6 +18,14 @@ const TransferRequestManagement = () => {
     useEffect(() => {
         fetchData();
     }, []);
+
+    useEffect(() => {
+        if (location.state?.successMessage) {
+            toast.success(location.state.successMessage);
+            // Clear the state to prevent showing toast on refresh
+            navigate(location.pathname, { replace: true, state: {} });
+        }
+    }, [location, navigate]);
 
     const fetchData = async () => {
         try {
@@ -43,6 +54,17 @@ const TransferRequestManagement = () => {
 
     return (
         <div className="space-y-6">
+            <ToastContainer
+                position="bottom-right"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+            />
             {/* Header Stats (Giữ nguyên như cũ) */}
             <div className="bg-white rounded-lg shadow-sm border p-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">CO2 Transfer Requests</h2>

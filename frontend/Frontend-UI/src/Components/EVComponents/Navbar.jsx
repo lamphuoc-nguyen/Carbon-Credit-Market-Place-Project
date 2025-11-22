@@ -13,7 +13,7 @@ import {
   X,
   ChevronDown,
   ClipboardMinus,
-  List
+  List, Package
 } from 'lucide-react'
 import userDataFetcher from '../../api/userDataFetcher'
 import NotificationButton from '../NotificationButton' // Add notification button
@@ -194,6 +194,14 @@ function Navbar() {
                     <List size={16} />
                     Listing
                   </Link>
+                    <Link
+                        to="/ev-dashboard/my-listings"
+                        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                    >
+                        <Package size={16} /> {/* Import icon Package từ lucide-react */}
+                        My Listings
+                    </Link>
                   <Link
                     to="/ev-dashboard/report"
                     className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
