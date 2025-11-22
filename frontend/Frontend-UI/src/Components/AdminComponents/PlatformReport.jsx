@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { transactionApi } from '../../api/transactionApi';
+import { creditListingApi } from '../../api/creditListingApi';
 import { userApi } from '../../api/userApi';
 import {
     Download,
@@ -8,9 +9,14 @@ import {
     Database,
     FileText,
     Users,
-    Loader2
+    Loader2,
+    FileSpreadsheet,
+    FileCode,
+    Activity
 } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // --- Helper Components ---
 
@@ -88,9 +94,12 @@ const PlatformReport = () => {
     // State cho số liệu
     const [stats, setStats] = useState(null);
     const [userStats, setUserStats] = useState({ totalUsers: 0, chartData: [] });
+    const [listingStats, setListingStats] = useState(null);
+    
 
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [isExporting, setIsExporting] = useState(false);
 
     // State cho Date Picker (định dạng 'YYYY-MM-DD' cho input)
     const [startDate, setStartDate] = useState(() => {
@@ -115,13 +124,14 @@ const PlatformReport = () => {
 
         try {
             // Gọi API song song
-            const [statsResponse, usersResponse] = await Promise.all([
+            const [statsResponse, usersResponse, listingsResponse] = await Promise.all([
                 // ✅ SỬA LỖI 400: Áp dụng .slice(0, -5) để xóa múi giờ (chữ Z)
                 transactionApi.getTransactionStatistics(
                     fullStartDate.toISOString().slice(0, -5),
                     fullEndDate.toISOString().slice(0, -5)
                 ),
-                userApi.getAllUsers()
+                userApi.getAllUsers(),
+                creditListingApi.getMarketplaceStats().catch(() => null)
             ]);
 
             // Xử lý Transaction Stats
@@ -134,8 +144,16 @@ const PlatformReport = () => {
                 totalRevenue: revenue,
                 totalCreditsTraded: credits,
                 totalTransactions: transactions,
-                avgPrice: avgPrice
+                avgPrice: avgPrice,
+                completedTransactions: statsResponse.completedTransactions || 0,
+                pendingTransactions: statsResponse.pendingTransactions || 0,
+                cancelledTransactions: statsResponse.cancelledTransactions || 0,
+                successRate: statsResponse.successRate || 0,
+                disputeRate: statsResponse.disputeRate || 0
             });
+
+            // Lưu listing stats
+            setListingStats(listingsResponse);
 
             // Xử lý User Stats
             const roleCounts = usersResponse.reduce((acc, user) => {
@@ -184,12 +202,231 @@ const PlatformReport = () => {
     };
 
     /**
-     * Placeholder cho chức năng xuất CSV
+     * Xuất báo cáo CSV
      */
     const handleExportCSV = () => {
-        console.log("Exporting data:", { stats, userStats });
-        alert("Chức năng xuất CSV đang được phát triển. Dữ liệu đã được log ra console.");
+        if (!stats || !userStats) {
+            toast.error('No data available to export');
+            return;
+        }
+
+        setIsExporting(true);
+        try {
+            // Tạo CSV content
+            const csvContent = generateCSVReport();
+
+            // Download file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', `Carbon_Credit_Report_${startDate}_to_${endDate}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            toast.success('CSV report exported successfully!');
+        } catch (error) {
+            console.error('Export error:', error);
+            toast.error('Failed to export CSV report');
+        } finally {
+            setIsExporting(false);
+        }
     };
+
+    /**
+     * Xuất báo cáo Excel (HTML table format)
+     */
+    const handleExportExcel = () => {
+        if (!stats || !userStats) {
+            toast.error('No data available to export');
+            return;
+        }
+
+        setIsExporting(true);
+        try {
+            const excelContent = generateExcelReport();
+
+            const blob = new Blob([excelContent], { type: 'application/vnd.ms-excel' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', `Carbon_Credit_Report_${startDate}_to_${endDate}.xls`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            toast.success('Excel report exported successfully!');
+        } catch (error) {
+            console.error('Export error:', error);
+            toast.error('Failed to export Excel report');
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    /**
+     * Xuất báo cáo JSON
+     */
+    const handleExportJSON = () => {
+        if (!stats || !userStats) {
+            toast.error('No data available to export');
+            return;
+        }
+
+        setIsExporting(true);
+        try {
+            const reportData = {
+                reportInfo: {
+                    generatedAt: new Date().toISOString(),
+                    reportPeriod: {
+                        startDate,
+                        endDate
+                    },
+                    platform: 'Carbon Credit Marketplace'
+                },
+                transactionMetrics: stats,
+                userStatistics: userStats,
+                listingStatistics: listingStats
+            };
+
+            const jsonContent = JSON.stringify(reportData, null, 2);
+
+            const blob = new Blob([jsonContent], { type: 'application/json' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+
+            link.setAttribute('href', url);
+            link.setAttribute('download', `Carbon_Credit_Report_${startDate}_to_${endDate}.json`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            toast.success('JSON report exported successfully!');
+        } catch (error) {
+            console.error('Export error:', error);
+            toast.error('Failed to export JSON report');
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    /**
+     * Tạo nội dung CSV
+     */
+    const generateCSVReport = () => {
+        const lines = [];
+
+        // Header
+        lines.push('CARBON CREDIT MARKETPLACE - COMPREHENSIVE TRANSACTION REPORT');
+        lines.push(`Report Period:,${startDate},to,${endDate}`);
+        lines.push(`Generated:,${new Date().toLocaleString()}`);
+        lines.push('');
+
+        // Transaction Metrics
+        lines.push('TRANSACTION METRICS');
+        lines.push('Metric,Value');
+        lines.push(`Total Revenue,${formatCurrency(stats.totalRevenue)}`);
+        lines.push(`Total Credits Traded,${formatNumber(stats.totalCreditsTraded)} tCO2e`);
+        lines.push(`Total Transactions,${formatNumber(stats.totalTransactions)}`);
+        lines.push(`Completed Transactions,${formatNumber(stats.completedTransactions)}`);
+        lines.push(`Pending Transactions,${formatNumber(stats.pendingTransactions)}`);
+        lines.push(`Cancelled Transactions,${formatNumber(stats.cancelledTransactions)}`);
+        lines.push(`Average Price per Credit,${formatCurrency(stats.avgPrice)}`);
+        lines.push(`Success Rate,${stats.successRate}%`);
+        lines.push(`Dispute Rate,${stats.disputeRate}%`);
+        lines.push('');
+
+        // User Statistics
+        lines.push('USER STATISTICS');
+        lines.push('Category,Count');
+        lines.push(`Total Users,${formatNumber(userStats.totalUsers)}`);
+        userStats.chartData.forEach(item => {
+            lines.push(`${item.name},${formatNumber(item.value)}`);
+        });
+        lines.push('');
+
+        // Listing Statistics (if available)
+        if (listingStats) {
+            lines.push('LISTING STATISTICS');
+            lines.push('Metric,Value');
+            lines.push(`Total Listings,${formatNumber(listingStats.totalListings || 0)}`);
+            lines.push(`Active Listings,${formatNumber(listingStats.activeListings || 0)}`);
+            lines.push(`Sold Listings,${formatNumber(listingStats.soldListings || 0)}`);
+            lines.push(`Average Listing Price,${formatCurrency(listingStats.averagePrice || 0)}`);
+        }
+
+        return lines.join('\n');
+    };
+
+    /**
+     * Tạo nội dung Excel (HTML format)
+     */
+    const generateExcelReport = () => {
+        return `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    table { border-collapse: collapse; width: 100%; }
+                    th, td { border: 1px solid black; padding: 8px; text-align: left; }
+                    th { background-color: #4CAF50; color: white; font-weight: bold; }
+                    .header { font-size: 18px; font-weight: bold; margin-bottom: 10px; }
+                    .section-title { background-color: #2196F3; color: white; font-weight: bold; }
+                </style>
+            </head>
+            <body>
+                <div class="header">CARBON CREDIT MARKETPLACE - COMPREHENSIVE TRANSACTION REPORT</div>
+                <p><strong>Report Period:</strong> ${startDate} to ${endDate}</p>
+                <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+                
+                <h3>Transaction Metrics</h3>
+                <table>
+                    <tr><th>Metric</th><th>Value</th></tr>
+                    <tr><td>Total Revenue</td><td>${formatCurrency(stats.totalRevenue)}</td></tr>
+                    <tr><td>Total Credits Traded</td><td>${formatNumber(stats.totalCreditsTraded)} tCO2e</td></tr>
+                    <tr><td>Total Transactions</td><td>${formatNumber(stats.totalTransactions)}</td></tr>
+                    <tr><td>Completed Transactions</td><td>${formatNumber(stats.completedTransactions)}</td></tr>
+                    <tr><td>Pending Transactions</td><td>${formatNumber(stats.pendingTransactions)}</td></tr>
+                    <tr><td>Cancelled Transactions</td><td>${formatNumber(stats.cancelledTransactions)}</td></tr>
+                    <tr><td>Average Price per Credit</td><td>${formatCurrency(stats.avgPrice)}</td></tr>
+                    <tr><td>Success Rate</td><td>${stats.successRate}%</td></tr>
+                    <tr><td>Dispute Rate</td><td>${stats.disputeRate}%</td></tr>
+                </table>
+                
+                <h3>User Statistics</h3>
+                <table>
+                    <tr><th>Category</th><th>Count</th></tr>
+                    <tr><td>Total Users</td><td>${formatNumber(userStats.totalUsers)}</td></tr>
+                    ${userStats.chartData.map(item =>
+            `<tr><td>${item.name}</td><td>${formatNumber(item.value)}</td></tr>`
+        ).join('')}
+                </table>
+                
+                ${listingStats ? `
+                    <h3>Listing Statistics</h3>
+                    <table>
+                        <tr><th>Metric</th><th>Value</th></tr>
+                        <tr><td>Total Listings</td><td>${formatNumber(listingStats.totalListings || 0)}</td></tr>
+                        <tr><td>Active Listings</td><td>${formatNumber(listingStats.activeListings || 0)}</td></tr>
+                        <tr><td>Sold Listings</td><td>${formatNumber(listingStats.soldListings || 0)}</td></tr>
+                        <tr><td>Average Listing Price</td><td>${formatCurrency(listingStats.averagePrice || 0)}</td></tr>
+                    </table>
+                ` : ''}
+            </body>
+            </html>
+        `;
+    };
+
+    /**
+     * Placeholder cho chức năng xuất CSV - DEPRECATED
+     */
+  
 
     // Helper định dạng
     const formatCurrency = (val) => `$${(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -235,15 +472,36 @@ const PlatformReport = () => {
                         </button>
                     </div>
                 </div>
-                {/* Export Button */}
-                <button
-                    onClick={handleExportCSV}
-                    disabled={isLoading}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:bg-gray-400"
-                >
-                    <Download className="h-4 w-4" />
-                    Export Report (CSV)
-                </button>
+                {/* Export Buttons */}
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={handleExportCSV}
+                        disabled={isLoading || isExporting}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        title="Export as CSV"
+                    >
+                        <FileText className="h-4 w-4" />
+                        CSV
+                    </button>
+                    <button
+                        onClick={handleExportExcel}
+                        disabled={isLoading || isExporting}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        title="Export as Excel"
+                    >
+                        <FileSpreadsheet className="h-4 w-4" />
+                        Excel
+                    </button>
+                    <button
+                        onClick={handleExportJSON}
+                        disabled={isLoading || isExporting}
+                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        title="Export as JSON"
+                    >
+                        <FileCode className="h-4 w-4" />
+                        JSON
+                    </button>
+                </div>
             </div>
 
             {/* Báo cáo lỗi chung */}
@@ -307,6 +565,57 @@ const PlatformReport = () => {
                     </div>
                 </div>
             </div>
+
+            {/* --- Section 3: Listing Statistics --- */}
+            {listingStats && (
+                <div>
+                    <h2 className="text-xl font-semibold text-gray-800 mb-4">Marketplace Listing Statistics</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <StatCard
+                            title="Total Listings"
+                            value={formatNumber(listingStats.totalListings || 0)}
+                            icon={Activity}
+                            note="All time"
+                            isLoading={isLoading}
+                        />
+                        <StatCard
+                            title="Active Listings"
+                            value={formatNumber(listingStats.activeListings || 0)}
+                            icon={FileText}
+                            note="Currently available"
+                            isLoading={isLoading}
+                        />
+                        <StatCard
+                            title="Sold Listings"
+                            value={formatNumber(listingStats.soldListings || 0)}
+                            icon={Download}
+                            note="Completed sales"
+                            isLoading={isLoading}
+                        />
+                        <StatCard
+                            title="Avg. Listing Price"
+                            value={formatCurrency(listingStats.averagePrice || 0)}
+                            icon={DollarSign}
+                            note="Per listing"
+                            isLoading={isLoading}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Toast Notifications */}
+            <ToastContainer
+                position="bottom-right"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="light"
+            />
 
         </div>
     );

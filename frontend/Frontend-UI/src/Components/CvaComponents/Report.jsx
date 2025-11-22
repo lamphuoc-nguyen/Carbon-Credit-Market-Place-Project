@@ -27,6 +27,7 @@ import {
     Download,
     User,
     Car,
+    Leaf
 } from 'lucide-react';
 
 const Report = () => {
@@ -59,11 +60,30 @@ const Report = () => {
             // Fetch additional statistics in parallel
             try {
                 const [users, vehicles, credits, pendingCredits] = await Promise.all([
-                    userApi.getAllUsers().catch(() => []),
-                    vehicleApi.getAllVehicles().catch(() => []),
-                    cvaApi.getVerifiedCredits().catch(() => []),
-                    carbonCreditApi.getPendingCredits().catch(() => [])
+                    userApi.getAllUsers().catch(err => {
+                        console.warn('Failed to fetch users (may require admin permission):', err);
+                        return [];
+                    }),
+                    vehicleApi.getAllVehicles().catch(err => {
+                        console.warn('Failed to fetch vehicles:', err);
+                        return [];
+                    }),
+                    cvaApi.getVerifiedCredits().catch(err => {
+                        console.warn('Failed to fetch verified credits:', err);
+                        return [];
+                    }),
+                    carbonCreditApi.getPendingCredits().catch(err => {
+                        console.warn('Failed to fetch pending credits:', err);
+                        return [];
+                    })
                 ]);
+
+                console.log('Additional Stats Raw Data:', {
+                    users: Array.isArray(users) ? `Array(${users.length})` : users,
+                    vehicles: Array.isArray(vehicles) ? `Array(${vehicles.length})` : vehicles,
+                    credits: Array.isArray(credits) ? `Array(${credits.length})` : credits,
+                    pendingCredits: Array.isArray(pendingCredits) ? `Array(${pendingCredits.length})` : pendingCredits
+                });
 
                 setAdditionalStats({
                     totalUsers: Array.isArray(users) ? users.length : 0,
@@ -71,8 +91,15 @@ const Report = () => {
                     totalCreditsIssued: Array.isArray(credits) ? credits.length : 0,
                     pendingCredits: Array.isArray(pendingCredits) ? pendingCredits.length : 0
                 });
+
+                console.log('Additional Stats Set:', {
+                    totalUsers: Array.isArray(users) ? users.length : 0,
+                    totalVehicles: Array.isArray(vehicles) ? vehicles.length : 0,
+                    totalCreditsIssued: Array.isArray(credits) ? credits.length : 0,
+                    pendingCredits: Array.isArray(pendingCredits) ? pendingCredits.length : 0
+                });
             } catch (additionalErr) {
-                console.warn('Could not fetch additional statistics:', additionalErr);
+                console.error('Could not fetch additional statistics:', additionalErr);
                 // Continue with main stats even if additional stats fail
             }
         } catch (err) {
@@ -393,7 +420,7 @@ const Report = () => {
                 </div>
 
                 {/* Metrics Section - Style đơn giản */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                     {/* Approval Rate - Circular Progress */}
                     <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                         <div className="flex items-center justify-between mb-6">
@@ -484,42 +511,6 @@ const Report = () => {
                         </div>
                         <p className="text-sm text-gray-500 mt-4">Based on approval rate</p>
                     </div>
-
-                    {/* Quick Actions - Card đơn giản */}
-                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                        <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
-                            <Sparkles className="h-5 w-5 text-yellow-500" />
-                            Quick Actions
-                        </h3>
-                        <div className="space-y-4">
-                            <button
-                                onClick={() => navigate('/cva/pending')}
-                                className="w-full bg-amber-100 hover:bg-amber-200 text-amber-800 font-semibold py-4 px-5 rounded-xl transition-all duration-300"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <Clock className="h-5 w-5" />
-                                        <span>View Pending</span>
-                                    </div>
-                                    <span className="bg-amber-200 text-amber-800 px-3 py-1 rounded-full text-sm font-bold">
-                                        {stats.pendingTransfers ?? 0}
-                                    </span>
-                                </div>
-                            </button>
-                            <button
-                                onClick={() => navigate('/cva/verified')}
-                                className="w-full bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-semibold py-4 px-5 rounded-xl transition-all duration-300"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <CheckCircle className="h-5 w-5" />
-                                        <span>View History</span>
-                                    </div>
-                                    <ArrowUp className="h-5 w-5" />
-                                </div>
-                            </button>
-                        </div>
-                    </div>
                 </div>
 
                 {/* Performance Summary - Bento Grid đơn giản */}
@@ -586,17 +577,18 @@ const Report = () => {
                         </h2>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4 border border-purple-200">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-4 border border-emerald-200">
                             <div className="flex items-center gap-2 mb-2">
-                                <User className="h-5 w-5 text-purple-600" />
-                                <p className="text-sm text-purple-700 font-semibold">
-                                    Total Users
+                                <Leaf className="h-5 w-5 text-emerald-600" />
+                                <p className="text-sm text-emerald-700 font-semibold">
+                                    CO₂ Reduced
                                 </p>
                             </div>
-                            <p className="text-3xl font-bold text-purple-900">
-                                {additionalStats.totalUsers}
+                            <p className="text-3xl font-bold text-emerald-900">
+                                {((additionalStats.totalCreditsIssued || 0) * 1.5).toFixed(1)}
                             </p>
+                            <p className="text-xs text-emerald-600 mt-1">tons</p>
                         </div>
                         <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-xl p-4 border border-cyan-200">
                             <div className="flex items-center gap-2 mb-2">
@@ -618,17 +610,6 @@ const Report = () => {
                             </div>
                             <p className="text-3xl font-bold text-green-900">
                                 {additionalStats.totalCreditsIssued}
-                            </p>
-                        </div>
-                        <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Clock className="h-5 w-5 text-orange-600" />
-                                <p className="text-sm text-orange-700 font-semibold">
-                                    Pending Credits
-                                </p>
-                            </div>
-                            <p className="text-3xl font-bold text-orange-900">
-                                {additionalStats.pendingCredits}
                             </p>
                         </div>
                     </div>

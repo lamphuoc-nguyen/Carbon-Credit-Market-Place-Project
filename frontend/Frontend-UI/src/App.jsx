@@ -38,14 +38,37 @@ import UserManagement from './Components/AdminComponents/UserManagement';
 import Transactions from './Components/AdminComponents/Transactions';
 import WalletManagement from './Components/AdminComponents/WalletManagement';
 import PlatformReport from './Components/AdminComponents/PlatformReport';
+import CreditListings from './Components/AdminComponents/CreditListing';
 import Detail from './pages/EvPage/Detail';
 import DashboardPage from './pages/BuyerPage/DashboardPage';
 import TransferRequestDetailPage from './pages/CvaPage/TransferRequestDetailPage';
 import PaymentFailedPage from './Pages/BuyerPage/PaymentFailedPage';
 import MyListingsPage from './Pages/EvPage/MyListing'; // ✅ Đã sửa đường dẫn import đúng tên file (MyListing.jsx)
 
+import ChatbotWidget from './AIcomponents/ChatbotWidget'
+
 function App() {
     const location = useLocation();
+
+    // Kiểm tra user role để hiển thị ChatbotWidget
+    const getUserRole = () => {
+        try {
+            const userStr = localStorage.getItem('user') || sessionStorage.getItem('user');
+            if (userStr) {
+                const user = JSON.parse(userStr);
+                return user.role || null;
+            }
+        } catch (error) {
+            console.error('Error parsing user data:', error);
+        }
+        return null;
+    };
+
+    const userRole = getUserRole();
+    const showChatbot = userRole === 'EV_OWNER' || userRole === 'BUYER';
+
+    // Debug logging
+    console.log('🔍 Chatbot Debug:', { userRole, showChatbot });
 
     // Hide Navbar & Footer for specific pages
     const hideLayout = location.pathname === '/cva' ||
@@ -209,10 +232,14 @@ function App() {
                     <Route path="transactions" element={<Transactions />} />
                     <Route path="wallets-cash-flow" element={<WalletManagement />} />
                     <Route path="platform-reports" element={<PlatformReport />} />
+                    <Route path="credit-listings" element={<CreditListings />} />
                 </Route>
             </Routes>
 
             {!hideLayout && <Footer />}
+
+            {/* Hiển thị ChatbotWidget chỉ cho EV_OWNER và BUYER */}
+            {showChatbot && <ChatbotWidget />}
         </>
     );
 }
