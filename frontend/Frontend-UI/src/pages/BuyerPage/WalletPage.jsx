@@ -57,6 +57,7 @@ const WalletPage = () => {
 
         if (!token) {
             console.warn('⚠️ No token found - user not logged in');
+            toast.error('Please log in to access your wallet');
             setLoading(false);
             setError('NOT_LOGGED_IN');
             return;
@@ -80,6 +81,7 @@ const WalletPage = () => {
                 console.log('✅ Transactions loaded:', transactionsData.content?.length || 0);
             } catch (txError) {
                 console.error('⚠️ Failed to load transactions:', txError);
+                toast.warn('Some transaction data could not be loaded');
                 setTransactions([]);
             }
 
@@ -88,10 +90,13 @@ const WalletPage = () => {
 
             if (err.response?.status === 401) {
                 setError('AUTHENTICATION_FAILED');
+                toast.error('Your session has expired. Please log in again.');
             } else if (err.response?.status === 404) {
                 setError('WALLET_NOT_FOUND');
+                toast.error('Wallet not found. Please contact support.');
             } else {
                 setError('FETCH_ERROR');
+                toast.error('Failed to load wallet data. Please try again.');
             }
         } finally {
             setLoading(false);
@@ -100,12 +105,18 @@ const WalletPage = () => {
 
     const handleRefresh = async () => {
         setRefreshing(true);
-        await fetchWalletData();
+        try {
+            await fetchWalletData();
+            toast.success('Wallet data refreshed successfully!');
+        } catch (error) {
+            toast.error('Failed to refresh wallet data');
+        }
         setRefreshing(false);
     };
 
     const handleRetirementSuccess = async (response) => {
         console.log('✅ Retirement completed:', response);
+        toast.success('Credits retired successfully! Thank you for your environmental contribution.');
         // Refresh wallet data to update balances
         await fetchWalletData();
     };
@@ -252,12 +263,16 @@ const WalletPage = () => {
                 position="bottom-right"
                 autoClose={3000}
                 hideProgressBar={false}
-                newestOnTop={false}
+                newestOnTop={true}
                 closeOnClick
                 rtl={false}
                 pauseOnFocusLoss
                 draggable
                 pauseOnHover
+                theme="light"
+                toastClassName="!bg-white !text-gray-800 !rounded-lg !shadow-lg !border !border-gray-200"
+                bodyClassName="!text-sm !font-medium"
+                progressClassName="!bg-green-500"
                 style={{ zIndex: 9999 }}
             />
 
@@ -296,7 +311,13 @@ const WalletPage = () => {
                                 </div>
                             </div>
                             <button
-                                onClick={() => setShowBalance(!showBalance)}
+                                onClick={() => {
+                                    setShowBalance(!showBalance);
+                                    toast.info(showBalance ? 'Balance hidden for privacy' : 'Balance now visible', {
+                                        autoClose: 1500,
+                                        hideProgressBar: true
+                                    });
+                                }}
                                 className="p-1 hover:bg-gray-100 rounded transition-colors"
                             >
                                 {showBalance ? <Eye className="w-4 h-4 text-gray-600" /> : <EyeOff className="w-4 h-4 text-gray-600" />}
