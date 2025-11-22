@@ -286,6 +286,27 @@ function JourneyList() {
             </div>
           </div>
 
+          {/* No Vehicle Warning */}
+          {!loading && vehicles.length === 0 && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="text-yellow-600 flex-shrink-0 mt-0.5" size={24} />
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-yellow-900 mb-2">No vehicles detected</h3>
+                  <p className="text-yellow-800 mb-4">
+                    You need to link a vehicle to your account before you can upload or track journeys.
+                  </p>
+                  <button
+                    onClick={() => navigate('/ev-dashboard/profile')}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                  >
+                    Link Your Vehicle Here
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Journeys List */}
           {loading ? (
             <div className="flex justify-center items-center py-12">
@@ -297,7 +318,11 @@ function JourneyList() {
                 <div className="text-center py-12">
                   <Route className="mx-auto text-gray-400 mb-4" size={48} />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No journeys found</h3>
-                  <p className="text-gray-500">Start your first journey to see it here!</p>
+                  <p className="text-gray-500">
+                    {vehicles.length === 0 
+                      ? 'Please link a vehicle first to start tracking your journeys.'
+                      : 'Start your first journey to see it here!'}
+                  </p>
                 </div>
               ) : (
                 filteredJourneys.map((journey) => {
