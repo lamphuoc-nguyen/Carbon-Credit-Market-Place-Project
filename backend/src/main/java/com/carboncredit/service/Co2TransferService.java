@@ -214,6 +214,26 @@ public class Co2TransferService {
         return convertToDetailDTO(request);
     }
 
+    /**
+     * Get all approved transfer requests
+     */
+    @Transactional(readOnly = true)
+    public List<Co2TransferRequestDTO> getApprovedTransferRequests() {
+        List<Co2TransferRequest> requests = transferRequestRepository.findByStatus(Co2TransferRequest.TransferStatus.APPROVED);
+        log.info("Found {} approved transfer requests", requests.size());
+        return requests.stream().map(this::convertToDTO).toList();
+    }
+
+    /**
+     * Get all rejected transfer requests
+     */
+    @Transactional(readOnly = true)
+    public List<Co2TransferRequestDTO> getRejectedTransferRequests() {
+        List<Co2TransferRequest> requests = transferRequestRepository.findByStatus(Co2TransferRequest.TransferStatus.REJECTED);
+        log.info("Found {} rejected transfer requests", requests.size());
+        return requests.stream().map(this::convertToDTO).toList();
+    }
+
     private Co2TransferRequestDTO convertToDTO(Co2TransferRequest request) {
         Co2TransferRequestDTO dto = new Co2TransferRequestDTO();
         dto.setId(request.getId());

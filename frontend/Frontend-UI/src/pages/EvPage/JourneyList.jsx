@@ -4,6 +4,8 @@ import Navbar from '../../Components/EVComponents/Navbar'
 import Footer from '../../Components/Footer'
 import EvOwnerAPI from '../../api/EvOwnerAPI'
 import { Clock, Battery, Route, Calendar, Filter, Search, Upload, FileText, CheckCircle, XCircle, AlertCircle, Zap } from 'lucide-react'
+import { toast, ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 
 function JourneyList() {
   const navigate = useNavigate()
@@ -22,6 +24,11 @@ function JourneyList() {
   useEffect(() => {
     fetchJourneys()
     fetchMyVehicles()
+
+    // Cleanup: dismiss toasts when component unmounts (user navigates away)
+    return () => {
+      toast.dismiss()
+    }
   }, [])
 
   const fetchMyVehicles = async () => {
@@ -181,12 +188,14 @@ function JourneyList() {
           (importResult.errors && importResult.errors.length > 0 ?
             `Errors: ${importResult.errors.slice(0, 3).join(' | ')}` : '')
         )
+        toast.warning(`Processed ${importResult.processed} rows: ${importResult.success} successful, ${importResult.failed} failed`)
       } else {
         setUploadStatus('success')
         setUploadMessage(
           `✅ Successfully processed ${importResult.success} journeys! ` +
           `Auto-validated journeys will immediately add CO2 to your wallet.`
         )
+        toast.success(`Successfully uploaded ${importResult.success} journeys!`)
       }
 
       // Auto-close on success after showing the message
@@ -227,6 +236,18 @@ function JourneyList() {
   return (
     <>
       <Navbar />
+      <ToastContainer
+        position="bottom-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        style={{ zIndex: 9999 }}
+      />
       <div className="min-h-screen bg-gray-50" 
            style={{
              backgroundImage: "url('/src/image/journeybg.png')",

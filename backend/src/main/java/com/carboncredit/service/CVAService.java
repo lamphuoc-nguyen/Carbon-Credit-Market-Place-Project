@@ -289,4 +289,20 @@ public class CVAService {
     public TransferRequestDetailDTO getTransferRequestDetail(UUID requestId) {
         return co2TransferService.getTransferRequestDetail(requestId);
     }
+
+    /**
+     * Get all approved transfer requests
+     */
+    @Transactional(readOnly = true)
+    public List<Co2TransferRequestDTO> getApprovedTransferRequests() {
+        return co2TransferService.getApprovedTransferRequests();
+    }
+
+    /**
+     * Get all rejected transfer requests
+     */
+    @Transactional(readOnly = true)
+    public List<Co2TransferRequestDTO> getRejectedTransferRequests() {
+        return co2TransferService.getRejectedTransferRequests();
+    }
 }

@@ -9,6 +9,8 @@ import {
     TrendingUp,
     Zap
 } from 'lucide-react';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { co2TransferApi, walletApi } from '../../api';
 import userDataFetcher from '../../api/userDataFetcher';
 
@@ -72,19 +74,19 @@ const Co2TransferComponent = ({ onTransferComplete }) => {
         const amount = parseFloat(transferAmount);
 
         if (!transferAmount || amount < 1000) {
-            alert('Minimum 1000kg CO2 required for transfer');
+            toast.error('Minimum 1000kg CO2 required for transfer');
             return;
         }
 
         // Ensure amount is integer multiple of 1000
         if (amount % 1000 !== 0) {
-            alert('Transfer amount must be a multiple of 1000kg (integer credits only)');
+            toast.error('Transfer amount must be a multiple of 1000kg (integer credits only)');
             return;
         }
 
         const maxTransferable = Math.floor(availableCo2 / 1000) * 1000;
         if (amount > maxTransferable) {
-            alert(`Maximum transferable amount is ${maxTransferable}kg (for integer credits)`);
+            toast.error(`Maximum transferable amount is ${maxTransferable}kg (for integer credits)`);
             return;
         }
 
@@ -95,7 +97,7 @@ const Co2TransferComponent = ({ onTransferComplete }) => {
                 co2Amount: amount
             });
 
-            alert(`Transfer request created successfully! ${amount}kg CO2 → ${amount / 1000} credit(s)`);
+            toast.success(`Transfer request created successfully! ${amount}kg CO2 → ${amount / 1000} credit(s)`);
             setShowCreateModal(false);
             setTransferAmount('');
             await fetchData();
@@ -106,7 +108,7 @@ const Co2TransferComponent = ({ onTransferComplete }) => {
             }
         } catch (error) {
             console.error('Failed to create transfer request:', error);
-            alert('Failed to create transfer request. Please try again.');
+            toast.error('Failed to create transfer request. Please try again.');
         } finally {
             setSubmitting(false);
         }

@@ -4,6 +4,8 @@ import {
     Clock, CheckCircle, TrendingUp, XCircle, Shield, ArrowRightLeft,
     BarChart as ChartIcon
 } from 'lucide-react';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import {
     ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend
 } from 'recharts';
@@ -77,61 +79,109 @@ const Dashboard = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    useEffect(() => {
-        const fetchDashboardData = async () => {
-            try {
-                setIsLoading(true);
-                setError(null);
+    // Modal states
+    const [showApprovalModal, setShowApprovalModal] = useState(false);
+    const [showRejectionModal, setShowRejectionModal] = useState(false);
+    const [selectedRequest, setSelectedRequest] = useState(null);
+    const [approvalNotes, setApprovalNotes] = useState('');
+    const [rejectionReason, setRejectionReason] = useState('');
+    const [processing, setProcessing] = useState(false);
 
-                // 1. Gọi API: Lấy danh sách chờ duyệt & Thống kê
-                // Sử dụng cvaApi.getPendingTransferRequests thay vì carbonCreditApi
-                const [pendingTransfers, transferStats] = await Promise.all([
-                    cvaApi.getPendingTransferRequests(),
-                    cvaApi.getTransferStatistics() // Đã sửa tên hàm cho đúng với cvaApi.js mới
-                ]);
+    const fetchDashboardData = async () => {
+        try {
+            setIsLoading(true);
+            setError(null);
 
-                // console.log("Pending Transfers:", pendingTransfers);
-                // console.log("Transfer Stats:", transferStats);
+            // 1. Gọi API: Lấy danh sách chờ duyệt & Thống kê
+            // Sử dụng cvaApi.getPendingTransferRequests thay vì carbonCreditApi
+            const [pendingTransfers, transferStats] = await Promise.all([
+                cvaApi.getPendingTransferRequests(),
+                cvaApi.getTransferStatistics() // Đã sửa tên hàm cho đúng với cvaApi.js mới
+            ]);
 
-                setPendingRequests(pendingTransfers);
+            // console.log("Pending Transfers:", pendingTransfers);
+            // console.log("Transfer Stats:", transferStats);
 
-                // 2. Cập nhật Stats Cards dựa trên dữ liệu thật từ API
-                // Backend trả về: pendingTransfers, approvedTransfers, rejectedTransfers
-                setStatsData(prevStats => prevStats.map(stat => {
-                    if (stat.name === 'Pending Requests') {
-                        return {
-                            ...stat,
-                            value: (transferStats.pendingTransfers || pendingTransfers.length).toString(),
-                            trend: 'Needs attention'
-                        };
-                    } else if (stat.name === 'Total Approved') {
-                        return {
-                            ...stat,
-                            value: (transferStats.approvedTransfers || 0).toString(),
-                            trend: 'Successfully credited'
-                        };
-                    } else if (stat.name === 'Total Rejected') {
-                        return {
-                            ...stat,
-                            value: (transferStats.rejectedTransfers || 0).toString(),
-                            trend: 'Returned to wallet'
-                        };
-                    }
-                    return stat;
-                }));
+            setPendingRequests(pendingTransfers);
 
-            } catch (err) {
-                console.error("Failed to load dashboard data:", err);
-                if (err.response?.status !== 401) {
-                    setError('Cannot load dashboard data.');
-                    setStatsData(prevStats => prevStats.map(stat => ({ ...stat, value: '-', trend: 'Error' })));
+            // 2. Cập nhật Stats Cards dựa trên dữ liệu thật từ API
+            // Backend trả về: pendingTransfers, approvedTransfers, rejectedTransfers
+            setStatsData(prevStats => prevStats.map(stat => {
+                if (stat.name === 'Pending Requests') {
+                    return {
+                        ...stat,
+                        value: (transferStats.pendingTransfers || pendingTransfers.length).toString(),
+                        trend: 'Needs attention'
+                    };
+                } else if (stat.name === 'Total Approved') {
+                    return {
+                        ...stat,
+                        value: (transferStats.approvedTransfers || 0).toString(),
+                        trend: 'Successfully credited'
+                    };
+                } else if (stat.name === 'Total Rejected') {
+                    return {
+                        ...stat,
+                        value: (transferStats.rejectedTransfers || 0).toString(),
+                        trend: 'Returned to wallet'
+                    };
                 }
-            } finally {
-                setIsLoading(false);
+                return stat;
+            }));
+
+        } catch (err) {
+            console.error("Failed to load dashboard data:", err);
+            if (err.response?.status !== 401) {
+                setError('Cannot load dashboard data.');
+                setStatsData(prevStats => prevStats.map(stat => ({ ...stat, value: '-', trend: 'Error' })));
             }
-        };
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchDashboardData();
     }, []);
+
+    const handleApprove = async () => {
+        if (!selectedRequest) return;
+        try {
+            setProcessing(true);
+            await cvaApi.approveTransferRequest(selectedRequest.id, approvalNotes);
+            toast.success('Request approved successfully!');
+            setShowApprovalModal(false);
+            setApprovalNotes('');
+            setSelectedRequest(null);
+            // Refresh dashboard data
+            await fetchDashboardData();
+        } catch (error) {
+            toast.error('Failed to approve: ' + error.message);
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    const handleReject = async () => {
+        if (!selectedRequest || !rejectionReason.trim()) {
+            toast.error('Please provide a rejection reason');
+            return;
+        }
+        try {
+            setProcessing(true);
+            await cvaApi.rejectTransferRequest(selectedRequest.id, rejectionReason);
+            toast.success('Request rejected successfully!');
+            setShowRejectionModal(false);
+            setRejectionReason('');
+            setSelectedRequest(null);
+            // Refresh dashboard data
+            await fetchDashboardData();
+        } catch (error) {
+            toast.error('Failed to reject: ' + error.message);
+        } finally {
+            setProcessing(false);
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -191,8 +241,8 @@ const Dashboard = () => {
                         <div key={req.id} className="border-b border-gray-100 pb-6 last:border-b-0">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    {/* Cập nhật field hiển thị theo Co2TransferRequestDTO */}
-                                    <p className="font-semibold text-gray-900">{req.requesterName || 'Unknown User'}</p>
+                                    {/* Display username from request */}
+                                    <p className="font-semibold text-gray-900">{req.username || 'Unknown User'}</p>
                                     <p className="text-sm text-gray-500">
                                         Request ID: <span title={req.id} className="cursor-help">{req.id?.substring(0, 8)}...</span>
                                     </p>
@@ -212,12 +262,24 @@ const Dashboard = () => {
                                 </span>
                             </div>
 
-                            {/* Buttons giả lập (bị disabled ở dashboard) */}
-                            <div className="flex items-center space-x-3 mt-4 opacity-50 pointer-events-none">
-                                <button className="flex items-center justify-center w-1/2 bg-gray-100 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium">
+                            {/* Action Buttons */}
+                            <div className="flex items-center space-x-3 mt-4">
+                                <button
+                                    onClick={() => {
+                                        setSelectedRequest(req);
+                                        setShowRejectionModal(true);
+                                    }}
+                                    className="flex items-center justify-center w-1/2 bg-red-50 text-red-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
+                                >
                                     <XCircle className="h-4 w-4 mr-1.5" /> Reject
                                 </button>
-                                <button className="flex items-center justify-center w-1/2 bg-gray-900 text-white px-3 py-2 rounded-lg text-sm font-medium">
+                                <button
+                                    onClick={() => {
+                                        setSelectedRequest(req);
+                                        setShowApprovalModal(true);
+                                    }}
+                                    className="flex items-center justify-center w-1/2 bg-green-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
+                                >
                                     <CheckCircle className="h-4 w-4 mr-1.5" /> Approve
                                 </button>
                             </div>
@@ -260,6 +322,104 @@ const Dashboard = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Approval Modal */}
+            {showApprovalModal && selectedRequest && (
+                <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl">
+                        <h3 className="text-lg font-bold mb-4 text-gray-900 flex items-center gap-2">
+                            <CheckCircle className="w-5 h-5 text-green-600" />
+                            Approve Transfer Request
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                            This will convert <span className="font-bold text-gray-900">{selectedRequest.co2Amount?.toLocaleString()} kg CO2</span> into{' '}
+                            <span className="font-bold text-gray-900">{selectedRequest.creditsToGenerate} Credits</span> for the user.
+                        </p>
+                        <textarea
+                            className="w-full border border-gray-300 p-3 mb-4 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                            placeholder="Approval notes (optional)..."
+                            value={approvalNotes}
+                            onChange={e => setApprovalNotes(e.target.value)}
+                            rows={3}
+                        />
+                        <div className="flex justify-end space-x-2">
+                            <button
+                                onClick={() => {
+                                    setShowApprovalModal(false);
+                                    setApprovalNotes('');
+                                    setSelectedRequest(null);
+                                }}
+                                disabled={processing}
+                                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleApprove}
+                                disabled={processing}
+                                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {processing ? 'Processing...' : 'Confirm Approval'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Rejection Modal */}
+            {showRejectionModal && selectedRequest && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl">
+                        <h3 className="text-lg font-bold mb-4 text-red-600 flex items-center gap-2">
+                            <XCircle className="w-5 h-5" />
+                            Reject Transfer Request
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                            Please provide a clear reason for rejection. The CO2 will be refunded to the user's wallet.
+                        </p>
+                        <textarea
+                            className="w-full border border-red-300 p-3 mb-4 rounded-lg focus:ring-2 focus:ring-red-500 outline-none bg-red-50"
+                            placeholder="Rejection reason (required)..."
+                            value={rejectionReason}
+                            onChange={e => setRejectionReason(e.target.value)}
+                            rows={4}
+                        />
+                        <div className="flex justify-end space-x-2">
+                            <button
+                                onClick={() => {
+                                    setShowRejectionModal(false);
+                                    setRejectionReason('');
+                                    setSelectedRequest(null);
+                                }}
+                                disabled={processing}
+                                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleReject}
+                                disabled={processing || !rejectionReason.trim()}
+                                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {processing ? 'Processing...' : 'Confirm Rejection'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Toast Container */}
+            <ToastContainer
+                position="top-right"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop={true}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+            />
         </div>
     );
 };

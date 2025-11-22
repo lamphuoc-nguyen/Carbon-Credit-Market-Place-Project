@@ -75,6 +75,22 @@ export const cvaApi = {
         return handleRequest(axiosInstance.get('/api/cva/transfer-statistics'));
     },
 
+    /**
+     * Lấy danh sách các yêu cầu chuyển đổi đã được duyệt
+     * Endpoint: GET /api/cva/approved-transfer-requests
+     */
+    getApprovedTransferRequests: () => {
+        return handleRequest(axiosInstance.get('/api/cva/approved-transfer-requests'));
+    },
+
+    /**
+     * Lấy danh sách các yêu cầu chuyển đổi đã bị từ chối
+     * Endpoint: GET /api/cva/rejected-transfer-requests
+     */
+    getRejectedTransferRequests: () => {
+        return handleRequest(axiosInstance.get('/api/cva/rejected-transfer-requests'));
+    },
+
     // ================== QUẢN LÝ LỊCH SỬ & TÍN CHỈ (VERIFICATIONS & CREDITS) ==================
 
     /**

@@ -85,7 +85,7 @@ const AdminSidebar = ({ isOpen, setIsOpen }) => {
                         )}
                     </div>
                     {/* Notification Button next to user name */}
-                    <NotificationButton dropdownPosition="left" />
+                    {isOpen && <NotificationButton dropdownPosition="left" />}
                 </div>
 
 

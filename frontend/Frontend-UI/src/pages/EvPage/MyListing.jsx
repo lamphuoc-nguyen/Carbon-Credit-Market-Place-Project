@@ -4,6 +4,8 @@ import {
     Package, DollarSign, Calendar, Edit2, Trash2,
     AlertCircle, Leaf, MapPin, Filter
 } from 'lucide-react';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import EvOwnerAPI from '../../api/EvOwnerAPI';
 import Navbar from '../../Components/EVComponents/Navbar';
 import Footer from '../../Components/Footer';
@@ -47,7 +49,7 @@ const MyListingsPage = () => {
 
     const handleUpdatePrice = async () => {
         if (!newPrice || parseFloat(newPrice) <= 0) {
-            alert("Please enter a valid positive price.");
+            toast.error('Please enter a valid positive price');
             return;
         }
 
@@ -60,11 +62,11 @@ const MyListingsPage = () => {
                 item.id === editingListing.id ? { ...item, price: parseFloat(newPrice) } : item
             ));
 
-            alert("Price updated successfully!");
+            toast.success('Price updated successfully!');
             setEditingListing(null);
         } catch (err) {
             console.error(err);
-            alert(err.response?.data?.message || "Failed to update price");
+            toast.error(err.response?.data?.message || 'Failed to update price');
         } finally {
             setProcessing(false);
         }
@@ -80,11 +82,11 @@ const MyListingsPage = () => {
             // Ở đây ta load lại list để đồng bộ trạng thái mới nhất
             await fetchMyListings();
 
-            alert("Listing cancelled successfully. Credits returned to your wallet.");
+            toast.success('Listing cancelled successfully. Credits returned to your wallet.');
             setShowDeleteConfirm(null);
         } catch (err) {
             console.error(err);
-            alert(err.response?.data?.message || "Failed to cancel listing");
+            toast.error(err.response?.data?.message || 'Failed to cancel listing');
         } finally {
             setProcessing(false);
         }
@@ -111,6 +113,18 @@ const MyListingsPage = () => {
     return (
         <>
             <Navbar />
+            <ToastContainer
+                position="bottom-right"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                style={{ zIndex: 9999 }}
+            />
             <div className="min-h-screen bg-gray-50 py-8 px-4">
                 <div className="max-w-6xl mx-auto">
 

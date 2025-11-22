@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
     LayoutDashboard, CheckCircle, FileText, Hammer, X, Leaf, Menu,
-    Shield, ArrowRightLeft
+    Shield, ArrowRightLeft, ClockFading 
 } from 'lucide-react';
 import LogoutButton from '../LogoutButton';
 import NotificationButton from '../NotificationButton';
@@ -15,13 +15,15 @@ const iconMap = {
     TransferRequests: ArrowRightLeft,
     Reports: FileText,
     AuditTools: Hammer,
+    TransferHistory: ClockFading
 };
 
 const navItems = [
     { name: 'Dashboard', key: 'dashboard', icon: 'Dashboard' },
     { name: 'CO2 Transfer Requests', key: 'transfer-requests', icon: 'TransferRequests' },
+    { name: 'Transfer Request History', key: 'transfer-history', icon: 'TransferHistory'},
     { name: 'Verified Credits', key: 'verified-credits', icon: 'VerifiedCredits' },
-    { name: 'Reports', key: 'reports', icon: 'Reports' },
+    { name: 'Reports', key: 'reports', icon: 'Reports' }
 ];
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
@@ -81,8 +83,8 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
                             </div>
                         )}
                     </div>
-                    {/* Notification Button next to user name */}
-                    <NotificationButton dropdownPosition="left" />
+                    {/* Notification Button - only visible when sidebar is open */}
+                    {isOpen && <NotificationButton dropdownPosition="left" />}
                 </div>
 
                 {/* 3. Navigation Items */}

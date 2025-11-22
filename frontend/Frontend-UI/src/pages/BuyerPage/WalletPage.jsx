@@ -21,6 +21,8 @@ import {
     Earth,
     TrendingUp
 } from 'lucide-react';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import Navbar_Buyer from '../../Components/BuyerComponents/Navbar-Buyer';
 import Footer from '../../Components/Footer';
 import RetirementModal from '../../Components/BuyerComponents/RetirementModal';
@@ -110,7 +112,7 @@ const WalletPage = () => {
 
     const handleDeposit = async () => {
         if (!depositAmount || parseFloat(depositAmount) <= 0) {
-            alert('Please enter a valid amount');
+            toast.error('Please enter a valid amount');
             return;
         }
 
@@ -121,13 +123,18 @@ const WalletPage = () => {
                 paymentMethodId: depositMethod // walletApi expects paymentMethodId not method
             });
 
-            alert(`Deposit initiated successfully! Amount: $${depositAmount}`);
+            // Close modal and clear form first
             setShowDepositModal(false);
             setDepositAmount('');
-            await fetchWalletData(); // Refresh wallet data
+            
+            // Show success toast after modal closes
+            toast.success(`Deposit initiated successfully! Amount: $${depositAmount}`);
+            
+            // Refresh wallet data
+            await fetchWalletData();
         } catch (error) {
             console.error('❌ Deposit failed:', error);
-            alert('Deposit failed. Please try again.');
+            toast.error(error.response?.data?.message || 'Deposit failed. Please try again.');
         } finally {
             setDepositing(false);
         }
@@ -241,6 +248,18 @@ const WalletPage = () => {
                  backgroundAttachment: 'fixed'
              }}>
             <Navbar_Buyer />
+            <ToastContainer
+                position="bottom-right"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                style={{ zIndex: 9999 }}
+            />
 
             {/* Header */}
             <div className="bg-white border-b border-gray-200">

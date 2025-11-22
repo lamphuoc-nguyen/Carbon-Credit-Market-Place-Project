@@ -71,10 +71,16 @@ const RegisterForm = () => {
             case 'fullName':
                 if (!value) {
                     error = 'Full name is required';
-                } else if (value.length < 2) {
+                } else if (value.trim().length < 2) {
                     error = 'Full name must be at least 2 characters';
                 } else if (value.length > 100) {
                     error = 'Full name must be less than 100 characters';
+                } else if (!/^[a-zA-Z\s]+$/.test(value)) {
+                    error = 'Full name can only contain letters and spaces';
+                } else if (/\s{2,}/.test(value)) {
+                    error = 'Full name cannot contain consecutive spaces';
+                } else if (value.trim() !== value) {
+                    error = 'Full name cannot start or end with spaces';
                 }
                 break;
 
@@ -83,6 +89,14 @@ const RegisterForm = () => {
                     error = 'Email is required';
                 } else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(value)) {
                     error = 'Invalid email address';
+                } else if (value.length > 254) {
+                    error = 'Email address is too long';
+                } else if (/\.{2,}/.test(value)) {
+                    error = 'Email cannot contain consecutive dots';
+                } else if (/^[.]|[.]@/.test(value)) {
+                    error = 'Email cannot start with a dot or have a dot before @';
+                } else if (/(tempmail|throwaway|guerrillamail|mailinator|10minutemail)/i.test(value)) {
+                    error = 'Disposable email addresses are not allowed';
                 }
                 break;
 
@@ -93,16 +107,30 @@ const RegisterForm = () => {
                     error = 'Username must be at least 3 characters';
                 } else if (value.length > 50) {
                     error = 'Username must be less than 50 characters';
+                } else if (!/^[a-zA-Z]/.test(value)) {
+                    error = 'Username must start with a letter';
                 } else if (!/^[a-zA-Z0-9_]+$/.test(value)) {
                     error = 'Username can only contain letters, numbers, and underscores';
+                } else if (/__/.test(value)) {
+                    error = 'Username cannot contain consecutive underscores';
+                } else if (/_$/.test(value)) {
+                    error = 'Username cannot end with an underscore';
                 }
                 break;
 
             case 'phone':
                 if (!value) {
                     error = 'Phone number is required';
-                } else if (!/^[0-9]{10,15}$/.test(value)) {
-                    error = 'Phone number must be 10-15 digits only (no spaces or special characters)';
+                } else if (!/^[0-9]+$/.test(value)) {
+                    error = 'Phone number must contain digits only (no spaces or special characters)';
+                } else if (!value.startsWith('0')) {
+                    error = 'Phone number must start with 0';
+                } else if (value.length < 10) {
+                    error = 'Phone number must be at least 10 digits';
+                } else if (value.length > 11) {
+                    error = 'Phone number must not exceed 11 digits';
+                } else if (!/^(03|05|07|08|09)[0-9]{8}$/.test(value)) {
+                    error = 'Invalid phone number format. Must start with 03, 05, 07, 08, or 09 followed by 8 digits';
                 }
                 break;
 
@@ -113,6 +141,8 @@ const RegisterForm = () => {
                     error = 'Password must be at least 8 characters';
                 } else if (value.length > 100) {
                     error = 'Password must be less than 100 characters';
+                } else if (/\s/.test(value)) {
+                    error = 'Password cannot contain spaces';
                 }
                 break;
 

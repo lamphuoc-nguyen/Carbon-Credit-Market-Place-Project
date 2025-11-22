@@ -134,24 +134,69 @@ const ProfilePage = () => {
         return;
       }
       
-      // Check if name contains only letters, spaces, and common name characters
-      const nameRegex = /^[a-zA-Z\s\-'.]+$/;
-      if (!nameRegex.test(formData.fullName)) {
-        toast.error('Name can only contain letters, spaces, hyphens, apostrophes, and periods');
-        return;
-      }
-      
-      // Check name length (2-50 characters)
       const trimmedName = formData.fullName.trim();
-      if (trimmedName.length < 2 || trimmedName.length > 50) {
-        toast.error('Name must be between 2 and 50 characters');
+      
+      // Check name length (2-100 characters)
+      if (trimmedName.length < 2) {
+        toast.error('Full name must be at least 2 characters');
         return;
       }
       
-      // Validate phone number format
+      if (trimmedName.length > 100) {
+        toast.error('Full name must be less than 100 characters');
+        return;
+      }
+      
+      // Check if name contains only letters and spaces
+      if (!/^[a-zA-Z\s]+$/.test(trimmedName)) {
+        toast.error('Full name can only contain letters and spaces');
+        return;
+      }
+      
+      // Check for consecutive spaces
+      if (/\s{2,}/.test(trimmedName)) {
+        toast.error('Full name cannot contain consecutive spaces');
+        return;
+      }
+      
+      // Check for leading/trailing spaces (should be caught by trim, but double check)
+      if (formData.fullName !== trimmedName) {
+        toast.error('Full name cannot start or end with spaces');
+        return;
+      }
+      
+      // Validate email format
+      if (formData.email && formData.email.trim() !== '') {
+        if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(formData.email)) {
+          toast.error('Invalid email address');
+          return;
+        }
+        
+        if (formData.email.length > 254) {
+          toast.error('Email address is too long');
+          return;
+        }
+        
+        if (/\.{2,}/.test(formData.email)) {
+          toast.error('Email cannot contain consecutive dots');
+          return;
+        }
+        
+        if (/^[.]|[.]@/.test(formData.email)) {
+          toast.error('Email cannot start with a dot or have a dot before @');
+          return;
+        }
+      }
+      
+      // Validate phone number format (Vietnamese format)
       if (formData.phone && formData.phone.trim() !== '') {
-        // Remove all non-digit characters for validation
         const digitsOnly = formData.phone.replace(/\D/g, '');
+        
+        // Check if phone number contains only digits
+        if (!/^[0-9]+$/.test(digitsOnly)) {
+          toast.error('Phone number must contain digits only');
+          return;
+        }
         
         // Check if phone number starts with 0
         if (!digitsOnly.startsWith('0')) {
@@ -159,28 +204,75 @@ const ProfilePage = () => {
           return;
         }
         
-        // Check if phone number has between 10-15 digits
-        if (digitsOnly.length < 10 || digitsOnly.length > 15) {
-          toast.error('Phone number must be between 10-15 digits');
+        // Check if exactly 10 digits
+        if (digitsOnly.length !== 10) {
+          toast.error('Phone number must be exactly 10 digits');
           return;
         }
         
-        // Check if phone number contains only valid characters (digits, spaces, hyphens, parentheses, plus)
-        const phoneRegex = /^[\d\s\-+()]+$/;
-        if (!phoneRegex.test(formData.phone)) {
-          toast.error('Phone number contains invalid characters');
+        // Check valid Vietnamese prefixes (03, 05, 07, 08, 09)
+        if (!/^(03|05|07|08|09)[0-9]{8}$/.test(digitsOnly)) {
+          toast.error('Invalid phone number format. Must start with 03, 05, 07, 08, or 09 followed by 8 digits');
           return;
         }
       }
       
-      // Validate vehicle registration date if form has data
-      if (vehicleFormData.vin && vehicleFormData.model && vehicleFormData.registrationDate) {
+      // Validate vehicle data if form has any field filled
+      if (vehicleFormData.vin || vehicleFormData.model || vehicleFormData.registrationDate) {
+        // Check if all required fields are filled
+        if (!vehicleFormData.vin || !vehicleFormData.model || !vehicleFormData.registrationDate) {
+          toast.error('All vehicle fields are required (VIN, Model, Registration Date)');
+          return;
+        }
+        
+        // Validate VIN format (typically 17 characters, alphanumeric, no I, O, Q)
+        const vinTrimmed = vehicleFormData.vin.trim().toUpperCase();
+        if (vinTrimmed.length !== 17) {
+          toast.error('VIN must be exactly 17 characters');
+          return;
+        }
+        
+        if (!/^[A-HJ-NPR-Z0-9]{17}$/.test(vinTrimmed)) {
+          toast.error('Invalid VIN format. Must be 17 alphanumeric characters (excluding I, O, Q)');
+          return;
+        }
+        
+        // Validate model name
+        const modelTrimmed = vehicleFormData.model.trim();
+        if (modelTrimmed.length < 2) {
+          toast.error('Vehicle model must be at least 2 characters');
+          return;
+        }
+        
+        if (modelTrimmed.length > 100) {
+          toast.error('Vehicle model must be less than 100 characters');
+          return;
+        }
+        
+        if (!/^[a-zA-Z0-9\s-]+$/.test(modelTrimmed)) {
+          toast.error('Vehicle model can only contain letters, numbers, spaces, and hyphens');
+          return;
+        }
+        
+        // Validate registration date
         const registrationDate = new Date(vehicleFormData.registrationDate);
         const today = new Date();
-        today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
+        today.setHours(0, 0, 0, 0);
+        
+        if (isNaN(registrationDate.getTime())) {
+          toast.error('Invalid registration date');
+          return;
+        }
         
         if (registrationDate > today) {
           toast.error('Registration date cannot be in the future');
+          return;
+        }
+        
+        // Check if registration date is not too old (e.g., not before 1900)
+        const minDate = new Date('1900-01-01');
+        if (registrationDate < minDate) {
+          toast.error('Registration date seems invalid (too old)');
           return;
         }
       }

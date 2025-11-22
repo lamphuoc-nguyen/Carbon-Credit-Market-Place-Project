@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { buyerApi } from '../../api';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import Navbar from '../../Components/EVComponents/Navbar';
 import { getValidToken } from '../../utils/tokenUtils';
 import Footer from '../../Components/Footer';
 
 const MakerPlacePage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   // Helper function to format price (hide .00 for whole numbers)
@@ -129,6 +132,15 @@ const MakerPlacePage = () => {
     const token = getValidToken();
     setIsAuthenticated(!!token);
   }, []);
+
+  // Show success toast if navigated from listing creation
+  useEffect(() => {
+    if (location.state?.showSuccessToast) {
+      toast.success(location.state.message || 'Listed Successfully!');
+      // Clear the state to prevent showing toast on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   // Apply filters when any filter changes
   useEffect(() => {
@@ -704,6 +716,17 @@ const MakerPlacePage = () => {
       </div>
     </div>
     <Footer />
+    <ToastContainer
+      position="bottom-right"
+      autoClose={3000}
+      hideProgressBar={false}
+      newestOnTop={true}
+      closeOnClick
+      rtl={false}
+      pauseOnFocusLoss
+      draggable
+      pauseOnHover
+    />
     </>
   );
 };

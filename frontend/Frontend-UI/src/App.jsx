@@ -46,6 +46,7 @@ import PaymentFailedPage from './Pages/BuyerPage/PaymentFailedPage';
 import MyListingsPage from './Pages/EvPage/MyListing'; // ✅ Đã sửa đường dẫn import đúng tên file (MyListing.jsx)
 
 import ChatbotWidget from './AIcomponents/ChatbotWidget'
+import TransferHistory from './Components/CvaComponents/TransferHistory';
 
 function App() {
     const location = useLocation();
@@ -218,6 +219,7 @@ function App() {
                     <Route path="verified-credits" element={<VerifiedCredits />} />
                     <Route path="reports" element={<Report />} />
                     <Route path="transfer-request/:id" element={<TransferRequestDetailPage />} />
+                    <Route path="transfer-history" element={<TransferHistory />} />
                 </Route>
 
                 {/* --- Admin Routes --- */}

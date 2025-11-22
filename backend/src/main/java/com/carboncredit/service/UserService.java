@@ -1,7 +1,7 @@
 package com.carboncredit.service;
 
 import com.carboncredit.entity.User;
-import com.carboncredit.repository.UserRepository;
+import com.carboncredit.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -23,7 +23,15 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final WalletService walletService;
-    private final NotificationService notificationService; // 1. Inject NotificationService
+    private final NotificationService notificationService;
+    private final NotificationRepository notificationRepository;
+    private final VehicleRepository vehicleRepository;
+    private final JourneyDataRepository journeyDataRepository;
+    private final CreditListingRepository creditListingRepository;
+    private final CarbonCreditRepository carbonCreditRepository;
+    private final Co2TransferRequestRepository co2TransferRequestRepository;
+    private final WalletRepository walletRepository;
+    private final TransactionRepository transactionRepository;
 
     public User createUser(User user) {
         log.info("Creating user: {}", user.getUsername());
@@ -104,8 +112,79 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    /**
+     * Delete user with cascade deletion of all related entities
+     * Order of deletion matters due to foreign key constraints:
+     * 1. Notifications
+     * 2. Transactions (as buyer and seller)
+     * 3. Credit Listings
+     * 4. Carbon Credits
+     * 5. CO2 Transfer Requests
+     * 6. Journeys
+     * 7. Vehicles
+     * 8. Wallet
+     * 9. User
+     */
     public void deleteUser(UUID id) {
-        userRepository.deleteById(id);
+        log.info("Starting cascade delete for user ID: {}", id);
+        
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+        
+        try {
+            // 1. Delete all notifications
+            var notifications = notificationRepository.findByUserIdOrderByCreatedAtDesc(id);
+            notificationRepository.deleteAll(notifications);
+            log.info("Deleted {} notifications for user {}", notifications.size(), id);
+            
+            // 2. Delete all transactions (as buyer or seller)
+            try {
+                var transactionsAsBuyer = transactionRepository.findByBuyerOrSellerOrderByCreatedAtDesc(user, user);
+                transactionRepository.deleteAll(transactionsAsBuyer);
+                log.info("Deleted {} transactions for user {}", transactionsAsBuyer.size(), id);
+            } catch (Exception e) {
+                log.warn("Failed to delete transactions: {}", e.getMessage());
+            }
+            
+            // 3. Delete all credit listings
+            var listings = creditListingRepository.findByUser(user);
+            creditListingRepository.deleteAll(listings);
+            log.info("Deleted {} credit listings for user {}", listings.size(), id);
+            
+            // 4. Delete all carbon credits
+            var credits = carbonCreditRepository.findByUser(user);
+            carbonCreditRepository.deleteAll(credits);
+            log.info("Deleted {} carbon credits for user {}", credits.size(), id);
+            
+            // 5. Delete all CO2 transfer requests
+            var transferRequests = co2TransferRequestRepository.findByUser(user);
+            co2TransferRequestRepository.deleteAll(transferRequests);
+            log.info("Deleted {} CO2 transfer requests for user {}", transferRequests.size(), id);
+            
+            // 6. Delete all journeys (must be before vehicles due to foreign key)
+            var journeys = journeyDataRepository.findByUser(user);
+            journeyDataRepository.deleteAll(journeys);
+            log.info("Deleted {} journeys for user {}", journeys.size(), id);
+            
+            // 7. Delete all vehicles
+            var vehicles = vehicleRepository.findByUser(user);
+            vehicleRepository.deleteAll(vehicles);
+            log.info("Deleted {} vehicles for user {}", vehicles.size(), id);
+            
+            // 8. Delete wallet
+            walletRepository.findByUserId(id).ifPresent(wallet -> {
+                walletRepository.delete(wallet);
+                log.info("Deleted wallet for user {}", id);
+            });
+            
+            // 9. Finally delete the user
+            userRepository.deleteById(id);
+            log.info("Successfully deleted user {} and all related data", id);
+            
+        } catch (Exception e) {
+            log.error("Error during cascade delete for user {}: {}", id, e.getMessage(), e);
+            throw new RuntimeException("Failed to delete user and related data: " + e.getMessage(), e);
+        }
     }
 
     @Transactional(readOnly = true)

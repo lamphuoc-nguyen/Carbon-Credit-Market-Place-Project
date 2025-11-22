@@ -666,15 +666,7 @@ const Report = () => {
                     </div>
                 </div>
 
-                {/* Footer đơn giản */}
-                <div className="text-center mt-8">
-                    <p className="text-sm text-gray-500">
-                        Last updated:{' '}
-                        <span className="text-gray-700 font-semibold">
-                            {new Date().toLocaleString('en-US')}
-                        </span>
-                    </p>
-                </div>
+                
             </div>
         </div>
     );

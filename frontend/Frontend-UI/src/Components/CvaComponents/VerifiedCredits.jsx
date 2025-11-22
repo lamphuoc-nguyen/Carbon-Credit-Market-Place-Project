@@ -163,10 +163,7 @@ const VerifiedCredits = () => {
                     <p className="text-gray-500 mt-1">Manage and track verified carbon credits issuance.</p>
                 </div>
 
-                <button onClick={() => navigate('/cva/transfer-requests')} className="inline-flex items-center justify-center px-4 py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-lg font-medium shadow-sm transition-colors">
-                    <Clock className="w-4 h-4 mr-2 text-amber-500" />
-                    Review Pending Requests
-                </button>
+                
             </div>
 
             {/* Stats Cards */}
@@ -228,19 +225,7 @@ const VerifiedCredits = () => {
                         className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                     />
                 </div>
-                <div className="flex items-center gap-2">
-                    <Filter className="h-5 w-5 text-gray-400" />
-                    <select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-700 bg-white"
-                    >
-                        <option value="ALL">All Status</option>
-                        <option value="VERIFIED">Verified</option>
-                        <option value="PENDING">Pending</option>
-                        <option value="REJECTED">Rejected</option>
-                    </select>
-                </div>
+
             </div>
 
             {/* Table */}
@@ -346,7 +331,7 @@ const VerifiedCredits = () => {
 
             {/* Modal Chi Tiết Credit */}
             {showDetailModal && selectedCredit && (
-                <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+                <div className="fixed inset-0 bg-black/50 bg-opacity-60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
                     <div className="bg-white rounded-xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
 
                         {/* Modal Header */}
@@ -439,7 +424,7 @@ const VerifiedCredits = () => {
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-500 mb-1 uppercase">Role</p>
-                                        <span className="inline-block px-2 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded">
+                                        <span className="inline-block px-2 py-1 bg-blue-50 text-green-700 text-xs font-medium rounded">
                                             {ownerDetails?.role || selectedCredit.owner?.role || 'N/A'}
                                         </span>
                                     </div>
