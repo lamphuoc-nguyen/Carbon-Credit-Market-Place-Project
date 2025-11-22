@@ -8,7 +8,6 @@ import com.carboncredit.entity.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 
-
 /**
  * Utility class for converting entities to DTOs and preventing circular references
  */
@@ -27,12 +26,14 @@ public class DTOMapper {
 
     // Transaction mappings
     public static TransactionDTO toTransactionDTO(Transaction transaction) {
-        return transaction != null ? new TransactionDTO(transaction) : null;
+        // ✅ FIX: Sử dụng fromEntity thay vì new TransactionDTO(transaction)
+        return transaction != null ? TransactionDTO.fromEntity(transaction) : null;
     }
 
     public static List<TransactionDTO> toTransactionDTOList(List<Transaction> transactions) {
+        // ✅ FIX: Sử dụng method reference fromEntity
         return transactions.stream()
-                .map(TransactionDTO::new)
+                .map(TransactionDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 

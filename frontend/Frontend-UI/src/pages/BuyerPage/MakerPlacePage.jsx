@@ -659,21 +659,23 @@ const MakerPlacePage = ({ showNavbar = true }) => {
                   {/* Card Content */}
                   <div className="p-6">
 
-                    {/* Metrics Grid */}
-                    <div className="grid grid-cols-2 gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
-                      {listing.credit?.creditAmount && (
-                        <div>
-                          <p className="text-xs text-gray-500 uppercase tracking-wide">Credits</p>
-                          <p className="text-sm font-bold text-gray-900">{listing.credit.creditAmount}</p>
-                        </div>
-                      )}
-                      {listing.credit?.co2ReducedKg && (
-                        <div>
-                          <p className="text-xs text-gray-500 uppercase tracking-wide">CO₂ Reduced</p>
-                          <p className="text-sm font-bold text-gray-900">{listing.credit.co2ReducedKg} kg</p>
-                        </div>
-                      )}
-                    </div>
+                      {/* Metrics Grid inside Card */}
+                      <div className="grid grid-cols-2 gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
+                          {listing.credit?.creditAmount && (
+                              <div>
+                                  <p className="text-xs text-gray-500 uppercase tracking-wide">Credits</p>
+                                  <p className="text-sm font-bold text-gray-900">{listing.credit.creditAmount} credit</p>
+                              </div>
+                          )}
+
+                          {/* ✅ FIX: Luôn tính CO2 Offset = Credit Amount * 1000 */}
+                          <div>
+                              <p className="text-xs text-gray-500 uppercase tracking-wide">CO₂ Offset</p>
+                              <p className="text-sm font-bold text-gray-900">
+                                  {((listing.credit?.creditAmount || 0) * 1000).toLocaleString()} kg
+                              </p>
+                          </div>
+                      </div>
                       
                     {/* Divider */}
                     <div className="border-t border-gray-200 my-4"></div>

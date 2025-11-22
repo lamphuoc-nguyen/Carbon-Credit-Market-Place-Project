@@ -106,14 +106,14 @@ public class ValidationService {
         }
 
         // validate listing exist and is active
-        if (currentCredit == null) {
+        if (currentListing == null) {
             throw new BusinessOperationException("Listing no longer exists");
         }
         if (currentListing.getStatus() != ListingStatus.ACTIVE) {
-            throw new BusinessOperationException("Lisitng  no longer active");
+            throw new BusinessOperationException("Listing no longer active");
         }
 
-        // validate credit stil exisit and available
+        // validate credit still exists and available
         if (currentCredit == null) {
             throw new BusinessOperationException("Credit no longer exists");
         }
@@ -121,9 +121,41 @@ public class ValidationService {
             throw new BusinessOperationException("Credit is no longer available for purchase");
         }
 
-        // validate transaction amoutn matches current listing price
-        if (transaction.getAmount().compareTo(currentListing.getPrice()) != 0) {
-            throw new BusinessOperationException("Transcation does not match current listing price");
+        // Enhanced price validation for partial vs full purchases
+        BigDecimal transactionAmount = transaction.getAmount();
+        BigDecimal currentListingPrice = currentListing.getPrice();
+        BigDecimal transactionCreditAmount = transaction.getCreditAmount();
+        BigDecimal currentCreditAmount = currentCredit.getCreditAmount();
+
+        // Check if this is a partial purchase
+        if (transactionCreditAmount != null &&
+            currentCreditAmount != null &&
+            transactionCreditAmount.compareTo(currentCreditAmount) < 0) {
+
+            // PARTIAL PURCHASE: Validate proportional pricing
+            // Calculate expected amount based on current listing price and requested quantity
+            BigDecimal expectedAmount = currentListingPrice
+                .multiply(transactionCreditAmount)
+                .divide(currentCreditAmount, 2, RoundingMode.HALF_UP);
+
+            // Allow for small rounding differences (within 0.01)
+            BigDecimal difference = transactionAmount.subtract(expectedAmount).abs();
+            if (difference.compareTo(new BigDecimal("0.01")) > 0) {
+                throw new BusinessOperationException(
+                    String.format("Transaction amount (%.2f) does not match expected partial purchase amount (%.2f) for %s credits",
+                        transactionAmount, expectedAmount, transactionCreditAmount));
+            }
+        } else {
+            // FULL PURCHASE: Original validation logic with tolerance for price updates
+            // Allow for small differences that might occur due to concurrent updates or rounding
+            BigDecimal difference = transactionAmount.subtract(currentListingPrice).abs();
+            BigDecimal tolerance = currentListingPrice.multiply(new BigDecimal("0.01")); // 1% tolerance
+
+            if (difference.compareTo(tolerance) > 0 && difference.compareTo(new BigDecimal("0.01")) > 0) {
+                throw new BusinessOperationException(
+                    String.format("Transaction amount (%.2f) does not match current listing price (%.2f). Price may have changed during payment.",
+                        transactionAmount, currentListingPrice));
+            }
         }
 
     }

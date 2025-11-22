@@ -27,13 +27,8 @@ const EvOwnerAPI = {
 
   // ==================== JOURNEY MANAGEMENT ====================
   journeys: {
-    createJourney: (journeyData) => axiosInstance.post('/api/journeys', journeyData),
     getMyJourneys: () => axiosInstance.get('/api/journeys/my-journeys'),
-    getJourneyById: (journeyId) => axiosInstance.get(`/api/journeys/${journeyId}`),
-    updateJourney: (journeyId, journeyData) => axiosInstance.put(`/api/journeys/${journeyId}`, journeyData),
-    deleteJourney: (journeyId) => axiosInstance.delete(`/api/journeys/${journeyId}`),
-    getStatistics: () => axiosInstance.get('/api/journeys/statistics'),
-    // CSV import functionality
+     // CSV import functionality
     importCsv: (csvFile) => {
       const formData = new FormData();
       formData.append('file', csvFile);
@@ -90,22 +85,26 @@ const EvOwnerAPI = {
       });
     },
 
-    getMyListings: (params = {}) => {
-      const { page = 0, size = 20 } = params;
-      return axiosInstance.get('/credit-listings/my-listings', { params: { page, size } });
-    },
+      getMyListings: async (page = 0, size = 20) => {
+          return await axiosInstance.get('/credit-listings/my-listings', {
+              params: { page, size }
+          });
+      },
 
-    getMyActiveListings: (params = {}) => {
-      const { page = 0, size = 20 } = params;
-      return axiosInstance.get('/credit-listings/my-active-listings', { params: { page, size } });
-    },
+      // 2. Cập nhật giá listing
+      updateListingPrice: async (listingId, newPrice) => {
+          // Endpoint: PUT /credit-listings/{id}/price?newPrice=...
+          return await axiosInstance.put(`/credit-listings/${listingId}/price`, null, {
+              params: { newPrice }
+          });
+      },
 
-    updateListingPrice: (listingId, newPrice) =>
-      axiosInstance.put(`/credit-listings/${listingId}/price?newPrice=${newPrice}`),
-
-    cancelListing: (listingId) =>
-      axiosInstance.delete(`/credit-listings/${listingId}`),
-
+      // 3. Hủy listing
+      cancelListing: async (listingId) => {
+          // Endpoint: DELETE /credit-listings/{id}
+          return await axiosInstance.delete(`/credit-listings/${listingId}`);
+      },
+      
     getMarketplaceStats: () => axiosInstance.get('/credit-listings/stats'),
   },
 

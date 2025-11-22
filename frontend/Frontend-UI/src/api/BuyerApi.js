@@ -409,18 +409,20 @@ export const buyerApi = {
      * @param {string} paymentMethodId - Phương thức thanh toán (hiện tại backend ignore field này)
      * @returns {Promise<Object>} Response: { transactionId, paymentUrl }
      */
-    initiatePurchaseTransaction: async (listingId, paymentMethodId = 'VNPAY', quantity = null) => {
+    initiatePurchaseTransaction: async (listingId, methodId, purchaseQuantity) => {
         try {
             console.log('💳 Initiating purchase transaction...');
+
+            // Xây dựng request body với tên trường chính xác
             const requestBody = {
-                listingId,
-                paymentMethodId
+                listingId: listingId,
+                paymentMethodId: methodId, // ✅ Đặt tên trường paymentMethodId (string)
             };
 
-            // Add quantity if specified for partial purchase
-            if (quantity !== null && quantity !== undefined) {
-                requestBody.quantity = quantity;
-                console.log(`🔢 Partial purchase: ${quantity} credits`);
+            // ✅ Đặt tên trường quantity (number)
+            if (purchaseQuantity !== null && purchaseQuantity !== undefined) {
+                requestBody.quantity = purchaseQuantity;
+                console.log(`🔢 Partial purchase: ${purchaseQuantity} credits`);
             }
 
             const response = await axiosInstance.post('/transactions/purchase', requestBody);

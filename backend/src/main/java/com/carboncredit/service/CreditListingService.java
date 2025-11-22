@@ -202,6 +202,7 @@ public class CreditListingService {
         return updated;
     }
 
+    @Transactional // Đảm bảo có annotation này
     public CreditListing cancelListing(UUID listingId, User owner) {
         log.info("Cancelling listing {} by user {}", listingId, owner.getUsername());
 
@@ -210,23 +211,32 @@ public class CreditListingService {
         // Use ValidationService
         validationService.validateOwnership(listing, owner);
 
+        // 1. Kiểm tra trạng thái an toàn
+        if (listing.getStatus() == ListingStatus.PENDING_TRANSACTION) {
+            throw new BusinessOperationException("Cannot cancel. A buyer is currently paying for this listing.");
+        }
         if (listing.getStatus() != ListingStatus.ACTIVE) {
             throw new BusinessOperationException("Can only cancel active listings");
         }
 
-        // Update listing status
+        // 2. Cập nhật trạng thái Listing
         listing.setStatus(ListingStatus.CANCELLED);
 
-        // Revert credit status back to VERIFIED
+        // 3. Hoàn trả trạng thái Carbon Credit
         CarbonCredit credit = listing.getCredit();
         credit.setStatus(CreditStatus.VERIFIED);
         credit.setListedAt(null);
 
-        // Save updates
+        // 4.  FIX QUAN TRỌNG: Hoàn tiền (Credit) vào Ví
+        // Cộng lại số dương vào ví credit của người dùng
+        walletService.updateCreditBalance(owner.getId(), credit.getCreditAmount());
+        log.info("Refunded {} credits to wallet of user {}", credit.getCreditAmount(), owner.getUsername());
+
+        // 5. Lưu thay đổi
         CreditListing cancelled = creditListingRepository.save(listing);
         carbonCreditRepository.save(credit);
 
-        log.info("Listing {} cancelled by user {}", listingId, owner.getUsername());
+        log.info("Listing {} cancelled successfully by user {}", listingId, owner.getUsername());
 
         return cancelled;
     }

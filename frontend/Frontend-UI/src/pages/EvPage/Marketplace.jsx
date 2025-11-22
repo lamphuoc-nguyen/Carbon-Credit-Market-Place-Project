@@ -438,74 +438,78 @@ const MakerPlacePage = () => {
                           )}
                         </div>
 
-                        {/* Card Content */}
-                        <div className="p-6">
-                          {/* Metrics Grid */}
-                          <div className="grid grid-cols-2 gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
-                            {listing.credit?.creditAmount && (
-                              <div>
-                                <p className="text-xs text-gray-500 uppercase tracking-wide">Credits</p>
-                                <p className="text-sm font-bold text-gray-900">{listing.credit.creditAmount}</p>
-                              </div>
-                            )}
-                            {listing.credit?.co2ReducedKg && (
-                              <div>
-                                <p className="text-xs text-gray-500 uppercase tracking-wide">CO₂ Reduced</p>
-                                <p className="text-sm font-bold text-gray-900">{listing.credit.co2ReducedKg} kg</p>
-                              </div>
-                            )}
-                          </div>
-                            
-                          {/* Divider */}
-                          <div className="border-t border-gray-200 my-4"></div>
+                          {/* Card Content */}
+                          <div className="p-6">
+                              {/* Metrics Grid */}
+                              <div className="grid grid-cols-2 gap-3 mb-4 p-3 bg-gray-50 rounded-lg">
+                                  {listing.credit?.creditAmount && (
+                                      <div>
+                                          <p className="text-xs text-gray-500 uppercase tracking-wide">Credits</p>
+                                          {/* Hiển thị số lượng Credit (Tấn) */}
+                                          <p className="text-sm font-bold text-gray-900">{listing.credit.creditAmount} tonnes</p>
+                                      </div>
+                                  )}
 
-                          {/* Price Section */}
-                          <div className="flex items-baseline justify-between mb-4">
-                            <div className="w-full">
-                              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Total Price</p>
-                              <div className="flex items-baseline gap-2">
-                                <p className="text-2xl font-bold text-green-600">
-                                  ${formatPrice((listing.price || 0) * (listing.credit?.creditAmount || 0))}
-                                </p>
+                                  {/* ✅ SỬA: Hiển thị CO2 Offset = Credit * 1000 (1 Tấn = 1000kg) */}
+                                  <div>
+                                      <p className="text-xs text-gray-500 uppercase tracking-wide">CO₂ Offset</p>
+                                      <p className="text-sm font-bold text-gray-900">
+                                          {(listing.credit?.creditAmount * 1000).toLocaleString()} kg
+                                      </p>
+                                  </div>
                               </div>
-                              <p className="text-xs text-gray-500 mt-1">
-                                ${formatPrice(listing.price)}/tonne × {listing.credit?.creditAmount || 0} tonnes
-                              </p>
-                            </div>
-                          </div>
 
-                          {/* Action Buttons */}
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleViewDetails(listing.id)}
-                              disabled={listing.status !== 'ACTIVE'}
-                              className="flex-1 bg-green-500 text-white py-3 px-4 rounded-xl font-semibold hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all"
-                            >
-                              Buy Now
-                            </button>
-                            {listing.id && (
-                              <button
-                                onClick={() => handleViewDetails(listing.id)}
-                                className="px-4 py-3 border-2 border-gray-200 rounded-xl hover:border-green-600 hover:bg-green-50 transition-all"
-                              >
-                                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                              </button>
-                            )}
-                          </div>
+                              {/* Divider */}
+                              <div className="border-t border-gray-200 my-4"></div>
 
-                          {/* Posted Date */}
-                          {listing.createdAt && (
-                            <p className="text-xs text-gray-600 mt-3 text-center">
-                              Posted {new Date(listing.createdAt).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric'
-                              })}
-                            </p>
-                          )}
-                        </div>
+                              {/* Price Section */}
+                              <div className="flex items-baseline justify-between mb-4">
+                                  <div className="w-full">
+                                      <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Total Price</p>
+                                      <div className="flex items-baseline gap-2">
+                                          <p className="text-2xl font-bold text-green-600">
+                                              {/* Tính tổng giá: Giá/Tấn * Số lượng Tấn */}
+                                              ${formatPrice((listing.price || 0) * (listing.credit?.creditAmount || 0))}
+                                          </p>
+                                      </div>
+                                      <p className="text-xs text-gray-500 mt-1">
+                                          ${formatPrice(listing.price)}/tonne × {listing.credit?.creditAmount || 0} tonnes
+                                      </p>
+                                  </div>
+                              </div>
+
+                              {/* Action Buttons */}
+                              <div className="flex gap-2">
+                                  <button
+                                      onClick={() => handleViewDetails(listing.id)}
+                                      disabled={listing.status !== 'ACTIVE'}
+                                      className="flex-1 bg-green-500 text-white py-3 px-4 rounded-xl font-semibold hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all"
+                                  >
+                                      Buy Now
+                                  </button>
+                                  {listing.id && (
+                                      <button
+                                          onClick={() => handleViewDetails(listing.id)}
+                                          className="px-4 py-3 border-2 border-gray-200 rounded-xl hover:border-green-600 hover:bg-green-50 transition-all"
+                                      >
+                                          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                          </svg>
+                                      </button>
+                                  )}
+                              </div>
+
+                              {/* Posted Date */}
+                              {listing.createdAt && (
+                                  <p className="text-xs text-gray-600 mt-3 text-center">
+                                      Posted {new Date(listing.createdAt).toLocaleDateString('en-US', {
+                                      month: 'short',
+                                      day: 'numeric',
+                                      year: 'numeric'
+                                  })}
+                                  </p>
+                              )}
+                          </div>
                       </div>
                     ))}
                   </div>

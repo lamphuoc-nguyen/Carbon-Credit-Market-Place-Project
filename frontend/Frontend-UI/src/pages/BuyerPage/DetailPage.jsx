@@ -189,73 +189,79 @@ const Detailpage = () => {
               </div>
             </div>
 
-            {/* Credit Details */}
-            <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Leaf className="w-5 h-5 text-green-600" />
-                Credit Information
-              </h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {listing.credit?.creditAmount && (
-                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="flex items-center justify-between mb-2">
+              {/* Credit Details */}
+              <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+                  <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                       <Leaf className="w-5 h-5 text-green-600" />
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-green-600">{listing.credit.creditAmount}</div>
-                        <div className="text-xs text-gray-500">tonnes CO₂e</div>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600">Credit Amount</p>
-                  </div>
-                )}
-                
-                {listing.credit?.co2ReducedKg && (
-                  <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <Zap className="w-5 h-5 text-blue-600" />
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-green-600">{listing.credit.co2ReducedKg}</div>
-                        <div className="text-xs text-gray-500">kg CO₂</div>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600">CO₂ Reduced</p>
-                  </div>
-                )}
-                
-                {listing.credit?.journeyId && (
-                  <div className="col-span-full p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="flex items-start gap-3">
-                      <Info className="w-5 h-5 text-gray-600 mt-1" />
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-600 font-medium mb-2">Journey ID</p>
-                        <p className="font-mono text-sm text-gray-900 bg-white px-3 py-2 rounded border border-gray-200">
-                          {listing.credit.journeyId}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                      Credit Information
+                  </h2>
 
-                {listing.credit?.status && (
-                  <div className="col-span-full p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="flex items-center gap-3">
-                      <Shield className="w-5 h-5 text-gray-600" />
-                      <div>
-                        <p className="text-sm text-gray-600 mb-1">Status</p>
-                        <span className={`px-3 py-1 rounded text-xs font-semibold ${
-                          listing.credit.status === 'VERIFIED' 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-yellow-100 text-yellow-700'
-                        }`}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {listing.credit?.creditAmount && (
+                          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                              <div className="flex items-center justify-between mb-2">
+                                  <Leaf className="w-5 h-5 text-green-600"/>
+                                  <div className="text-right">
+                                      {/* ✅ SỬA: Hiển thị chính xác số lượng credit */}
+                                      <div className="text-2xl font-bold text-green-600">
+                                          {listing.credit.creditAmount}
+                                      </div>
+                                      <div className="text-xs text-gray-500">tonnes CO₂e</div>
+                                  </div>
+                              </div>
+                              <p className="text-sm text-gray-600">Credit Amount</p>
+                          </div>
+                      )}
+
+                      {listing.credit?.co2ReducedKg && (
+                          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                              <div className="flex items-center justify-between mb-2">
+                                  <Zap className="w-5 h-5 text-blue-600"/>
+                                  <div className="text-right">
+                                      {/* ✅ SỬA: Nếu có co2ReducedKg thì hiển thị, nếu không thì tính creditAmount * 1000 */}
+                                      <div className="text-2xl font-bold text-green-600">
+                                          {((listing.credit?.creditAmount || 0) * 1000).toLocaleString()} kg
+                                      </div>
+                                      <div className="text-xs text-gray-500">kg CO₂</div>
+                                  </div>
+                              </div>
+                              <p className="text-sm text-gray-600">Total CO₂ Offset</p>
+                          </div>
+                      )}
+
+                      {listing.credit?.journeyId && (
+                          <div className="col-span-full p-4 bg-gray-50 rounded-lg border border-gray-200">
+                              <div className="flex items-start gap-3">
+                                  <Info className="w-5 h-5 text-gray-600 mt-1" />
+                                  <div className="flex-1">
+                                      <p className="text-sm text-gray-600 font-medium mb-2">Journey ID</p>
+                                      <p className="font-mono text-sm text-gray-900 bg-white px-3 py-2 rounded border border-gray-200">
+                                          {listing.credit.journeyId}
+                                      </p>
+                                  </div>
+                              </div>
+                          </div>
+                      )}
+
+                      {listing.credit?.status && (
+                          <div className="col-span-full p-4 bg-gray-50 rounded-lg border border-gray-200">
+                              <div className="flex items-center gap-3">
+                                  <Shield className="w-5 h-5 text-gray-600" />
+                                  <div>
+                                      <p className="text-sm text-gray-600 mb-1">Status</p>
+                                      <span className={`px-3 py-1 rounded text-xs font-semibold ${
+                                          listing.credit.status === 'VERIFIED'
+                                              ? 'bg-green-100 text-green-700'
+                                              : 'bg-yellow-100 text-yellow-700'
+                                      }`}>
                           {listing.credit.status}
                         </span>
-                      </div>
-                    </div>
+                                  </div>
+                              </div>
+                          </div>
+                      )}
                   </div>
-                )}
               </div>
-            </div>
 
             {/* Seller Information */}
             {listing.credit?.owner && (

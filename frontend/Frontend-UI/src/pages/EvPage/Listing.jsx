@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Store, Leaf, DollarSign, TrendingUp, AlertCircle, CheckCircle, ArrowRight, MapPin } from 'lucide-react';
+import { Leaf, AlertCircle, CheckCircle } from 'lucide-react';
 import EvOwnerAPI from '../../api/EvOwnerAPI';
 import Navbar from '../../Components/EVComponents/Navbar';
 import Footer from '../../Components/Footer';
+import { getValidToken } from '../../utils/tokenUtils';
 import { VIETNAM_PROVINCES } from '../../utils/vietnamProvinces';
 
 

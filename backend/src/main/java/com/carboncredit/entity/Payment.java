@@ -100,35 +100,6 @@ public class Payment {
     public boolean isFailed() {
         return paymentStatus == PaymentStatus.FAILED || paymentStatus == PaymentStatus.CANCELLED;
     }
-
-    public boolean canBeRefunded() {
-        return paymentStatus == PaymentStatus.COMPLETED;
-    }
-
-    public boolean isRefunded() {
-        return paymentStatus == PaymentStatus.REFUNDED;
-    }
-
-    // Business logic methods
-    public void markAsCompleted() {
-        this.paymentStatus = PaymentStatus.COMPLETED;
-    }
-
-    public void markAsFailed() {
-        this.paymentStatus = PaymentStatus.FAILED;
-    }
-
-    public void markAsRefunded() {
-        if (!canBeRefunded()) {
-            throw new IllegalStateException("Payment cannot be refunded in current status: " + paymentStatus);
-        }
-        this.paymentStatus = PaymentStatus.REFUNDED;
-    }
-
-    public void markAsDisputed() {
-        this.paymentStatus = PaymentStatus.DISPUTED;
-    }
-
     @Override
     public String toString() {
         return String.format("Payment{id=%s, amount=%s, method=%s, status=%s, reference='%s'}",
