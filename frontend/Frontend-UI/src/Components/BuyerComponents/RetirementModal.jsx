@@ -1,20 +1,9 @@
 import React, { useState } from 'react';
 import { X, Leaf, AlertCircle, CheckCircle, Loader, TreePine, Recycle } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { buyerApi } from '../../api';
 
-/**
- * 🌿 Retirement Modal Component
- * Form để retire carbon credits với validation đầy đủ
- * 
- * Flow theo backend:
- * 1. Validate số lượng credits (phải là số nguyên > 0)
- * 2. Kiểm tra wallet credit balance
- * 3. Gửi request retirement
- * 4. Backend sẽ:
- *    - Trừ ngay credits từ wallet
- *    - Chọn và retire credits (FIFO)
- *    - Tạo certificate (async PDF generation)
- */
+
 const RetirementModal = ({ isOpen, onClose, wallet, onSuccess }) => {
   const [formData, setFormData] = useState({
     amountToRetire: '',
@@ -83,6 +72,7 @@ const RetirementModal = ({ isOpen, onClose, wallet, onSuccess }) => {
     setSubmitError(null);
 
     if (!validateForm()) {
+      toast.error('Please fix the errors in the form before submitting.');
       return;
     }
 
@@ -92,6 +82,7 @@ const RetirementModal = ({ isOpen, onClose, wallet, onSuccess }) => {
       // Get user ID from wallet
       const userId = wallet?.userId;
       if (!userId) {
+        toast.error('User ID not found. Please refresh the page.');
         throw new Error('User ID not found. Please refresh the page.');
       }
 
@@ -110,13 +101,13 @@ const RetirementModal = ({ isOpen, onClose, wallet, onSuccess }) => {
 
       console.log('✅ Retirement successful:', response);
 
-      // Show success message
-      alert(
-        `✅ Retirement Successful!\n\n` +
-        `${formData.amountToRetire} credits have been retired.\n` +
-        `Project: ${formData.projectInfo}\n\n` +
-        `Certificate is being generated and will be available shortly.\n\n` +
-        `Check your retirement history to download the certificate.`
+      // Show success message with toast
+      toast.success(
+        `🌿 Retirement Successful! ${formData.amountToRetire} credits have been retired for "${formData.projectInfo}". Certificate is being generated and will be available shortly in your retirement history.`,
+        {
+          autoClose: 5000,
+          position: "top-center"
+        }
       );
 
       // Close modal and refresh wallet
@@ -127,7 +118,9 @@ const RetirementModal = ({ isOpen, onClose, wallet, onSuccess }) => {
 
     } catch (error) {
       console.error('❌ Retirement failed:', error);
-      setSubmitError(error.message || 'Failed to retire credits. Please try again.');
+      const errorMessage = error.message || 'Failed to retire credits. Please try again.';
+      setSubmitError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

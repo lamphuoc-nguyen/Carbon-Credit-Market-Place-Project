@@ -14,6 +14,7 @@ import {
   AlertCircle,
   ExternalLink
 } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { buyerApi } from '../../api';
 
 /**
@@ -142,29 +143,33 @@ const RetirementHistory = ({ userId, onRefresh }) => {
       // Open download URL in new tab (triggers auto-download via Content-Disposition header)
       window.open(response.url, '_blank');
 
-      // Show success message
-      alert(
-        `✅ Certificate Download Started\n\n` +
-        `File: ${response.fileName}\n\n` +
-        `The certificate PDF will be downloaded automatically.\n` +
-        `Download link is valid for 1 hour.`
+      // Show success message with toast
+      toast.success(
+        `Downloaded Successfully!!!!`,
+        {
+          autoClose: 5000,
+          position: "bottom-right"
+        }
       );
 
     } catch (error) {
       console.error('❌ Certificate download failed:', error);
       
       if (error.message.includes('not ready')) {
-        alert(
-          `⏳ Certificate Not Ready\n\n` +
-          `Your certificate is still being generated.\n` +
-          `Please wait a few minutes and try again.\n\n` +
-          `Click the refresh button to check status.`
+        toast.warning(
+          '⏳ Certificate Not Ready - Your certificate is still being generated. Please wait a few minutes and try again. Click the refresh button to check status.',
+          {
+            autoClose: 6000,
+            position: "bottom-right"
+          }
         );
       } else {
-        alert(
-          `❌ Download Failed\n\n` +
-          `${error.message}\n\n` +
-          `Please try again or contact support if the issue persists.`
+        toast.error(
+          `❌ Download Failed - ${error.message}. Please try again or contact support if the issue persists.`,
+          {
+            autoClose: 7000,
+            position: "bottom-right"
+          }
         );
       }
     } finally {

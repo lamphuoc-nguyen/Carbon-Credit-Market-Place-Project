@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { userApi } from '../../api/userApi';         // Cần để lấy danh sách user
 import { walletApi } from '../../api/walletApi';     // API bạn vừa cung cấp
+import { toast } from 'react-toastify';
 import {
     Users,
     DollarSign,
@@ -138,11 +139,11 @@ const AdjustBalanceModal = ({ wallet, isOpen, onClose, onSave }) => {
 
     const handleSave = async () => {
         if (!reason) {
-            alert('A reason is required for balance adjustments.');
+            toast.error('A reason is required for balance adjustments.');
             return;
         }
         if (cashAmount === 0 && creditAmount === 0 && co2Amount === 0) {
-            alert('Please enter an amount to adjust.');
+            toast.error('Please enter an amount to adjust.');
             return;
         }
 
@@ -154,6 +155,10 @@ const AdjustBalanceModal = ({ wallet, isOpen, onClose, onSave }) => {
                 co2Amount: Number(co2Amount),
                 reason: reason
             });
+
+            // Show success message
+            toast.success(`💰 Wallet adjustment applied successfully for ${wallet.username}! Cash: $${cashAmount}, Credits: ${creditAmount}, CO2: ${co2Amount}kg`);
+
             // Reset form và đóng modal
             onClose();
             setCashAmount(0);
@@ -162,14 +167,14 @@ const AdjustBalanceModal = ({ wallet, isOpen, onClose, onSave }) => {
             setReason('');
         } catch (err) {
             console.error("Failed to save adjustment:", err);
-            alert(`Error: ${err.message}`);
+            toast.error(`Error: ${err.message}. Failed to save wallet adjustment. Please try again.`);
         } finally {
             setIsSaving(false);
         }
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-lg mx-4">
                 <div className="flex justify-between items-center p-4 border-b">
                     <h3 className="text-lg font-semibold text-gray-800">Adjust Wallet Balance</h3>
@@ -438,3 +443,8 @@ const WalletManagement = () => {
 };
 
 export default WalletManagement;
+
+
+
+
+
