@@ -95,7 +95,7 @@ const PlatformReport = () => {
     const [stats, setStats] = useState(null);
     const [userStats, setUserStats] = useState({ totalUsers: 0, chartData: [] });
     const [listingStats, setListingStats] = useState(null);
-    
+
 
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -131,20 +131,26 @@ const PlatformReport = () => {
                     fullEndDate.toISOString().slice(0, -5)
                 ),
                 userApi.getAllUsers(),
-                creditListingApi.getMarketplaceStats().catch(() => null)
+                creditListingApi.getMarketplaceStats().catch(err => {
+                    console.warn('Failed to fetch marketplace stats:', err);
+                    return null;
+                })
             ]);
+
+            // Debug: Log API response
+            console.log('📊 Transaction Statistics API Response:', statsResponse);
+            console.log('📊 Cancelled Transactions:', statsResponse.cancelledTransactions);
 
             // Xử lý Transaction Stats
             const revenue = statsResponse.totalRevenue || 0;
-            const credits = statsResponse.totalCreditsTraded || 0;
             const transactions = statsResponse.totalTransactions || 0;
-            const avgPrice = credits > 0 ? (revenue / credits) : 0;
+            const avgTransactionValue = statsResponse.averageTransactionValue || 0;
 
             setStats({
                 totalRevenue: revenue,
-                totalCreditsTraded: credits,
+                totalCreditsTraded: 0, // Backend không cung cấp field này
                 totalTransactions: transactions,
-                avgPrice: avgPrice,
+                avgPrice: avgTransactionValue,
                 completedTransactions: statsResponse.completedTransactions || 0,
                 pendingTransactions: statsResponse.pendingTransactions || 0,
                 cancelledTransactions: statsResponse.cancelledTransactions || 0,
@@ -152,8 +158,15 @@ const PlatformReport = () => {
                 disputeRate: statsResponse.disputeRate || 0
             });
 
-            // Lưu listing stats
-            setListingStats(listingsResponse);
+            // Xử lý Listing Stats - map đúng với API response
+            if (listingsResponse) {
+                setListingStats({
+                    activeListings: listingsResponse.totalActiveListings || 0,
+                    averagePrice: listingsResponse.averagePrice || 0
+                });
+            } else {
+                setListingStats(null);
+            }
 
             // Xử lý User Stats
             const roleCounts = usersResponse.reduce((acc, user) => {
@@ -280,6 +293,9 @@ const PlatformReport = () => {
 
         setIsExporting(true);
         try {
+            console.log('📊 Exporting JSON - Current stats state:', stats);
+            console.log('📊 Cancelled Transactions in state:', stats.cancelledTransactions);
+
             const reportData = {
                 reportInfo: {
                     generatedAt: new Date().toISOString(),
@@ -355,9 +371,7 @@ const PlatformReport = () => {
         if (listingStats) {
             lines.push('LISTING STATISTICS');
             lines.push('Metric,Value');
-            lines.push(`Total Listings,${formatNumber(listingStats.totalListings || 0)}`);
             lines.push(`Active Listings,${formatNumber(listingStats.activeListings || 0)}`);
-            lines.push(`Sold Listings,${formatNumber(listingStats.soldListings || 0)}`);
             lines.push(`Average Listing Price,${formatCurrency(listingStats.averagePrice || 0)}`);
         }
 
@@ -412,9 +426,7 @@ const PlatformReport = () => {
                     <h3>Listing Statistics</h3>
                     <table>
                         <tr><th>Metric</th><th>Value</th></tr>
-                        <tr><td>Total Listings</td><td>${formatNumber(listingStats.totalListings || 0)}</td></tr>
                         <tr><td>Active Listings</td><td>${formatNumber(listingStats.activeListings || 0)}</td></tr>
-                        <tr><td>Sold Listings</td><td>${formatNumber(listingStats.soldListings || 0)}</td></tr>
                         <tr><td>Average Listing Price</td><td>${formatCurrency(listingStats.averagePrice || 0)}</td></tr>
                     </table>
                 ` : ''}
@@ -426,7 +438,7 @@ const PlatformReport = () => {
     /**
      * Placeholder cho chức năng xuất CSV - DEPRECATED
      */
-  
+
 
     // Helper định dạng
     const formatCurrency = (val) => `$${(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -538,10 +550,10 @@ const PlatformReport = () => {
                         isLoading={isLoading}
                     />
                     <StatCard
-                        title="Avg. Price / Credit"
+                        title="Avg. Transaction Value"
                         value={formatCurrency(stats?.avgPrice)}
                         icon={DollarSign}
-                        note="Revenue / Credits"
+                        note="Per transaction"
                         isLoading={isLoading}
                     />
                 </div>
@@ -570,14 +582,7 @@ const PlatformReport = () => {
             {listingStats && (
                 <div>
                     <h2 className="text-xl font-semibold text-gray-800 mb-4">Marketplace Listing Statistics</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <StatCard
-                            title="Total Listings"
-                            value={formatNumber(listingStats.totalListings || 0)}
-                            icon={Activity}
-                            note="All time"
-                            isLoading={isLoading}
-                        />
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
                         <StatCard
                             title="Active Listings"
                             value={formatNumber(listingStats.activeListings || 0)}
@@ -586,14 +591,7 @@ const PlatformReport = () => {
                             isLoading={isLoading}
                         />
                         <StatCard
-                            title="Sold Listings"
-                            value={formatNumber(listingStats.soldListings || 0)}
-                            icon={Download}
-                            note="Completed sales"
-                            isLoading={isLoading}
-                        />
-                        <StatCard
-                            title="Avg. Listing Price"
+                            title="Average Listing Price"
                             value={formatCurrency(listingStats.averagePrice || 0)}
                             icon={DollarSign}
                             note="Per listing"

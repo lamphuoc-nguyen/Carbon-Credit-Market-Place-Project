@@ -132,6 +132,12 @@ const Report = () => {
             // Fetch verified credits data
             const verifiedCredits = await cvaApi.getVerifiedCredits();
 
+            // Debug: Log the data structure
+            console.log('📊 Exporting Report - Total Credits:', verifiedCredits?.length || 0);
+            if (verifiedCredits && verifiedCredits.length > 0) {
+                console.log('📊 Sample Credit Data:', verifiedCredits[0]);
+            }
+
             if (format === 'csv') {
                 exportToCSV(verifiedCredits);
             } else if (format === 'json') {
@@ -149,39 +155,59 @@ const Report = () => {
         // Format data for Excel with tab separator (more reliable than comma)
         const headers = [
             'Credit ID',
-            'Owner Username',
-            'Owner Email',
-            'CO2 Amount (kg)',
-            'Credit Value',
+            'CO2 Reduced (kg)',
+            'Credit Amount',
             'Status',
-            'Issued Date',
-            'Verified By',
-            'Certificate ID'
+            'Created Date',
+            'Verified Date',
+            'Verified By'
         ];
 
-        // Create rows with tab separation
-        const rows = credits.map(credit => {
-            const issuedDate = credit.issuedDate
-                ? new Date(credit.issuedDate).toLocaleString('en-US', {
+        // Helper function to safely get value or return default
+        const safeValue = (value, defaultValue = 'N/A') => {
+            if (value === null || value === undefined || value === '') {
+                return defaultValue;
+            }
+            return String(value).trim();
+        };
+
+        // Helper function to format date
+        const formatDate = (dateValue) => {
+            if (!dateValue) return 'N/A';
+            try {
+                return new Date(dateValue).toLocaleString('en-US', {
                     year: 'numeric',
                     month: '2-digit',
                     day: '2-digit',
                     hour: '2-digit',
                     minute: '2-digit',
                     second: '2-digit'
-                })
-                : '';
+                });
+            } catch (err) {
+                console.warn('Invalid date format:', dateValue, err);
+                return 'Invalid Date';
+            }
+        };
+
+        // Create rows with tab separation
+        const rows = credits.map(credit => {
+            // Get numeric values with proper defaults
+            const co2Reduced = credit.co2ReducedKg !== null && credit.co2ReducedKg !== undefined
+                ? Number(credit.co2ReducedKg).toFixed(2)
+                : '0.00';
+
+            const creditAmount = credit.creditAmount !== null && credit.creditAmount !== undefined
+                ? Number(credit.creditAmount).toFixed(2)
+                : '0.00';
 
             return [
-                credit.id || '',
-                credit.owner?.username || credit.ownerUsername || '',
-                credit.owner?.email || '',
-                credit.co2Amount || '0',
-                credit.creditValue || '0',
-                credit.status || '',
-                issuedDate,
-                credit.verifiedByUsername || '',
-                credit.certificateId || ''
+                safeValue(credit.id, 'N/A'),
+                co2Reduced,
+                creditAmount,
+                safeValue(credit.status, 'UNKNOWN'),
+                formatDate(credit.createdAt),
+                formatDate(credit.verifiedAt),
+                safeValue(credit.verifiedByUsername, 'N/A')
             ].join('\t'); // Use TAB instead of comma
         });
 
@@ -214,23 +240,26 @@ const Report = () => {
             generatedDate: new Date().toISOString(),
             statistics: {
                 totalCreditsIssued: credits.length,
-                totalCO2Converted: credits.reduce((sum, c) => sum + (c.co2Amount || 0), 0),
-                totalCreditValue: credits.reduce((sum, c) => sum + (c.creditValue || 0), 0)
+                totalCO2Reduced: credits.reduce((sum, c) => sum + (Number(c.co2ReducedKg) || 0), 0),
+                totalCreditAmount: credits.reduce((sum, c) => sum + (Number(c.creditAmount) || 0), 0)
             },
             credits: credits.map(credit => ({
                 id: credit.id,
                 owner: {
-                    username: credit.owner?.username || credit.ownerUsername,
-                    email: credit.owner?.email,
-                    userId: credit.ownerId
+                    id: credit.owner?.id,
+                    username: credit.owner?.username,
+                    role: credit.owner?.role
                 },
-                co2Amount: credit.co2Amount,
-                creditValue: credit.creditValue,
+                co2ReducedKg: credit.co2ReducedKg,
+                creditAmount: credit.creditAmount,
                 status: credit.status,
-                issuedDate: credit.issuedDate,
-                verifiedBy: credit.verifiedByUsername,
-                certificateId: credit.certificateId,
-                journeyIds: credit.journeyIds
+                createdAt: credit.createdAt,
+                verifiedAt: credit.verifiedAt,
+                verifiedBy: {
+                    id: credit.verifiedById,
+                    username: credit.verifiedByUsername
+                },
+                listedAt: credit.listedAt
             }))
         };
 
@@ -666,7 +695,7 @@ const Report = () => {
                     </div>
                 </div>
 
-                
+
             </div>
         </div>
     );

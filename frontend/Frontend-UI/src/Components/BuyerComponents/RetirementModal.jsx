@@ -284,19 +284,7 @@ const RetirementModal = ({ isOpen, onClose, wallet, onSuccess }) => {
             )}       
 
             {/* Info Notice - Compact */}
-            <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-              <div className="flex items-start space-x-2">
-                <AlertCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
-                <div className="text-xs text-blue-900">
-                  <p className="font-semibold mb-1">Important</p>
-                  <ul className="space-y-0.5 text-blue-800">
-                    <li>• Credits deducted immediately</li>
-                    <li>• Action is permanent</li>
-                    <li>• Certificate ready in minutes</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
+            
           </div>
 
           {/* Action Buttons - Compact */}

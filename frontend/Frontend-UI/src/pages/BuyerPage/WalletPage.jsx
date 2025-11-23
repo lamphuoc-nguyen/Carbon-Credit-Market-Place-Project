@@ -137,10 +137,10 @@ const WalletPage = () => {
             // Close modal and clear form first
             setShowDepositModal(false);
             setDepositAmount('');
-            
+
             // Show success toast after modal closes
             toast.success(`Deposit initiated successfully! Amount: $${depositAmount}`);
-            
+
             // Refresh wallet data
             await fetchWalletData();
         } catch (error) {
@@ -251,13 +251,13 @@ const WalletPage = () => {
 
     return (
         <div className="min-h-screen bg-gray-50"
-             style={{
-                 backgroundImage: "url('/src/image/bg4.png')",
-                 backgroundSize: '100% auto',
-                 backgroundPosition: 'top center',
-                 backgroundRepeat: 'no-repeat',
-                 backgroundAttachment: 'fixed'
-             }}>
+            style={{
+                backgroundImage: "url('/src/image/bg4.png')",
+                backgroundSize: '100% auto',
+                backgroundPosition: 'top center',
+                backgroundRepeat: 'no-repeat',
+                backgroundAttachment: 'fixed'
+            }}>
             <Navbar_Buyer />
             <ToastContainer
                 position="bottom-right"
@@ -494,32 +494,30 @@ const WalletPage = () => {
                                     <div key={transaction.id || index} className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:border-green-300 hover:shadow-sm transition-all duration-200">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-4">
-                                                <div className={`p-2 rounded-lg ${
-                                                    transaction.type === 'DEPOSIT' ? 'bg-green-100 text-green-600' :
+                                                <div className={`p-2 rounded-lg ${transaction.type === 'DEPOSIT' ? 'bg-green-100 text-green-600' :
                                                         transaction.type === 'WITHDRAWAL' ? 'bg-red-100 text-red-600' :
                                                             transaction.type === 'PURCHASE' ? 'bg-blue-100 text-blue-600' :
                                                                 'bg-gray-100 text-gray-600'
-                                                }`}>
+                                                    }`}>
                                                     {getTransactionIcon(transaction.type)}
                                                 </div>
                                                 <div>
                                                     <div className="flex items-center gap-2 mb-1">
-                            <span className="font-semibold text-gray-900">
-                              {transaction.type?.replace('_', ' ') || 'Transaction'}
-                            </span>
+                                                        <span className="font-semibold text-gray-900">
+                                                            {transaction.type?.replace('_', ' ') || 'Transaction'}
+                                                        </span>
                                                         <span className={`px-2 py-0.5 text-xs font-medium rounded ${getStatusColor(transaction.status)}`}>
-                              {transaction.status || 'Completed'}
-                            </span>
+                                                            {transaction.status || 'Completed'}
+                                                        </span>
 
                                                         {/* 🆕 NEW: Payment Method Badge */}
                                                         {transaction.paymentMethod && (
-                                                            <span className={`px-2 py-0.5 text-xs font-medium rounded border ${
-                                                                transaction.paymentMethod === 'VNPAY' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                                            <span className={`px-2 py-0.5 text-xs font-medium rounded border ${transaction.paymentMethod === 'VNPAY' ? 'bg-blue-50 text-blue-700 border-blue-200' :
                                                                     transaction.paymentMethod === 'WALLET' ? 'bg-purple-50 text-purple-700 border-purple-200' :
                                                                         'bg-gray-100 text-gray-700 border-gray-200'
-                                                            }`}>
-                                {transaction.paymentMethod === 'BANK_TRANSFER' ? 'BANKING' : transaction.paymentMethod}
-                              </span>
+                                                                }`}>
+                                                                {transaction.paymentMethod === 'BANK_TRANSFER' ? 'BANKING' : transaction.paymentMethod}
+                                                            </span>
                                                         )}
                                                     </div>
                                                     <p className="text-sm text-gray-600">
@@ -531,16 +529,15 @@ const WalletPage = () => {
                                                 </div>
                                             </div>
                                             <div className="text-right">
-                        <span className={`text-lg font-bold ${
-                            transaction.type === 'DEPOSIT' ? 'text-green-600' :
-                                transaction.type === 'WITHDRAWAL' ? 'text-red-600' :
-                                    transaction.type === 'PURCHASE' ? 'text-blue-600' :
-                                        'text-gray-900'
-                        }`}>
-                          {transaction.type === 'DEPOSIT' ? '+' :
-                              transaction.type === 'WITHDRAWAL' ? '-' : ''}
-                            {formatCurrency(transaction.amount)}
-                        </span>
+                                                <span className={`text-lg font-bold ${transaction.type === 'DEPOSIT' ? 'text-green-600' :
+                                                        transaction.type === 'WITHDRAWAL' ? 'text-red-600' :
+                                                            transaction.type === 'PURCHASE' ? 'text-blue-600' :
+                                                                'text-gray-900'
+                                                    }`}>
+                                                    {transaction.type === 'DEPOSIT' ? '+' :
+                                                        transaction.type === 'WITHDRAWAL' ? '-' : ''}
+                                                    {formatCurrency(transaction.amount)}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -553,47 +550,47 @@ const WalletPage = () => {
                 {/* Deposit Modal */}
                 {showDepositModal && (
                     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl transform transition-all overflow-hidden">
+                        <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl transform transition-all overflow-hidden">
                             {/* Modal Header */}
-                            <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-8 text-white relative">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
+                            <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-5 text-white relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-12 translate-x-12"></div>
                                 <div className="relative z-10">
-                                    <div className="flex items-center space-x-4 mb-4">
-                                        <div className="p-3 bg-white/20 backdrop-blur-sm rounded-2xl">
-                                            <TreePine className="w-8 h-8" />
+                                    <div className="flex items-center space-x-3">
+                                        <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
+                                            <TreePine className="w-6 h-6" />
                                         </div>
                                         <div>
-                                            <h3 className="text-2xl font-bold">Deposit Funds</h3>
-                                            <p className="text-green-200">Add funds to your wallet</p>
+                                            <h3 className="text-xl font-bold">Deposit Funds</h3>
+                                            <p className="text-green-100 text-sm">Add funds to your wallet</p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="p-8">
-                                <div className="space-y-6">
+                            <div className="p-5">
+                                <div className="space-y-4">
                                     {/* Amount Input */}
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-800 mb-3">
-                                            Investment Amount (USD)
+                                        <label className="block text-sm font-semibold text-gray-800 mb-2">
+                                            Amount (USD)
                                         </label>
                                         <div className="relative">
-                                            <DollarSign className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-600" />
+                                            <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-600" />
                                             <input
                                                 type="number"
                                                 value={depositAmount}
                                                 onChange={(e) => setDepositAmount(e.target.value)}
                                                 placeholder="0.00"
-                                                className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all text-lg font-semibold"
+                                                className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all text-base font-semibold"
                                             />
                                         </div>
                                         {depositAmount && (
-                                            <div className="mt-2 p-3 bg-green-50 rounded-xl border border-green-200">
+                                            <div className="mt-2 p-2 bg-green-50 rounded-lg border border-green-200">
                                                 <div className="flex items-center space-x-2 text-green-700">
-                                                    <Earth className="w-4 h-4" />
-                                                    <span className="text-sm font-medium">
-                          Ready to fund your carbon credit purchases
-                        </span>
+                                                    <Earth className="w-3.5 h-3.5" />
+                                                    <span className="text-xs font-medium">
+                                                        Ready to fund your carbon credit purchases
+                                                    </span>
                                                 </div>
                                             </div>
                                         )}
@@ -601,13 +598,13 @@ const WalletPage = () => {
 
                                     {/* Payment Method */}
                                     <div>
-                                        <label className="block text-sm font-bold text-gray-800 mb-3">
+                                        <label className="block text-sm font-semibold text-gray-800 mb-2">
                                             Payment Method
                                         </label>
                                         <select
                                             value={depositMethod}
                                             onChange={(e) => setDepositMethod(e.target.value)}
-                                            className="w-full px-4 py-4 border-2 border-gray-200 rounded-2xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all font-medium"
+                                            className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all font-medium text-sm"
                                         >
                                             <option value="bank_transfer">🏦 Bank Transfer</option>
                                             <option value="credit_card">💳 Credit Card</option>
@@ -617,50 +614,49 @@ const WalletPage = () => {
 
                                     {/* Quick Amount Selection */}
                                     <div>
-                                        <p className="text-sm font-bold text-gray-800 mb-3">Quick amounts:</p>
-                                        <div className="grid grid-cols-2 gap-3">
+                                        <p className="text-sm font-semibold text-gray-800 mb-2">Quick amounts:</p>
+                                        <div className="grid grid-cols-4 gap-2">
                                             {[100, 500, 1000, 2500].map((amount) => (
                                                 <button
                                                     key={amount}
                                                     onClick={() => setDepositAmount(amount.toString())}
-                                                    className="p-3 border-2 border-gray-200 rounded-xl hover:border-green-400 hover:bg-green-50 transition-all text-center group"
+                                                    className="p-2 border-2 border-gray-200 rounded-lg hover:border-green-400 hover:bg-green-50 transition-all text-center group"
                                                 >
-                                                    <div className="font-bold text-green-600 group-hover:text-green-700">
+                                                    <div className="font-bold text-green-600 group-hover:text-green-700 text-sm">
                                                         ${amount}
                                                     </div>
-                                                    <div className="text-xs text-gray-500 mt-1">Deposit</div>
                                                 </button>
                                             ))}
                                         </div>
                                     </div>
 
                                     {/* Security Notice */}
-                                    <div className="bg-gray-50 rounded-xl p-4">
-                                        <div className="flex items-center space-x-2 mb-2">
-                                            <CheckCircle className="w-4 h-4 text-green-600" />
-                                            <h4 className="font-medium text-gray-800">Secure Deposit</h4>
+                                    <div className="bg-gray-50 rounded-lg p-3">
+                                        <div className="flex items-center space-x-2 mb-1">
+                                            <CheckCircle className="w-3.5 h-3.5 text-green-600" />
+                                            <h4 className="font-medium text-gray-800 text-sm">Secure Deposit</h4>
                                         </div>
-                                        <p className="text-sm text-gray-600">
-                                            Bank-level security • Instant processing • Wallet balance update
+                                        <p className="text-xs text-gray-600">
+                                            Bank-level security • Instant processing
                                         </p>
                                     </div>
                                 </div>
 
                                 {/* Action Buttons */}
-                                <div className="flex space-x-4 mt-8">
+                                <div className="flex space-x-3 mt-5">
                                     <button
                                         onClick={() => {
                                             setShowDepositModal(false);
                                             setDepositAmount('');
                                         }}
-                                        className="flex-1 py-4 px-6 border-2 border-gray-300 rounded-2xl font-semibold text-gray-700 hover:bg-gray-50 transition-all"
+                                        className="flex-1 py-2.5 px-4 border-2 border-gray-300 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition-all text-sm"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         onClick={handleDeposit}
                                         disabled={depositing || !depositAmount}
-                                        className="flex-1 py-4 px-6 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl font-semibold hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl"
+                                        className="flex-1 py-2.5 px-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl text-sm"
                                     >
                                         {depositing ? (
                                             <div className="flex items-center justify-center space-x-2">

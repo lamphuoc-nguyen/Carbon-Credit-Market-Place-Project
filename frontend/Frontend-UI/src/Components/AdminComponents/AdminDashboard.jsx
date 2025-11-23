@@ -159,20 +159,31 @@ const RecentTransactions = () => {
             setIsLoading(true);
             setError(null);
             try {
+                // Check if the function exists
+                if (typeof transactionApi.getDisputedTransactions !== 'function') {
+                    console.warn('getDisputedTransactions is not implemented');
+                    setTransactions([]);
+                    setIsLoading(false);
+                    return;
+                }
+
                 // Lấy 5 giao dịch bị khiếu nại gần nhất (phân trang)
-                // API trả về một đối tượng Page, vì vậy chúng ta cần .content
                 const response = await transactionApi.getDisputedTransactions(0, 5);
-                setTransactions(response.content || []); // Đảm bảo transactions luôn là mảng
+                console.log('📊 Disputed Transactions Response:', response);
+
+                // API có thể trả về { content: [...], totalElements: ... } hoặc trực tiếp mảng
+                const txData = response.content || response.data || response || [];
+                setTransactions(Array.isArray(txData) ? txData : []);
             } catch (err) {
-                console.error("Failed to fetch recent transactions:", err);
-                setError(err.message || 'Could not load data.');
+                console.error("Failed to fetch disputed transactions:", err);
+                setError(err.response?.data?.message || err.message || 'Could not load disputed transactions.');
             } finally {
                 setIsLoading(false);
             }
         };
 
         fetchTransactions();
-    }, []); // Chạy một lần khi component mount
+    }, []);
 
     // Helper để định dạng ngày
     const formatDate = (dateString) => {
@@ -218,8 +229,10 @@ const RecentTransactions = () => {
 
             {/* --- Xử lý khi không có dữ liệu --- */}
             {!isLoading && !error && transactions.length === 0 && (
-                <div className="border-t border-gray-100 pt-4 text-center text-gray-500">
-                    <p>No disputed transactions found.</p>
+                <div className="border-t border-gray-100 pt-4 text-center text-gray-500 py-8">
+                    <AlertTriangle className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                    <p className="font-semibold text-gray-700">Not Found</p>
+                    <p className="text-sm mt-1">No disputed transactions available</p>
                 </div>
             )}
 
@@ -417,8 +430,8 @@ const AdminDashboard = () => {
                             </div>
                             <div>
                                 <p className={`text-xs mt-1 ${stat.value === 'Error' ? 'text-red-500' :
-                                        stat.trend?.includes('+') ? 'text-green-600' :
-                                            stat.trend?.includes('-') ? 'text-red-600' : 'text-gray-500'
+                                    stat.trend?.includes('+') ? 'text-green-600' :
+                                        stat.trend?.includes('-') ? 'text-red-600' : 'text-gray-500'
                                     }`}>
                                     {stat.trend || stat.subtext}
                                 </p>
