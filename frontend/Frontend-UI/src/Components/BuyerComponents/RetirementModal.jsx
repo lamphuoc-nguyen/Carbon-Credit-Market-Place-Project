@@ -151,35 +151,35 @@ const RetirementModal = ({ isOpen, onClose, wallet, onSuccess }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl transform transition-all overflow-hidden">
+      <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl transform transition-all overflow-hidden">
         {/* Header - Compact */}
-        <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-5 text-white relative overflow-hidden">
+        <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-4 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-12 translate-x-12"></div>
           
           <div className="relative z-10">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
-                  <Recycle className="w-6 h-6" />
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center space-x-2">
+                <div className="p-1.5 bg-white/20 backdrop-blur-sm rounded-lg">
+                  <Recycle className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold">Retire Credits</h3>
-                  <p className="text-green-200 text-sm">Offset carbon footprint</p>
+                  <h3 className="text-lg font-bold">Retire Credits</h3>
+                  <p className="text-green-100 text-xs">Offset carbon footprint</p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+                className="p-1 hover:bg-white/20 rounded-lg transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
             {/* Available Balance - Compact */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
-              <p className="text-green-200 text-xs mb-0.5">Available Credits</p>
-              <p className="text-2xl font-bold">{(wallet?.creditBalance || 0).toLocaleString()}</p>
-              <p className="text-green-200 text-xs mt-0.5">
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2.5 border border-white/20">
+              <p className="text-green-100 text-xs mb-0.5">Available Credits</p>
+              <p className="text-xl font-bold">{(wallet?.creditBalance || 0).toLocaleString()}</p>
+              <p className="text-green-100 text-xs mt-0.5">
                 ≈ {((wallet?.creditBalance || 0) * 1000).toLocaleString()} kg CO₂
               </p>
             </div>
@@ -187,13 +187,13 @@ const RetirementModal = ({ isOpen, onClose, wallet, onSuccess }) => {
         </div>
 
         {/* Form - Compact */}
-        <form onSubmit={handleSubmit} className="p-5">
-          <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="p-4">
+          <div className="space-y-3">
             {/* Error Alert */}
             {submitError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-2.5">
                 <div className="flex items-start space-x-2">
-                  <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                  <AlertCircle className="w-3.5 h-3.5 text-red-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <h4 className="font-semibold text-sm text-red-900">Retirement Failed</h4>
                     <p className="text-xs text-red-700 mt-1">{submitError}</p>
@@ -213,7 +213,7 @@ const RetirementModal = ({ isOpen, onClose, wallet, onSuccess }) => {
                   type="text"
                   value={`${formData.amountToRetire} credits`}
                   readOnly
-                  className="w-full pl-10 pr-3 py-2.5 border-2 border-gray-200 rounded-xl font-semibold bg-gray-50 text-gray-800 cursor-not-allowed"
+                  className="w-full pl-9 pr-3 py-2 border-2 border-gray-200 rounded-lg font-semibold text-sm bg-gray-50 text-gray-800 cursor-not-allowed"
                 />
               </div>
               <p className="mt-1.5 text-xs text-gray-600">
@@ -232,7 +232,7 @@ const RetirementModal = ({ isOpen, onClose, wallet, onSuccess }) => {
                 onChange={(e) => handleChange('projectInfo', e.target.value)}
                 placeholder="e.g., Solar Panel Installation 2024"
                 maxLength="200"
-                className={`w-full px-3 py-2.5 border-2 rounded-xl focus:ring-2 focus:ring-green-500 transition-all ${
+                className={`w-full px-3 py-2 border-2 rounded-lg text-sm focus:ring-2 focus:ring-green-500 transition-all ${
                   errors.projectInfo 
                     ? 'border-red-300 focus:border-red-500' 
                     : 'border-gray-200 focus:border-green-500'
@@ -252,31 +252,31 @@ const RetirementModal = ({ isOpen, onClose, wallet, onSuccess }) => {
 
             {/* Environmental Impact Preview - Compact */}
             {impact && (
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-3 border border-green-200">
-                <div className="flex items-center space-x-1.5 mb-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  <h4 className="font-semibold text-sm text-green-900">Environmental Impact</h4>
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-2.5 border border-green-200">
+                <div className="flex items-center space-x-1.5 mb-1.5">
+                  <CheckCircle className="w-3.5 h-3.5 text-green-600" />
+                  <h4 className="font-semibold text-xs text-green-900">Environmental Impact</h4>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2">
                   <div className="text-center">
-                    <div className="p-2 bg-white rounded-lg inline-block mb-1">
-                      <Recycle className="w-4 h-4 text-green-600" />
+                    <div className="p-1.5 bg-white rounded-lg inline-block mb-1">
+                      <Recycle className="w-3.5 h-3.5 text-green-600" />
                     </div>
-                    <p className="text-lg font-bold text-green-900">{impact.co2}</p>
+                    <p className="text-base font-bold text-green-900">{impact.co2}</p>
                     <p className="text-xs text-green-700">kg CO₂</p>
                   </div>
                   <div className="text-center">
-                    <div className="p-2 bg-white rounded-lg inline-block mb-1">
-                      <TreePine className="w-4 h-4 text-green-600" />
+                    <div className="p-1.5 bg-white rounded-lg inline-block mb-1">
+                      <TreePine className="w-3.5 h-3.5 text-green-600" />
                     </div>
-                    <p className="text-lg font-bold text-green-900">{impact.trees}</p>
+                    <p className="text-base font-bold text-green-900">{impact.trees}</p>
                     <p className="text-xs text-green-700">Trees</p>
                   </div>
                   <div className="text-center">
-                    <div className="p-2 bg-white rounded-lg inline-block mb-1">
-                      <Leaf className="w-4 h-4 text-green-600" />
+                    <div className="p-1.5 bg-white rounded-lg inline-block mb-1">
+                      <Leaf className="w-3.5 h-3.5 text-green-600" />
                     </div>
-                    <p className="text-lg font-bold text-green-900">{impact.cars}</p>
+                    <p className="text-base font-bold text-green-900">{impact.cars}</p>
                     <p className="text-xs text-green-700">Cars</p>
                   </div>
                 </div>
@@ -284,9 +284,9 @@ const RetirementModal = ({ isOpen, onClose, wallet, onSuccess }) => {
             )}       
 
             {/* Info Notice - Compact */}
-            <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+            <div className="bg-blue-50 rounded-lg p-2.5 border border-blue-200">
               <div className="flex items-start space-x-2">
-                <AlertCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-3.5 h-3.5 text-blue-600 flex-shrink-0 mt-0.5" />
                 <div className="text-xs text-blue-900">
                   <p className="font-semibold mb-1">Important</p>
                   <ul className="space-y-0.5 text-blue-800">
@@ -300,19 +300,19 @@ const RetirementModal = ({ isOpen, onClose, wallet, onSuccess }) => {
           </div>
 
           {/* Action Buttons - Compact */}
-          <div className="flex space-x-3 mt-5">
+          <div className="flex space-x-2.5 mt-4">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="flex-1 py-2.5 px-4 border-2 border-gray-300 rounded-xl font-semibold text-sm text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-50 cursor-pointer"
+              className="flex-1 py-2 px-3 border-2 border-gray-300 rounded-lg font-semibold text-sm text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-50 cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting || !formData.amountToRetire || !formData.projectInfo}
-              className="flex-1 py-2.5 px-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-semibold text-sm hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 cursor-pointer transition-all shadow-md hover:shadow-lg"
+              className="flex-1 py-2 px-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-semibold text-sm hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 cursor-pointer transition-all shadow-md hover:shadow-lg"
             >
               {isSubmitting ? (
                 <div className="flex items-center justify-center space-x-2">
