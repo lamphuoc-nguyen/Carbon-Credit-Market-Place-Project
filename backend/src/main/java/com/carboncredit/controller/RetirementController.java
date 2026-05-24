@@ -35,7 +35,6 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/retirement")
 @Slf4j
-@CrossOrigin(origins = "*", maxAge = 3600)
 public class RetirementController {
 
     @Autowired

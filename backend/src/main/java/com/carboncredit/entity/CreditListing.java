@@ -25,6 +25,10 @@ public class CreditListing {
     @Column(name = "listing_id")
     private UUID id;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version = 0L;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "credit_id")
     private CarbonCredit credit;

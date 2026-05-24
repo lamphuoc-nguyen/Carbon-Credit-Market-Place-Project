@@ -24,6 +24,10 @@ public class CarbonCredit {
     @Column(name = "credit_id")
     private UUID id;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version = 0L;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;

@@ -23,6 +23,10 @@ public class Wallet {
     @Column(name = "wallet_id")
     private UUID id;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version = 0L;
+
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;

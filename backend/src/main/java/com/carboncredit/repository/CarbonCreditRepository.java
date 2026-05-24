@@ -3,16 +3,25 @@ package com.carboncredit.repository;
 import com.carboncredit.entity.CarbonCredit;
 import com.carboncredit.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import jakarta.persistence.LockModeType;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface CarbonCreditRepository extends JpaRepository<CarbonCredit, UUID> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT c FROM CarbonCredit c WHERE c.id = :id")
+    Optional<CarbonCredit> findByIdForUpdate(@Param("id") UUID id);
 
     List<CarbonCredit> findByUser(User user);
 

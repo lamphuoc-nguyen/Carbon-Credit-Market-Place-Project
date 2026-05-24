@@ -35,7 +35,6 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
 @Validated
-@CrossOrigin(origins = "*")
 public class UserController {
 
     private final UserService userService;
@@ -53,7 +52,7 @@ public class UserController {
      *         {
      *         "username": "evowner1",
      *         "email": "evowner1@example.com",
-     *         "password": "password123",
+     *         "password": "use-a-strong-password",
      *         "fullName": "John Doe",
      *         "phone": "0123456789",
      *         "role": "EV_OWNER"
@@ -157,7 +156,6 @@ public class UserController {
      * @return User profile data
      */
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'CVA') or #id == authentication.principal.id")
     public ResponseEntity<ApiResponse<UserDTO>> getUserById(@PathVariable UUID id, Authentication authentication) {
         log.info("Fetching user with ID: {}", id);
 
@@ -304,12 +302,6 @@ public class UserController {
         userService.deleteUser(id);
 
         return ResponseEntity.ok(ApiResponse.success("User deleted successfully", null));
-    }
-
-    @GetMapping("/debug/{username}")
-    public ResponseEntity<String> debugUser(@PathVariable String username) {
-        userService.debugPrintUser(username);
-        return ResponseEntity.ok("Check logs");
     }
 
 }

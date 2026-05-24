@@ -33,7 +33,6 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/vehicles")
 @RequiredArgsConstructor
 @Validated
-@CrossOrigin(origins = "*")
 public class VehicleController {
 
     private final VehicleService vehicleService;

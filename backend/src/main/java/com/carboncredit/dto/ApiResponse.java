@@ -15,6 +15,8 @@ public class ApiResponse<T> {
     private boolean success;
     private String message;
     private T data;
+    private Object errors;
+    private Object pagination;
     private LocalDateTime timestamp;
 
     public static <T> ApiResponse<T> success(T data) {
@@ -34,7 +36,17 @@ public class ApiResponse<T> {
 
     //Error with message and data
     public static <T> ApiResponse<T> error(String message, T data) {
-        return ApiResponse.<T>builder().success(false).message(message).data(null).timestamp(LocalDateTime.now()).build();
+        return ApiResponse.<T>builder().success(false).message(message).data(data).timestamp(LocalDateTime.now()).build();
+    }
+
+    public static <T> ApiResponse<T> error(String message, Object errors, T data) {
+        return ApiResponse.<T>builder()
+                .success(false)
+                .message(message)
+                .errors(errors)
+                .data(data)
+                .timestamp(LocalDateTime.now())
+                .build();
     }
 
 }

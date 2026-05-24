@@ -6,6 +6,7 @@ import com.carboncredit.service.VNPayService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,6 +25,9 @@ public class PaymentController {
 
     private final VNPayService vnPayService;
     private final TransactionService transactionService;
+
+    @Value("${app.frontend.base-url:http://localhost:5173}")
+    private String frontendBaseUrl;
 
     @PostMapping("/vnpay/create")
     public ResponseEntity<Map<String, String>> createPayment(@RequestParam UUID transactionId, HttpServletRequest request) {
@@ -57,7 +61,7 @@ public class PaymentController {
             // Validate required parameters
             if (transactionId == null || responseCode == null) {
                 log.error("❌ Missing required parameters");
-                response.sendRedirect("http://localhost:5173/payment/error?reason=missing_params");
+                response.sendRedirect(frontendRedirect("/payment/error?reason=missing_params"));
                 return ResponseEntity.ok().build();
             }
 
@@ -67,7 +71,7 @@ public class PaymentController {
 
             if (!isValid) {
                 log.error("❌ Invalid payment signature");
-                response.sendRedirect("http://localhost:5173/payment/error?reason=invalid_signature");
+                response.sendRedirect(frontendRedirect("/payment/error?reason=invalid_signature"));
                 return ResponseEntity.ok().build();
             }
 
@@ -75,7 +79,7 @@ public class PaymentController {
             Transaction transaction = transactionService.findTransactionById(UUID.fromString(transactionId));
             if (transaction == null) {
                 log.error("❌ Transaction not found: {}", transactionId);
-                response.sendRedirect("http://localhost:5173/payment/error?reason=transaction_not_found");
+                response.sendRedirect(frontendRedirect("/payment/error?reason=transaction_not_found"));
                 return ResponseEntity.ok().build();
             }
 
@@ -94,7 +98,7 @@ public class PaymentController {
                 try {
                     transactionService.completeTransaction(transaction);
                     log.info("✅ Transaction completed successfully");
-                    response.sendRedirect("http://localhost:5173/payment/success?transactionId=" + transactionId);
+                    response.sendRedirect(frontendRedirect("/payment/success?transactionId=" + transactionId));
                 } catch (com.carboncredit.exception.BusinessOperationException e) {
                     log.error("❌ Business validation failed during transaction completion: {}", e.getMessage());
 
@@ -109,8 +113,8 @@ public class PaymentController {
                             log.error("❌ Failed to cancel transaction after price validation error: {}", failException.getMessage());
                         }
 
-                        response.sendRedirect("http://localhost:5173/payment/failed?transactionId=" + transactionId +
-                                            "&code=PRICE_CHANGED&message=The listing price changed while you were completing payment. Please try again.");
+                        response.sendRedirect(frontendRedirect("/payment/failed?transactionId=" + transactionId +
+                                            "&code=PRICE_CHANGED&message=The listing price changed while you were completing payment. Please try again."));
                     } else {
                         // Other business validation errors
                         try {
@@ -119,8 +123,8 @@ public class PaymentController {
                             log.error("❌ Failed to cancel transaction after validation error: {}", failException.getMessage());
                         }
 
-                        response.sendRedirect("http://localhost:5173/payment/failed?transactionId=" + transactionId +
-                                            "&code=VALIDATION_ERROR&message=" + java.net.URLEncoder.encode(e.getMessage(), "UTF-8"));
+                        response.sendRedirect(frontendRedirect("/payment/failed?transactionId=" + transactionId +
+                                            "&code=VALIDATION_ERROR&message=" + java.net.URLEncoder.encode(e.getMessage(), "UTF-8")));
                     }
                 }
             } else {
@@ -133,7 +137,7 @@ public class PaymentController {
                 // Gọi service để chuyển Transaction -> CANCELLED và Listing -> ACTIVE
                 transactionService.failTransaction(transaction, reason);
 
-                response.sendRedirect("http://localhost:5173/payment/failed?transactionId=" + transactionId + "&code=" + responseCode);
+                response.sendRedirect(frontendRedirect("/payment/failed?transactionId=" + transactionId + "&code=" + responseCode));
             }
 
             return ResponseEntity.ok().build();
@@ -141,11 +145,11 @@ public class PaymentController {
 
         } catch (IllegalArgumentException e) {
             log.error("❌ Invalid UUID format: {}", e.getMessage());
-            response.sendRedirect("http://localhost:5173/payment/error?reason=invalid_id");
+            response.sendRedirect(frontendRedirect("/payment/error?reason=invalid_id"));
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             log.error("❌ Error processing VNPay callback: ", e);
-            response.sendRedirect("http://localhost:5173/payment/error?reason=server_error");
+            response.sendRedirect(frontendRedirect("/payment/error?reason=server_error"));
             return ResponseEntity.ok().build();
         }
     }
@@ -156,6 +160,10 @@ public class PaymentController {
             ipAddress = request.getRemoteAddr();
         }
         return ipAddress;
+    }
+
+    private String frontendRedirect(String pathAndQuery) {
+        return frontendBaseUrl + pathAndQuery;
     }
     // File: PaymentController.java
 

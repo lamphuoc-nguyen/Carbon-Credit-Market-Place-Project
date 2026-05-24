@@ -50,7 +50,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 @RestController
 @RequestMapping("/api/cva")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class CVAController {
 
     private final CVAService cvaService;

@@ -31,7 +31,6 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/journeys")
 @RequiredArgsConstructor
 @Validated
-@CrossOrigin(origins = "*")
 public class JourneyController {
 
     private final JourneyDataService journeyDataService;

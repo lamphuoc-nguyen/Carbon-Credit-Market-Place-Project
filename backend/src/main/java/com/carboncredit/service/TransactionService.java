@@ -77,7 +77,7 @@ public class TransactionService {
     @Transactional
     public Transaction initiatePurchase(UUID listingId, User buyer, String paymentMethodId, BigDecimal quantity) {
         // 1. Lock Listing Row for update if possible, but @Transactional handles basic isolation
-        CreditListing listing = creditListingRepository.findById(listingId)
+        CreditListing listing = creditListingRepository.findByIdForUpdate(listingId)
                 .orElseThrow(() -> new RuntimeException("Listing not found"));
 
         // 2. CRITICAL: Check status to prevent race condition
@@ -206,10 +206,10 @@ public class TransactionService {
         transactionRepository.save(fullTransaction);
 
         try {
-            CreditListing currentListing = creditListingRepository.findById(fullTransaction.getListing().getId())
+            CreditListing currentListing = creditListingRepository.findByIdForUpdate(fullTransaction.getListing().getId())
                     .orElseThrow(() -> new EntityNotFoundException("Listing not found"));
 
-            CarbonCredit sellerCredit = carbonCreditRepository.findById(fullTransaction.getCredit().getId())
+            CarbonCredit sellerCredit = carbonCreditRepository.findByIdForUpdate(fullTransaction.getCredit().getId())
                     .orElseThrow(() -> new EntityNotFoundException("Credit not found"));
 
             // Update transaction status
@@ -299,13 +299,20 @@ public class TransactionService {
     public Transaction failTransaction(Transaction transaction, String reason) {
         log.info("Failing/Cancelling transaction {} with reason: {}", transaction.getId(), reason);
 
+        if (transaction.getStatus() == TransactionStatus.CANCELLED) {
+            return transaction;
+        }
+        if (transaction.getStatus() == TransactionStatus.COMPLETED) {
+            throw new BusinessOperationException("Cannot cancel a completed transaction");
+        }
+
         // 1. Update status
         transaction.setStatus(TransactionStatus.CANCELLED);
         Transaction failedTransaction = transactionRepository.save(transaction);
 
         // 2. RESTORE RESOURCES (Compensation)
-        CreditListing listing = creditListingRepository.findById(transaction.getListing().getId()).orElse(null);
-        CarbonCredit sellerCredit = carbonCreditRepository.findById(transaction.getCredit().getId()).orElse(null);
+        CreditListing listing = creditListingRepository.findByIdForUpdate(transaction.getListing().getId()).orElse(null);
+        CarbonCredit sellerCredit = carbonCreditRepository.findByIdForUpdate(transaction.getCredit().getId()).orElse(null);
 
         if (listing != null && sellerCredit != null) {
             BigDecimal amountToRestore = transaction.getCreditAmount();

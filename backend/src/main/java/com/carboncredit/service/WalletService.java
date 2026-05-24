@@ -46,8 +46,7 @@ public class WalletService {
     }
 
     public Wallet updateCreditBalance(UUID userId, BigDecimal amount) {
-        Wallet wallet = findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("Wallet not found for user: " + userId));
+        Wallet wallet = getWalletForUpdate(userId);
 
         if (amount.compareTo(BigDecimal.ZERO) < 0 &&
                 wallet.getCreditBalance().add(amount).compareTo(BigDecimal.ZERO) < 0) {
@@ -59,8 +58,7 @@ public class WalletService {
     }
 
     public Wallet updateCashBalance(UUID userId, BigDecimal amount) {
-        Wallet wallet = findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("Wallet not found for user: " + userId));
+        Wallet wallet = getWalletForUpdate(userId);
 
         if (amount.compareTo(BigDecimal.ZERO) < 0 &&
                 wallet.getCashBalance().add(amount).compareTo(BigDecimal.ZERO) < 0) {
@@ -88,8 +86,7 @@ public class WalletService {
 
     /** Update CO2 reduced amount in wallet */
     public Wallet updateCo2ReducedKg(UUID userId, BigDecimal amount) {
-        Wallet wallet = findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("Wallet not found for user: " + userId));
+        Wallet wallet = getWalletForUpdate(userId);
 
         // Entity getter ensures we never get null
         BigDecimal currentCo2 = wallet.getCo2ReducedKg();
@@ -106,8 +103,7 @@ public class WalletService {
     /** Get CO2 reduced balance for a user */
     @Transactional(readOnly = true)
     public BigDecimal getCo2ReducedKg(UUID userId) {
-        Wallet wallet = findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("Wallet not found for user: " + userId));
+        Wallet wallet = getWalletForUpdate(userId);
 
         // Entity getter ensures we never get null
         return wallet.getCo2ReducedKg();
@@ -125,8 +121,7 @@ public class WalletService {
             throw new IllegalArgumentException("Only ADMIN or CVA users can verify credits");
         }
 
-        Wallet wallet = findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("Wallet not found for user: " + userId));
+        Wallet wallet = getWalletForUpdate(userId);
 
         // Entity getter ensures we never get null
         BigDecimal currentCo2 = wallet.getCo2ReducedKg();
@@ -163,8 +158,7 @@ public class WalletService {
 
     /** Lock CO2 for transfer request */
     public void lockCo2ForTransfer(UUID userId, BigDecimal co2Amount) {
-        Wallet wallet = findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("Wallet not found for user: " + userId));
+        Wallet wallet = getWalletForUpdate(userId);
 
         BigDecimal availableCo2 = wallet.getAvailableCo2();
         if (availableCo2.compareTo(co2Amount) < 0) {
@@ -187,6 +181,10 @@ public class WalletService {
                 .orElseThrow(() -> new IllegalArgumentException("Wallet not found for user: " + userId));
 
         // Remove CO2 from both total and pending
+        if (wallet.getCo2ReducedKg().compareTo(co2Amount) < 0
+                || wallet.getCo2PendingTransfer().compareTo(co2Amount) < 0) {
+            throw new IllegalArgumentException("Insufficient locked CO2 for approved transfer");
+        }
         wallet.setCo2ReducedKg(wallet.getCo2ReducedKg().subtract(co2Amount));
         wallet.setCo2PendingTransfer(wallet.getCo2PendingTransfer().subtract(co2Amount));
 
@@ -211,8 +209,7 @@ public class WalletService {
 
     /** Refund rejected transfer request */
     public void refundRejectedTransfer(UUID userId, BigDecimal co2Amount) {
-        Wallet wallet = findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("Wallet not found for user: " + userId));
+        Wallet wallet = getWalletForUpdate(userId);
 
         // Simply remove from pending transfer (CO2 stays in total balance)
         BigDecimal currentPending = wallet.getCo2PendingTransfer();
@@ -223,6 +220,11 @@ public class WalletService {
 
         wallet.setCo2PendingTransfer(currentPending.subtract(co2Amount));
         walletRepository.save(wallet);
+    }
+
+    private Wallet getWalletForUpdate(UUID userId) {
+        return walletRepository.findByUserIdForUpdate(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Wallet not found for user: " + userId));
     }
 
     /** Get available CO2 for transfer (not locked in pending transfers) */

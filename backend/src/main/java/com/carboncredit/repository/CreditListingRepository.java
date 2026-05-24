@@ -10,9 +10,12 @@ import java.util.UUID;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+
+import jakarta.persistence.LockModeType;
 
 import com.carboncredit.entity.CarbonCredit;
 import com.carboncredit.entity.CreditListing;
@@ -23,6 +26,10 @@ import com.carboncredit.entity.User;
 @Repository
 public interface CreditListingRepository extends JpaRepository<CreditListing, UUID> {
     // basic crud inherited from Jpa Repo
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT cl FROM CreditListing cl JOIN FETCH cl.credit WHERE cl.id = :id")
+    Optional<CreditListing> findByIdForUpdate(@Param("id") UUID id);
 
     // ============ FIND BY STATUS ===========
     // find all active listings
