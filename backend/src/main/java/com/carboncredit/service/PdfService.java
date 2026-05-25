@@ -2,8 +2,8 @@ package com.carboncredit.service;
 
 import com.carboncredit.entity.Certificate; // <<< Import Entity
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
@@ -14,10 +14,10 @@ import java.io.IOException;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class PdfService {
 
-    @Autowired
-    private TemplateEngine templateEngine;
+    private final TemplateEngine templateEngine;
 
     /**
      * SỬA ĐỔI: Đây là phương thức chính, nhận trực tiếp Certificate entity.

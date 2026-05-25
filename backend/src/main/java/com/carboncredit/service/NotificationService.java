@@ -8,7 +8,6 @@ import com.carboncredit.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,7 +16,6 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
-    @Autowired
     private final NotificationRepository notificationRepository;
     private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
 

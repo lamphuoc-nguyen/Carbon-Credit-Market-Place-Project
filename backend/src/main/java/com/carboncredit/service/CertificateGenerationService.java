@@ -4,7 +4,6 @@ import com.carboncredit.entity.Certificate;
 import com.carboncredit.entity.RetirementTransaction;
 import com.carboncredit.repository.CertificateRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -20,17 +19,21 @@ import java.util.UUID;
 @Slf4j
 public class CertificateGenerationService {
 
-    @Autowired
-    private CertificateRepository certificateRepository;
+    private final CertificateRepository certificateRepository;
+    private final PdfService pdfService;
+    private final StorageService storageService;
+    private final boolean useCloudStorage;
 
-    @Autowired
-    private PdfService pdfService;
-
-    @Autowired
-    private StorageService storageService;
-
-    @Value("${app.certificate.use-cloud-storage:true}")
-    private boolean useCloudStorage;
+    public CertificateGenerationService(
+            CertificateRepository certificateRepository,
+            PdfService pdfService,
+            StorageService storageService,
+            @Value("${app.certificate.use-cloud-storage:true}") boolean useCloudStorage) {
+        this.certificateRepository = certificateRepository;
+        this.pdfService = pdfService;
+        this.storageService = storageService;
+        this.useCloudStorage = useCloudStorage;
+    }
 
     /**
      * Asynchronously generates and stores a PDF certificate

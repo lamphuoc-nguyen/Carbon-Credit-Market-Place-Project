@@ -17,7 +17,6 @@ import com.carboncredit.repository.DisputeRepository;
 import com.carboncredit.repository.TransactionRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
@@ -29,22 +28,27 @@ import org.springframework.transaction.annotation.Transactional;
 public class DisputeService {
     private static final Logger log = LoggerFactory.getLogger(DisputeService.class);
 
-    @Autowired
-    private DisputeRepository disputeRepository;
+    private final DisputeRepository disputeRepository;
+    private final TransactionRepository transactionRepository;
+    private final ValidationService validationService;
+    private final TransactionService transactionService;
+    private final NotificationService notificationService;
+    private final AuditService auditService;
 
-    @Autowired
-    private TransactionRepository transactionRepository;
-
-    @Autowired
-    private ValidationService validationService;
-
-    @Autowired TransactionService transactionService;
-
-    @Autowired
-    private NotificationService notificationService;
-
-    @Autowired
-    private AuditService auditService;
+    public DisputeService(
+            DisputeRepository disputeRepository,
+            TransactionRepository transactionRepository,
+            ValidationService validationService,
+            TransactionService transactionService,
+            NotificationService notificationService,
+            AuditService auditService) {
+        this.disputeRepository = disputeRepository;
+        this.transactionRepository = transactionRepository;
+        this.validationService = validationService;
+        this.transactionService = transactionService;
+        this.notificationService = notificationService;
+        this.auditService = auditService;
+    }
 
     // ================= CORE DISPUTE OPERATIONS ==============
 

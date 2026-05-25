@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.carboncredit.entity.CarbonCredit;
@@ -30,11 +29,36 @@ import com.carboncredit.repository.TransactionRepository;
 @Service
 public class ValidationService {
 
-    @Autowired
-    private TransactionRepository transactionRepository;
+    private static final int RECENT_TRANSACTION_WINDOW_MINUTES = 15;
+    private static final int RECENT_TRANSACTION_LIMIT = 5;
+    private static final int DAILY_TRANSACTION_LIMIT = 20;
+    private static final int MAX_PAGE_SIZE = 100;
 
-    @Autowired
-    private DisputeRepository disputeRepository;
+    private static final BigDecimal CENT_TOLERANCE = new BigDecimal("0.01");
+    private static final BigDecimal PRICE_CHANGE_TOLERANCE_RATE = new BigDecimal("0.01");
+    private static final BigDecimal SINGLE_TRANSACTION_LIMIT = new BigDecimal("10000.00");
+    private static final BigDecimal DAILY_SPENDING_LIMIT = new BigDecimal("5000.00");
+    private static final BigDecimal FRAUD_AMOUNT_RATIO_LIMIT = new BigDecimal("5");
+    private static final BigDecimal MAX_LISTING_PRICE = new BigDecimal("10000");
+    private static final BigDecimal MAX_CREDIT_DISTANCE_KM = new BigDecimal("10000");
+    private static final BigDecimal MAX_JOURNEY_DISTANCE_KM = new BigDecimal("2000");
+    private static final BigDecimal MIN_JOURNEY_DISTANCE_KM = new BigDecimal("0.1");
+    private static final BigDecimal MAX_JOURNEY_ENERGY_KWH = new BigDecimal("500");
+    private static final BigDecimal MIN_JOURNEY_ENERGY_KWH = new BigDecimal("0.01");
+    private static final BigDecimal MAX_ENERGY_EFFICIENCY_KWH_PER_KM = new BigDecimal("1.0");
+    private static final BigDecimal MIN_ENERGY_EFFICIENCY_KWH_PER_KM = new BigDecimal("0.05");
+    private static final BigDecimal MAX_CO2_KG_PER_KM = new BigDecimal("1.0");
+    private static final BigDecimal MIN_CO2_KG_PER_KM = new BigDecimal("0.05");
+    private static final BigDecimal MIN_CREDIT_DISTANCE_KM = new BigDecimal("1.0");
+    private static final BigDecimal MIN_CREDIT_CO2_KG = new BigDecimal("0.1");
+
+    private final TransactionRepository transactionRepository;
+    private final DisputeRepository disputeRepository;
+
+    public ValidationService(TransactionRepository transactionRepository, DisputeRepository disputeRepository) {
+        this.transactionRepository = transactionRepository;
+        this.disputeRepository = disputeRepository;
+    }
 
     // ======================== TRANSACTION VALIDATIONS ===============
 
@@ -140,7 +164,7 @@ public class ValidationService {
 
             // Allow for small rounding differences (within 0.01)
             BigDecimal difference = transactionAmount.subtract(expectedAmount).abs();
-            if (difference.compareTo(new BigDecimal("0.01")) > 0) {
+            if (difference.compareTo(CENT_TOLERANCE) > 0) {
                 throw new BusinessOperationException(
                     String.format("Transaction amount (%.2f) does not match expected partial purchase amount (%.2f) for %s credits",
                         transactionAmount, expectedAmount, transactionCreditAmount));
@@ -149,9 +173,9 @@ public class ValidationService {
             // FULL PURCHASE: Original validation logic with tolerance for price updates
             // Allow for small differences that might occur due to concurrent updates or rounding
             BigDecimal difference = transactionAmount.subtract(currentListingPrice).abs();
-            BigDecimal tolerance = currentListingPrice.multiply(new BigDecimal("0.01")); // 1% tolerance
+            BigDecimal tolerance = currentListingPrice.multiply(PRICE_CHANGE_TOLERANCE_RATE); // 1% tolerance
 
-            if (difference.compareTo(tolerance) > 0 && difference.compareTo(new BigDecimal("0.01")) > 0) {
+            if (difference.compareTo(tolerance) > 0 && difference.compareTo(CENT_TOLERANCE) > 0) {
                 throw new BusinessOperationException(
                     String.format("Transaction amount (%.2f) does not match current listing price (%.2f). Price may have changed during payment.",
                         transactionAmount, currentListingPrice));
@@ -179,9 +203,9 @@ public class ValidationService {
     public void validateSuspiciousActivity(User buyer) {
         // Check for rapid consecutive transactions
         long recentTransactions = transactionRepository.countRecentTransactionsByUser(buyer.getId(),
-                LocalDateTime.now().minusMinutes(15));
+                LocalDateTime.now().minusMinutes(RECENT_TRANSACTION_WINDOW_MINUTES));
 
-        if (recentTransactions > 5) {
+        if (recentTransactions > RECENT_TRANSACTION_LIMIT) {
             throw new SecurityException("Suspicious activity: Too many recent transcations (limit: 5 / 15mins)");
         }
 
@@ -190,7 +214,7 @@ public class ValidationService {
         LocalDateTime endOfDay = startOfDay.plusDays(1);
         long todayTransactions = transactionRepository.countTodayTransactionsByUser(buyer.getId(), startOfDay, endOfDay);
 
-        if (todayTransactions > 20) {
+        if (todayTransactions > DAILY_TRANSACTION_LIMIT) {
             throw new SecurityException("Daily transaction limit exceeded (20/day)");
         }
     }
@@ -198,19 +222,17 @@ public class ValidationService {
     // validate transaction limits
     public void validateTransactionLimits(User buyer, BigDecimal amount) {
         // Single transaction limit
-        BigDecimal singleTransactionLimit = new BigDecimal("10000.00");
-        if (amount.compareTo(singleTransactionLimit) > 0) {
+        if (amount.compareTo(SINGLE_TRANSACTION_LIMIT) > 0) {
             throw new SecurityException(
-                    "Transaction amount exceeds single transaction limit: $" + singleTransactionLimit);
+                    "Transaction amount exceeds single transaction limit: $" + SINGLE_TRANSACTION_LIMIT);
         }
 
         // Daily spending limit
         LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
         LocalDateTime endOfDay = startOfDay.plusDays(1);
         BigDecimal dailySpent = transactionRepository.getDailySpentByUser(buyer.getId(), startOfDay, endOfDay);
-        BigDecimal dailyLimit = new BigDecimal("5000.00");
-        if (dailySpent.add(amount).compareTo(dailyLimit) > 0) {
-            throw new SecurityException("Transcation would exceed daily spending limit: $" + dailyLimit);
+        if (dailySpent.add(amount).compareTo(DAILY_SPENDING_LIMIT) > 0) {
+            throw new SecurityException("Transcation would exceed daily spending limit: $" + DAILY_SPENDING_LIMIT);
         }
     }
 
@@ -221,7 +243,7 @@ public class ValidationService {
 
         if(averageTransaction.isPresent() && averageTransaction.get().compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal ratio = transaction.getAmount().divide(averageTransaction.get(), 2, RoundingMode.HALF_UP);
-            if(ratio.compareTo(new BigDecimal("5")) > 0) {
+            if(ratio.compareTo(FRAUD_AMOUNT_RATIO_LIMIT) > 0) {
                 throw new SecurityException("Transaction amount significantly exceeds user's typical spending patterns");
             }
 
@@ -433,7 +455,7 @@ public class ValidationService {
         }
 
         // Set reasonable price limits
-        if (price.compareTo(new BigDecimal("10000")) > 0) {
+        if (price.compareTo(MAX_LISTING_PRICE) > 0) {
             throw new ValidationException("CreditListing", "price", "Price exceeds maximum allowed limit of $10,000");
         }
 
@@ -528,7 +550,7 @@ public class ValidationService {
             throw new ValidationException("Pagination", "size", "Page size must be positive");
         }
 
-        if (size > 100) {
+        if (size > MAX_PAGE_SIZE) {
             throw new ValidationException("Pagination", "size", "Page size cannot exceed 100 items");
         }
     }
@@ -569,7 +591,7 @@ public class ValidationService {
         }
 
         // Validate reasonable ranges
-        if (distanceKm.compareTo(new BigDecimal("10000")) > 0) {
+        if (distanceKm.compareTo(MAX_CREDIT_DISTANCE_KM) > 0) {
             throw new ValidationException("JourneyData", "distanceKm", "Distance exceeds reasonable limit (10,000 km)");
         }
     }
@@ -693,25 +715,25 @@ public class ValidationService {
      */
     private void validateJourneyLimits(JourneyData journeyData) {
         // Validate reasonable distance limits (max 2000km for single journey)
-        if (journeyData.getDistanceKm().compareTo(new BigDecimal("2000")) > 0) {
+        if (journeyData.getDistanceKm().compareTo(MAX_JOURNEY_DISTANCE_KM) > 0) {
             throw new ValidationException("JourneyData", "distanceKm",
                     "Distance exceeds reasonable limit (2000 km)");
         }
 
         // Minimum reasonable distance (0.1 km)
-        if (journeyData.getDistanceKm().compareTo(new BigDecimal("0.1")) < 0) {
+        if (journeyData.getDistanceKm().compareTo(MIN_JOURNEY_DISTANCE_KM) < 0) {
             throw new ValidationException("JourneyData", "distanceKm",
                     "Distance too small (minimum 0.1 km)");
         }
 
         // Validate reasonable energy consumption (max 500kWh for single journey)
-        if (journeyData.getEnergyConsumedKwh().compareTo(new BigDecimal("500")) > 0) {
+        if (journeyData.getEnergyConsumedKwh().compareTo(MAX_JOURNEY_ENERGY_KWH) > 0) {
             throw new ValidationException("JourneyData", "energyConsumedKwh",
                     "Energy consumption exceeds reasonable limit (500 kWh)");
         }
 
         // Minimum reasonable energy consumption (0.01 kWh)
-        if (journeyData.getEnergyConsumedKwh().compareTo(new BigDecimal("0.01")) < 0) {
+        if (journeyData.getEnergyConsumedKwh().compareTo(MIN_JOURNEY_ENERGY_KWH) < 0) {
             throw new ValidationException("JourneyData", "energyConsumedKwh",
                     "Energy consumption too small (minimum 0.01 kWh)");
         }
@@ -721,12 +743,12 @@ public class ValidationService {
                 .divide(journeyData.getDistanceKm(), 4, RoundingMode.HALF_UP);
 
         // Most EVs consume between 0.1 - 0.4 kWh/km, allow some buffer
-        if (efficiency.compareTo(new BigDecimal("1.0")) > 0) {
+        if (efficiency.compareTo(MAX_ENERGY_EFFICIENCY_KWH_PER_KM) > 0) {
             throw new ValidationException("JourneyData", "efficiency",
                     "Energy efficiency seems unrealistic (>" + efficiency + " kWh/km, max allowed: 1.0)");
         }
 
-        if (efficiency.compareTo(new BigDecimal("0.05")) < 0) {
+        if (efficiency.compareTo(MIN_ENERGY_EFFICIENCY_KWH_PER_KM) < 0) {
             throw new ValidationException("JourneyData", "efficiency",
                     "Energy efficiency seems unrealistic (<" + efficiency + " kWh/km, min allowed: 0.05)");
         }
@@ -737,12 +759,12 @@ public class ValidationService {
             BigDecimal co2PerKm = journeyData.getCo2ReducedKg()
                     .divide(journeyData.getDistanceKm(), 4, RoundingMode.HALF_UP);
 
-            if (co2PerKm.compareTo(new BigDecimal("1.0")) > 0) {
+            if (co2PerKm.compareTo(MAX_CO2_KG_PER_KM) > 0) {
                 throw new ValidationException("JourneyData", "co2Efficiency",
                         "CO2 reduction per km seems unrealistic (>" + co2PerKm + " kg/km)");
             }
 
-            if (co2PerKm.compareTo(new BigDecimal("0.05")) < 0) {
+            if (co2PerKm.compareTo(MIN_CO2_KG_PER_KM) < 0) {
                 throw new ValidationException("JourneyData", "co2Efficiency",
                         "CO2 reduction per km seems too low (<" + co2PerKm + " kg/km)");
             }
@@ -775,13 +797,13 @@ public class ValidationService {
         }
 
         // Minimum distance for carbon credit (e.g., 1 km)
-        if (journeyData.getDistanceKm().compareTo(new BigDecimal("1.0")) < 0) {
+        if (journeyData.getDistanceKm().compareTo(MIN_CREDIT_DISTANCE_KM) < 0) {
             throw new ValidationException("JourneyData", "distanceKm",
                     "Minimum 1 km journey required for carbon credit creation");
         }
 
         // Minimum CO2 reduction for credit (e.g., 0.1 kg)
-        if (journeyData.getCo2ReducedKg().compareTo(new BigDecimal("0.1")) < 0) {
+        if (journeyData.getCo2ReducedKg().compareTo(MIN_CREDIT_CO2_KG) < 0) {
             throw new ValidationException("JourneyData", "co2ReducedKg",
                     "Minimum 0.1 kg CO2 reduction required for carbon credit");
         }
