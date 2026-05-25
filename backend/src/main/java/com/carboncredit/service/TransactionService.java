@@ -9,7 +9,6 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -39,32 +38,36 @@ public class TransactionService {
 
     private static final Logger log = LoggerFactory.getLogger(TransactionService.class);
 
-    @Autowired
-    private ValidationService validationService;
+    private final ValidationService validationService;
+    private final TransactionRepository transactionRepository;
+    private final DisputeRepository disputeRepository;
+    private final CreditListingRepository creditListingRepository;
+    private final CarbonCreditRepository carbonCreditRepository;
+    private final PaymentService paymentService;
+    private final NotificationService notificationService;
+    private final AuditService auditService;
+    private final WalletService walletService;
 
-    @Autowired
-    private TransactionRepository transactionRepository;
-
-    @Autowired
-    private DisputeRepository disputeRepository;
-
-    @Autowired
-    private CreditListingRepository creditListingRepository;
-
-    @Autowired
-    private CarbonCreditRepository carbonCreditRepository;
-
-    @Autowired
-    private PaymentService paymentService;
-
-    @Autowired
-    private NotificationService notificationService;
-
-    @Autowired
-    private AuditService auditService;
-
-    @Autowired
-    private WalletService walletService;
+    public TransactionService(
+            ValidationService validationService,
+            TransactionRepository transactionRepository,
+            DisputeRepository disputeRepository,
+            CreditListingRepository creditListingRepository,
+            CarbonCreditRepository carbonCreditRepository,
+            PaymentService paymentService,
+            NotificationService notificationService,
+            AuditService auditService,
+            WalletService walletService) {
+        this.validationService = validationService;
+        this.transactionRepository = transactionRepository;
+        this.disputeRepository = disputeRepository;
+        this.creditListingRepository = creditListingRepository;
+        this.carbonCreditRepository = carbonCreditRepository;
+        this.paymentService = paymentService;
+        this.notificationService = notificationService;
+        this.auditService = auditService;
+        this.walletService = walletService;
+    }
 
     // ==== TRANSACTION AND PROCESSING ================
 
@@ -78,7 +81,7 @@ public class TransactionService {
     public Transaction initiatePurchase(UUID listingId, User buyer, String paymentMethodId, BigDecimal quantity) {
         // 1. Lock Listing Row for update if possible, but @Transactional handles basic isolation
         CreditListing listing = creditListingRepository.findByIdForUpdate(listingId)
-                .orElseThrow(() -> new RuntimeException("Listing not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Listing not found"));
 
         // 2. CRITICAL: Check status to prevent race condition
         if (listing.getStatus() != ListingStatus.ACTIVE) {
@@ -88,32 +91,10 @@ public class TransactionService {
         // Lấy credit từ listing
         CarbonCredit credit = listing.getCredit();
         if (credit == null) {
-            throw new RuntimeException("Listing has no associated carbon credit");
+            throw new EntityNotFoundException("Listing has no associated carbon credit");
         }
 
-        // 3. Calculate purchase amount and Validate Quantity
-        BigDecimal totalAvailableCredits = credit.getCreditAmount();
-        BigDecimal purchaseAmount;
-        BigDecimal purchaseQuantity;
-
-        if (quantity != null && quantity.compareTo(BigDecimal.ZERO) > 0) {
-            // Partial purchase
-            if (quantity.compareTo(totalAvailableCredits) > 0) {
-                throw new BusinessOperationException("Requested quantity (" + quantity + ") exceeds available credits (" + totalAvailableCredits + ")");
-            }
-
-            // Calculate proportional price: (quantity / totalCredits) * listingPrice
-            purchaseAmount = listing.getPrice().multiply(quantity).divide(totalAvailableCredits, 2, RoundingMode.HALF_UP);
-            purchaseQuantity = quantity;
-
-            log.info("Partial purchase initiated: {} out of {} credits for ${}", quantity, totalAvailableCredits, purchaseAmount);
-        } else {
-            // Full purchase
-            purchaseAmount = listing.getPrice();
-            purchaseQuantity = totalAvailableCredits;
-
-            log.info("Full purchase initiated: {} credits for ${}", purchaseQuantity, purchaseAmount);
-        }
+        PurchaseReservation reservation = calculatePurchaseReservation(listing, credit, quantity);
 
         // 4. Create Transaction Record
         Transaction transaction = new Transaction();
@@ -121,18 +102,11 @@ public class TransactionService {
         transaction.setCredit(credit);
         transaction.setBuyer(buyer);
         transaction.setSeller(credit.getUser());
-        transaction.setAmount(purchaseAmount);
+        transaction.setAmount(reservation.purchaseAmount());
         transaction.setPaymentMethodId(paymentMethodId);
-        transaction.setCreditAmount(purchaseQuantity); // Store purchased quantity
+        transaction.setCreditAmount(reservation.purchaseQuantity()); // Store purchased quantity
 
-        // Set payment method based on paymentMethodId
-        if (paymentMethodId != null && paymentMethodId.toUpperCase().contains("VNPAY")) {
-            transaction.setPaymentMethod(Transaction.PaymentMethod.VNPAY);
-        } else if (paymentMethodId != null && paymentMethodId.toUpperCase().contains("BANK")) {
-            transaction.setPaymentMethod(Transaction.PaymentMethod.BANK_TRANSFER);
-        } else {
-            transaction.setPaymentMethod(Transaction.PaymentMethod.WALLET);
-        }
+        transaction.setPaymentMethod(resolvePaymentMethod(paymentMethodId));
 
         transaction.setStatus(Transaction.TransactionStatus.PENDING);
         transaction.setCreatedAt(LocalDateTime.now());
@@ -141,7 +115,7 @@ public class TransactionService {
 
         // 5. RESOURCE LOCKING (RESERVATION)         // Trừ trực tiếp số lượng Credit của Seller để "giữ chỗ".
         // Nếu transaction fail, ta sẽ cộng lại sau.
-        BigDecimal remainingQuantity = totalAvailableCredits.subtract(purchaseQuantity);
+        BigDecimal remainingQuantity = reservation.remainingQuantity();
 
         if (remainingQuantity.compareTo(BigDecimal.ZERO) == 0) {
             // Nếu mua hết (hoặc mua phần còn lại cuối cùng) -> Khóa Listing ngay lập tức
@@ -152,7 +126,7 @@ public class TransactionService {
             // Nếu mua một phần -> Giảm số lượng credit gốc, Listing vẫn ACTIVE cho người khác mua phần còn lại
             credit.setCreditAmount(remainingQuantity);
             // Cập nhật giá Listing theo tỉ lệ mới (Optional logic: tùy business rule, ở đây ta cập nhật giá hiển thị nếu cần)
-            BigDecimal newPrice = listing.getPrice().subtract(purchaseAmount);
+            BigDecimal newPrice = listing.getPrice().subtract(reservation.purchaseAmount());
             listing.setPrice(newPrice.max(BigDecimal.ZERO));
 
             log.info("Listing {} quantity reserved. Remaining: {}. Status: ACTIVE", listingId, remainingQuantity);
@@ -163,6 +137,44 @@ public class TransactionService {
         creditListingRepository.save(listing);
 
         return savedTransaction;
+    }
+
+    private Transaction.PaymentMethod resolvePaymentMethod(String paymentMethodId) {
+        if (paymentMethodId == null) {
+            return Transaction.PaymentMethod.WALLET;
+        }
+
+        String normalizedPaymentMethod = paymentMethodId.toUpperCase();
+        if (normalizedPaymentMethod.contains("VNPAY")) {
+            return Transaction.PaymentMethod.VNPAY;
+        }
+        if (normalizedPaymentMethod.contains("BANK")) {
+            return Transaction.PaymentMethod.BANK_TRANSFER;
+        }
+        return Transaction.PaymentMethod.WALLET;
+    }
+
+    private PurchaseReservation calculatePurchaseReservation(CreditListing listing, CarbonCredit credit, BigDecimal quantity) {
+        BigDecimal totalAvailableCredits = credit.getCreditAmount();
+
+        if (quantity != null && quantity.compareTo(BigDecimal.ZERO) > 0) {
+            if (quantity.compareTo(totalAvailableCredits) > 0) {
+                throw new BusinessOperationException("Requested quantity (" + quantity + ") exceeds available credits (" + totalAvailableCredits + ")");
+            }
+
+            BigDecimal purchaseAmount = listing.getPrice().multiply(quantity).divide(totalAvailableCredits, 2, RoundingMode.HALF_UP);
+            log.info("Partial purchase initiated: {} out of {} credits for ${}", quantity, totalAvailableCredits, purchaseAmount);
+            return new PurchaseReservation(purchaseAmount, quantity, totalAvailableCredits.subtract(quantity));
+        }
+
+        log.info("Full purchase initiated: {} credits for ${}", totalAvailableCredits, listing.getPrice());
+        return new PurchaseReservation(listing.getPrice(), totalAvailableCredits, BigDecimal.ZERO);
+    }
+
+    private record PurchaseReservation(
+            BigDecimal purchaseAmount,
+            BigDecimal purchaseQuantity,
+            BigDecimal remainingQuantity) {
     }
 
     // Process payment for a transaction
